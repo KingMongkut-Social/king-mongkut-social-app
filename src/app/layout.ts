@@ -33,6 +33,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     const state = authStore.snapshot;
     if (state.status === 'authenticated' && state.user) {
       nav.append(
+        el('a', { className: 'nav__link', text: 'Connections', attrs: { href: '/connections' } }),
         el('a', { className: 'nav__link', text: 'My posts', attrs: { href: '/dashboard' } }),
         el('a', { className: 'button button--small button--primary', text: 'New post', attrs: { href: '/dashboard/posts/new' } }),
         el('span', { className: 'user-chip', text: state.user.name, attrs: { title: state.user.email } }),

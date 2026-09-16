@@ -24,6 +24,18 @@ export function registerPage(): PageView {
     className: 'input',
     attrs: { id: 'email', name: 'email', type: 'email', autocomplete: 'email', required: 'true' },
   });
+
+  // สร้าง Dropdown ให้เลือกมหาวิทยาลัย
+  const university = el('select', {
+    className: 'input',
+    attrs: { id: 'university', name: 'university', required: 'true' },
+  },
+    el('option', { attrs: { value: '' }, text: '-- Select University --' }),
+    el('option', { attrs: { value: 'KMITL' }, text: 'KMITL' }),
+    el('option', { attrs: { value: 'KMUTNB' }, text: 'KMUTNB' }),
+    el('option', { attrs: { value: 'KMUTT' }, text: 'KMUTT' }),
+  );
+
   const password = el('input', {
     className: 'input',
     attrs: { id: 'password', name: 'password', type: 'password', autocomplete: 'new-password', maxlength: '128', required: 'true' },
@@ -34,6 +46,7 @@ export function registerPage(): PageView {
   form.append(
     field('name', 'Name', name),
     field('email', 'Email', email),
+    field('university', 'University', university), // แทรกฟิลด์ university ในฟอร์ม
     field('password', 'Password', password, '10+ characters with uppercase, lowercase, and a number.'),
     formError,
     submit,
@@ -48,6 +61,7 @@ export function registerPage(): PageView {
       name: name.value,
       email: email.value.trim(),
       password: password.value,
+      university: (university as HTMLSelectElement).value, // ดึงค่ามหาวิทยาลัยส่งเข้า Zod
     });
     if (!result.success) {
       showZodErrors(form, result.error);
