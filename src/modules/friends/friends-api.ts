@@ -8,28 +8,32 @@ export interface FriendUser {
   requestId: string | null;
 }
 
-export async function searchFriends(q?: string, university?: string) {
+export async function searchFriends(q?: string, university?: string): Promise<FriendUser[]> {
   const query = new URLSearchParams();
   if (q) query.set('q', q);
   if (university && university !== 'All') query.set('university', university);
 
   const qs = query.toString() ? `?${query.toString()}` : '';
-  const res: any = await apiClient.request(`/friends/search${qs}`);
-  return (res?.data ?? res) as FriendUser[];
+  const res = await apiClient.request<{ data: FriendUser[] } | FriendUser[]>(`/friends/search${qs}`);
+  if (Array.isArray(res)) return res;
+  if (res && typeof res === 'object' && 'data' in res && Array.isArray(res.data)) {
+    return res.data;
+  }
+  return [];
 }
 
-export async function sendFriendRequest(targetUserId: string) {
-  const res: any = await apiClient.request('/friends/request', {
+export async function sendFriendRequest(targetUserId: string): Promise<unknown> {
+  const res = await apiClient.request<{ data: unknown }>('/friends/request', {
     method: 'POST',
     body: { targetUserId },
   });
-  return res?.data ?? res;
+  return res && typeof res === 'object' && 'data' in res ? res.data : res;
 }
 
-export async function respondFriendRequest(requestId: string, action: 'accept' | 'reject') {
-  const res: any = await apiClient.request('/friends/respond', {
+export async function respondFriendRequest(requestId: string, action: 'accept' | 'reject'): Promise<unknown> {
+  const res = await apiClient.request<{ data: unknown }>('/friends/respond', {
     method: 'POST',
     body: { requestId, action },
   });
-  return res?.data ?? res;
+  return res && typeof res === 'object' && 'data' in res ? res.data : res;
 }

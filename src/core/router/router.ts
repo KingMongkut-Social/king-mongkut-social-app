@@ -121,7 +121,7 @@ export class Router {
 
   private commit(navigationId: number, page: PageView): void {
     if (navigationId !== this.navigationId) return;
-    document.title = `${page.title} · King Mongkut Social`;
+    document.title = `${page.title} · TechEdu Connect (3 พระจอมฯ)`;
     this.outlet.replaceChildren(page.element);
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
@@ -142,7 +142,7 @@ export class Router {
 
   private loading(): HTMLElement {
     return el('div', { className: 'page-shell page-shell--center' },
-      el('div', { className: 'loader', attrs: { 'aria-label': 'Loading' } }),
+      el('div', { className: 'loader', attrs: { 'aria-label': 'กำลังโหลด…' } }),
     );
   }
 
@@ -150,9 +150,9 @@ export class Router {
     const section = el('section', { className: 'empty-state page-shell' });
     section.append(
       el('p', { className: 'eyebrow', text: '404' }),
-      el('h1', { text: 'Page not found' }),
-      el('p', { text: 'The page you requested does not exist or has moved.' }),
-      el('a', { className: 'button button--primary', text: 'Back to posts', attrs: { href: '/' } }),
+      el('h1', { text: 'ไม่พบหน้าที่ต้องการ' }),
+      el('p', { text: 'หน้าที่คุณกำลังค้นหาไม่มีอยู่จริง หรืออาจถูกย้ายไปแล้ว' }),
+      el('a', { className: 'button button--primary', text: 'กลับสู่หน้าแรก', attrs: { href: '/' } }),
     );
     return section;
   }
@@ -160,11 +160,11 @@ export class Router {
   private errorView(error: unknown): HTMLElement {
     const section = el('section', { className: 'empty-state page-shell' });
     section.append(
-      el('p', { className: 'eyebrow', text: 'Request failed' }),
-      el('h1', { text: 'We could not load this page' }),
+      el('p', { className: 'eyebrow', text: 'เกิดข้อผิดพลาด' }),
+      el('h1', { text: 'ไม่สามารถโหลดหน้านี้ได้' }),
       el('p', { text: errorMessage(error) }),
     );
-    const retry = el('button', { className: 'button button--primary', text: 'Try again', attrs: { type: 'button' } });
+    const retry = el('button', { className: 'button button--primary', text: 'ลองใหม่อีกครั้ง', attrs: { type: 'button' } });
     retry.addEventListener('click', () => this.refresh());
     section.append(retry);
     return section;

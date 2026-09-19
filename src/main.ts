@@ -10,8 +10,7 @@ import { postEditorPage } from './modules/posts/post-editor-page';
 import { postsPage } from './modules/posts/posts-page';
 import { renderConnectionsPage } from './modules/friends/connections-page';
 
-// แก้จุดที่ 1: ใช้ 'as HTMLElement | null' ให้ตรง Type ของ mountLayout
-const root = document.querySelector('#app') as HTMLElement | null;
+const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('App root not found');
 
 const outlet = mountLayout(root);

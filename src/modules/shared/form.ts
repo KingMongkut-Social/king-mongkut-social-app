@@ -4,11 +4,17 @@ import { el } from '../../core/ui/dom';
 export function field(
   name: string,
   labelText: string,
-  control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+  control: HTMLElement,
   hint?: string,
 ): HTMLDivElement {
   const wrapper = el('div', { className: 'field' });
-  const label = el('label', { className: 'field__label', text: labelText, attrs: { for: control.id } });
+  const targetId =
+    control instanceof HTMLInputElement ||
+    control instanceof HTMLTextAreaElement ||
+    control instanceof HTMLSelectElement
+      ? control.id
+      : (control.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select')?.id ?? name);
+  const label = el('label', { className: 'field__label', text: labelText, attrs: { for: targetId } });
   const error = el('p', {
     className: 'field__error',
     attrs: { id: `${name}-error`, 'aria-live': 'polite' },

@@ -6,6 +6,9 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  university?: string | undefined;
+  faculty?: string | undefined;
+  department?: string | undefined;
   createdAt: string;
   updatedAt: string;
 }
@@ -13,6 +16,8 @@ export interface User {
 export interface PostAuthor {
   _id: string;
   name: string;
+  email?: string | undefined;
+  university?: string | undefined;
 }
 
 export interface Post {
@@ -20,7 +25,10 @@ export interface Post {
   title: string;
   content: string;
   status: PostStatus;
-  author: string | PostAuthor;
+  author?: string | PostAuthor | undefined;
+  user?: string | PostAuthor | undefined;
+  coverImage?: string | null | undefined;
+  tags?: string[] | undefined;
   createdAt: string;
   updatedAt: string;
 }

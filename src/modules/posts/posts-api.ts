@@ -11,6 +11,8 @@ export interface SavePostInput {
   title: string;
   content: string;
   status: PostStatus;
+  coverImage?: string | null | undefined;
+  tags?: string[] | undefined;
 }
 
 function queryString(input: ListPostsInput): string {

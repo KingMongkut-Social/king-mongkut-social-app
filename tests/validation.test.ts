@@ -7,6 +7,7 @@ describe('registerSchema', () => {
       name: 'Ada Lovelace',
       email: 'ada@example.com',
       password: 'StrongPass123',
+      university: 'KMITL',
     });
     expect(result.success).toBe(true);
   });
@@ -16,6 +17,7 @@ describe('registerSchema', () => {
       name: 'Ada',
       email: 'ada@example.com',
       password: 'weakpassword',
+      university: 'KMITL',
     });
     expect(result.success).toBe(false);
   });
@@ -28,6 +30,6 @@ describe('postSchema', () => {
       content: '  World  ',
       status: 'draft',
     });
-    expect(parsed).toEqual({ title: 'Hello', content: 'World', status: 'draft' });
+    expect(parsed).toEqual({ title: 'Hello', content: 'World', status: 'draft', tags: [] });
   });
 });

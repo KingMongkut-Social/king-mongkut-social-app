@@ -18,11 +18,11 @@ export async function myPostsPage(context: RouteContext): Promise<PageView> {
   const section = el('section', { className: 'page-shell' });
   const heading = el('div', { className: 'dashboard-heading' },
     el('div', {},
-      el('p', { className: 'eyebrow', text: 'Dashboard' }),
-      el('h1', { text: 'My posts' }),
-      el('p', { className: 'muted', text: 'Manage both drafts and published posts from one place.' }),
+      el('p', { className: 'eyebrow', text: 'แดชบอร์ด' }),
+      el('h1', { text: 'โพสต์ของฉัน' }),
+      el('p', { className: 'muted', text: 'จัดการแบบร่างและโพสต์ที่เผยแพร่ทั้งหมดของคุณ' }),
     ),
-    el('a', { className: 'button button--primary', text: '+ New post', attrs: { href: '/dashboard/posts/new' } }),
+    el('a', { className: 'button button--primary', text: '+ สร้างโพสต์ใหม่', attrs: { href: '/dashboard/posts/new' } }),
   );
 
   const searchBar = searchForm(search, '/dashboard');
@@ -30,22 +30,22 @@ export async function myPostsPage(context: RouteContext): Promise<PageView> {
 
   if (result.data.items.length === 0) {
     grid.append(el('div', { className: 'empty-state empty-state--compact' },
-      el('h3', { text: search ? 'No matching posts' : 'You have not written anything yet' }),
-      el('p', { className: 'muted', text: search ? 'Try another search.' : 'Create a draft and publish it when you are ready.' }),
-      el('a', { className: 'button button--primary', text: 'Create your first post', attrs: { href: '/dashboard/posts/new' } }),
+      el('h3', { text: search ? 'ไม่พบโพสต์ที่ค้นหา' : 'คุณยังไม่มีโพสต์ที่เขียน' }),
+      el('p', { className: 'muted', text: search ? 'ลองค้นหาด้วยคำอื่น' : 'สร้างแบบร่างและเผยแพร่ผลงานของคุณเมื่อพร้อม' }),
+      el('a', { className: 'button button--primary', text: 'สร้างโพสต์แรกของคุณ', attrs: { href: '/dashboard/posts/new' } }),
     ));
   } else {
     for (const post of result.data.items) {
       const wrapper = el('div', { className: 'dashboard-post' });
       wrapper.append(postCard(post, { mine: true }));
-      const deleteButton = el('button', { className: 'danger-link', text: 'Delete', attrs: { type: 'button' } });
+      const deleteButton = el('button', { className: 'danger-link', text: 'ลบโพสต์', attrs: { type: 'button' } });
       deleteButton.addEventListener('click', async () => {
-        const confirmed = window.confirm(`Delete “${post.title}”? This cannot be undone.`);
+        const confirmed = window.confirm(`ต้องการลบโพสต์ “${post.title}” ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`);
         if (!confirmed) return;
         deleteButton.disabled = true;
         try {
           await postsApi.remove(post._id);
-          toast.success('Post deleted');
+          toast.success('ลบโพสต์เรียบร้อย');
           wrapper.remove();
           if (!grid.querySelector('.dashboard-post')) {
             window.dispatchEvent(new PopStateEvent('popstate'));
@@ -63,5 +63,5 @@ export async function myPostsPage(context: RouteContext): Promise<PageView> {
   section.append(heading, searchBar, grid);
   const pager = pagination(result.data.page, result.data.pages, search, '/dashboard');
   if (pager) section.append(pager);
-  return { title: 'My posts', element: section };
+  return { title: 'โพสต์ของฉัน', element: section };
 }
