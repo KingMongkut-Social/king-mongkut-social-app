@@ -1,187 +1,200 @@
+import { el } from '../../core/ui/dom';
+import { errorMessage } from '../../core/ui/error-message';
+import { toast } from '../../core/ui/toast';
+import type { University } from '../../types/api';
 import {
+  respondFriendRequest,
   searchFriends,
   sendFriendRequest,
-  respondFriendRequest,
   type FriendUser,
-} from './friends-api.js';
+} from './friends-api';
 
-function el(
-  tag: string,
-  props: any = {},
-  ...children: (Node | string | null | undefined)[]
-): HTMLElement {
-  const element = document.createElement(tag);
-  for (const [key, value] of Object.entries(props)) {
-    if (key.startsWith('on') && typeof value === 'function') {
-      element.addEventListener(key.slice(2).toLowerCase(), value as EventListener);
-    } else if (key === 'className') {
-      element.className = String(value);
-    } else if (key === 'disabled') {
-      (element as any).disabled = Boolean(value);
-    } else {
-      element.setAttribute(key, String(value));
-    }
+type UniversityFilter = University | 'All';
+
+function userAvatar(user: FriendUser): HTMLElement {
+  const wrapper = el('span', { className: 'avatar-placeholder' });
+  if (user.avatarUrl) {
+    wrapper.append(el('img', { attrs: { src: user.avatarUrl, alt: '' } }));
+  } else {
+    wrapper.textContent = user.name.charAt(0).toUpperCase() || '?';
   }
-  for (const child of children) {
-    if (child == null) continue;
-    element.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
-  }
-  return element;
+  return wrapper;
 }
 
 export function renderConnectionsPage(): HTMLElement {
   let currentSearch = '';
-  let currentUni = 'All';
-  let debounceTimer: any = null;
+  let currentUniversity: UniversityFilter = 'All';
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   const container = el('div', { className: 'page-shell connections-page' });
-
-  const header = el(
-    'div',
-    { className: 'connections-header' },
-    el('h1', { className: 'page-title' }, 'Connections'),
-    el('p', { className: 'page-subtitle' }, 'Manage your academic network across institutions.'),
+  const header = el('div', { className: 'connections-header' },
+    el('h1', { className: 'page-title', text: 'Connections' }),
+    el('p', { className: 'page-subtitle', text: 'Manage your academic network across institutions.' }),
   );
 
+  const cardsGrid = el('div', { className: 'connections-grid' });
   const searchInput = el('input', {
-    type: 'search',
-    className: 'input-field search-input',
-    placeholder: 'Search students by name...',
-    oninput: (e: Event) => {
-      clearTimeout(debounceTimer);
-      currentSearch = (e.target as HTMLInputElement).value.trim();
-      debounceTimer = setTimeout(() => {
-        void loadUsers();
-      }, 300);
+    className: 'input search-input',
+    attrs: {
+      type: 'search',
+      placeholder: 'Search students by name...',
+      'aria-label': 'Search students',
     },
   });
 
-  const universities = ['All', 'KMITL', 'KMUTT', 'KMUTNB'];
+  searchInput.addEventListener('input', () => {
+    if (debounceTimer !== undefined) clearTimeout(debounceTimer);
+    currentSearch = searchInput.value.trim();
+    debounceTimer = setTimeout(() => {
+      void loadUsers();
+    }, 300);
+  });
+
+  const universities: UniversityFilter[] = ['All', 'KMITL', 'KMUTT', 'KMUTNB'];
   const filterChipsContainer = el('div', { className: 'filter-chips-group' });
 
-universities.forEach((uni) => {
-  const chip = el(
-    'button',
-    {
-      type: 'button',
-      className: `chip-button ${currentUni === uni ? 'chip-button--active' : ''}`,
-      onclick: () => {
-        currentUni = uni;
-        const buttons = filterChipsContainer.querySelectorAll('.chip-button');
-        buttons.forEach((c: any) => {
-          c.classList.toggle('chip-button--active', c.textContent === uni);
-        });
-        void loadUsers();
-      },
-    },
-    uni,
-  );
-  filterChipsContainer.appendChild(chip);
-});
+  const refreshChipState = (): void => {
+    for (const button of filterChipsContainer.querySelectorAll<HTMLButtonElement>('.chip-button')) {
+      button.classList.toggle('chip-button--active', button.dataset.university === currentUniversity);
+    }
+  };
 
-  const cardsGrid = el('div', { className: 'connections-grid' });
+  for (const university of universities) {
+    const chip = el('button', {
+      className: 'chip-button',
+      text: university,
+      attrs: { type: 'button', 'data-university': university },
+    });
+    chip.addEventListener('click', () => {
+      currentUniversity = university;
+      refreshChipState();
+      void loadUsers();
+    });
+    filterChipsContainer.append(chip);
+  }
+  refreshChipState();
 
   function renderActionButton(user: FriendUser): HTMLElement {
     if (user.relationshipStatus === 'friends') {
-      return el('button', { className: 'button button--outline', disabled: true }, '✓ Friends');
+      const button = el('button', {
+        className: 'button button--outline',
+        text: '✓ Friends',
+        attrs: { type: 'button' },
+      });
+      button.disabled = true;
+      return button;
     }
 
     if (user.relationshipStatus === 'pending_sent') {
-      return el('button', { className: 'button button--subtle', disabled: true }, 'Requested');
+      const button = el('button', {
+        className: 'button button--subtle',
+        text: 'Requested',
+        attrs: { type: 'button' },
+      });
+      button.disabled = true;
+      return button;
     }
 
-    if (user.relationshipStatus === 'pending_received' && user.requestId) {
-      const btnGroup = el('div', { className: 'action-btn-group' });
-
-      const acceptBtn = el(
-        'button',
-        {
-          className: 'button button--primary',
-          onclick: async () => {
-            acceptBtn.textContent = 'Accepting...';
-            (acceptBtn as HTMLButtonElement).disabled = true;
-            await respondFriendRequest(user.requestId!, 'accept');
-            await loadUsers();
-          },
-        },
-        '✓ Accept Request',
-      );
-
-      const rejectBtn = el(
-        'button',
-        {
-          className: 'button button--outline reject-btn',
-          onclick: async () => {
-            (rejectBtn as HTMLButtonElement).disabled = true;
-            await respondFriendRequest(user.requestId!, 'reject');
-            await loadUsers();
-          },
-        },
-        '✕',
-      );
-
-      btnGroup.appendChild(acceptBtn);
-      btnGroup.appendChild(rejectBtn);
-      return btnGroup;
-    }
-
-    const addBtn = el(
-      'button',
-      {
+    const requestId = user.requestId;
+    if (user.relationshipStatus === 'pending_received' && requestId) {
+      const group = el('div', { className: 'action-btn-group' });
+      const accept = el('button', {
         className: 'button button--primary',
-        onclick: async () => {
-          addBtn.textContent = 'Adding...';
-          (addBtn as HTMLButtonElement).disabled = true;
-          await sendFriendRequest(user.id);
+        text: '✓ Accept Request',
+        attrs: { type: 'button' },
+      });
+      const reject = el('button', {
+        className: 'button button--outline reject-btn',
+        text: '✕',
+        attrs: { type: 'button', 'aria-label': 'Reject friend request' },
+      });
+
+      accept.addEventListener('click', async () => {
+        accept.disabled = true;
+        reject.disabled = true;
+        accept.textContent = 'Accepting…';
+        try {
+          await respondFriendRequest(requestId, 'accept');
           await loadUsers();
-        },
-      },
-      '+ Add Friend',
-    );
-    return addBtn;
+        } catch (cause) {
+          toast.error(errorMessage(cause));
+          accept.disabled = false;
+          reject.disabled = false;
+          accept.textContent = '✓ Accept Request';
+        }
+      });
+
+      reject.addEventListener('click', async () => {
+        accept.disabled = true;
+        reject.disabled = true;
+        try {
+          await respondFriendRequest(requestId, 'reject');
+          await loadUsers();
+        } catch (cause) {
+          toast.error(errorMessage(cause));
+          accept.disabled = false;
+          reject.disabled = false;
+        }
+      });
+
+      group.append(accept, reject);
+      return group;
+    }
+
+    const add = el('button', {
+      className: 'button button--primary',
+      text: '+ Add Friend',
+      attrs: { type: 'button' },
+    });
+    add.addEventListener('click', async () => {
+      add.disabled = true;
+      add.textContent = 'Adding…';
+      try {
+        await sendFriendRequest(user.id);
+        await loadUsers();
+      } catch (cause) {
+        toast.error(errorMessage(cause));
+        add.disabled = false;
+        add.textContent = '+ Add Friend';
+      }
+    });
+    return add;
   }
 
   function renderUserCard(user: FriendUser): HTMLElement {
-    const initial = user.name ? user.name.charAt(0).toUpperCase() : '?';
-
-    return el(
-      'div',
-      { className: 'card connection-card' },
-      el(
-        'div',
-        { className: 'connection-card__header' },
-        el('div', { className: 'avatar-placeholder' }, initial),
-        el(
-          'div',
-          { className: 'connection-card__meta' },
-          el('h3', { className: 'connection-name' }, user.name),
-          el('span', { className: `badge-uni badge-uni--${user.university.toLowerCase()}` }, user.university),
+    return el('article', { className: 'card connection-card' },
+      el('div', { className: 'connection-card__header' },
+        userAvatar(user),
+        el('div', { className: 'connection-card__meta' },
+          el('h3', { className: 'connection-name', text: user.name }),
+          el('span', {
+            className: `badge-uni badge-uni--${user.university.toLowerCase()}`,
+            text: user.university,
+          }),
         ),
       ),
       el('div', { className: 'connection-card__footer' }, renderActionButton(user)),
     );
   }
 
-  async function loadUsers() {
-    cardsGrid.innerHTML = 'Searching...';
+  async function loadUsers(): Promise<void> {
+    cardsGrid.replaceChildren(el('p', { className: 'status-msg', text: 'Searching…' }));
     try {
-    const users = await searchFriends(currentSearch, currentUni);
-    cardsGrid.innerHTML = '';
-        if (!users || users.length === 0) {
-            cardsGrid.innerHTML = 'No students found.';
-            return;
-        }
-        users.forEach((u) => cardsGrid.appendChild(renderUserCard(u)));
-        } catch (err: any) {
-        cardsGrid.innerHTML = `Error: ${err?.message ?? 'Failed to load'}`;
-        }
+      const users = await searchFriends(currentSearch, currentUniversity);
+      if (users.length === 0) {
+        cardsGrid.replaceChildren(el('p', { className: 'status-msg', text: 'No students found.' }));
+        return;
+      }
+      cardsGrid.replaceChildren(...users.map(renderUserCard));
+    } catch (cause) {
+      cardsGrid.replaceChildren(el('p', {
+        className: 'status-msg',
+        text: `Could not load connections: ${errorMessage(cause)}`,
+      }));
     }
-    container.appendChild(header);
-    container.appendChild(searchInput);
-    container.appendChild(filterChipsContainer);
-    container.appendChild(cardsGrid);
+  }
 
-    void loadUsers();
-
-    return container;
+  container.append(header, searchInput, filterChipsContainer, cardsGrid);
+  void loadUsers();
+  return container;
 }

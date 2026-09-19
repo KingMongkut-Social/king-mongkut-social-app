@@ -1,35 +1,49 @@
 import { apiClient } from '../../core/api/api-client';
+import type { ApiSuccess, University } from '../../types/api';
 
 export interface FriendUser {
   id: string;
   name: string;
-  university: 'KMITL' | 'KMUTNB' | 'KMUTT';
+  university: University;
+  avatarUrl?: string | null;
   relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
   requestId: string | null;
 }
 
-export async function searchFriends(q?: string, university?: string) {
+interface FriendshipResult {
+  _id: string;
+  requester: string;
+  recipient: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function searchFriends(q?: string, university?: University | 'All'): Promise<FriendUser[]> {
   const query = new URLSearchParams();
   if (q) query.set('q', q);
   if (university && university !== 'All') query.set('university', university);
 
-  const qs = query.toString() ? `?${query.toString()}` : '';
-  const res: any = await apiClient.request(`/friends/search${qs}`);
-  return (res?.data ?? res) as FriendUser[];
+  const suffix = query.size ? `?${query.toString()}` : '';
+  const response = await apiClient.request<ApiSuccess<FriendUser[]>>(`/friends/search${suffix}`);
+  return response.data;
 }
 
-export async function sendFriendRequest(targetUserId: string) {
-  const res: any = await apiClient.request('/friends/request', {
+export async function sendFriendRequest(targetUserId: string): Promise<FriendshipResult> {
+  const response = await apiClient.request<ApiSuccess<FriendshipResult>>('/friends/request', {
     method: 'POST',
     body: { targetUserId },
   });
-  return res?.data ?? res;
+  return response.data;
 }
 
-export async function respondFriendRequest(requestId: string, action: 'accept' | 'reject') {
-  const res: any = await apiClient.request('/friends/respond', {
+export async function respondFriendRequest(
+  requestId: string,
+  action: 'accept' | 'reject',
+): Promise<FriendshipResult> {
+  const response = await apiClient.request<ApiSuccess<FriendshipResult>>('/friends/respond', {
     method: 'POST',
     body: { requestId, action },
   });
-  return res?.data ?? res;
+  return response.data;
 }

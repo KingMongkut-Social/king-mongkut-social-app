@@ -126,7 +126,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   const search = (context.query.get('search') ?? '').trim().slice(0, 100);
   const rawUniversity = context.query.get('university');
   const university = rawUniversity === 'KMITL' || rawUniversity === 'KMUTT' || rawUniversity === 'KMUTNB'
-    ? rawUniversity as University
+    ? rawUniversity
     : undefined;
 
   const result = await postsApi.listPublished({

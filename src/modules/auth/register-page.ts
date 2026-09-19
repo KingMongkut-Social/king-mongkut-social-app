@@ -61,7 +61,7 @@ export function registerPage(): PageView {
       name: name.value,
       email: email.value.trim(),
       password: password.value,
-      university: (university as HTMLSelectElement).value, // ดึงค่ามหาวิทยาลัยส่งเข้า Zod
+      university: university.value,
     });
     if (!result.success) {
       showZodErrors(form, result.error);
