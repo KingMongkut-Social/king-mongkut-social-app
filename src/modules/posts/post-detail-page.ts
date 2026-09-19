@@ -185,7 +185,9 @@ export async function postDetailPage(context: RouteContext): Promise<PageView> {
     el('h2', { text: `Comments (${commentsResult.data.items.length})` }),
   );
 
-  const reload = (): void => window.dispatchEvent(new PopStateEvent('popstate'));
+  const reload = (): void => {
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
   const form = el('form', { className: 'comment-composer' });
   const textarea = el('textarea', {
     className: 'input',

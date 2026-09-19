@@ -20,11 +20,11 @@ export interface ListPostsInput {
 }
 
 export interface SavePostInput {
-  title?: string;
+  title?: string | undefined;
   content: string;
   status: PostStatus;
-  coverImage?: string | null;
-  tags?: string[];
+  coverImage?: string | null | undefined;
+  tags?: string[] | undefined;
 }
 
 function queryString(input: ListPostsInput): string {
