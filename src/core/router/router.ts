@@ -33,7 +33,7 @@ function compileRoute(route: RouteDefinition): CompiledRoute {
         keys.push(segment.slice(1));
         return '([^/]+)';
       }
-      return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return segment.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
     })
     .join('/');
 
@@ -84,12 +84,12 @@ export class Router {
     const match = this.match(url.pathname);
 
     if (!match) {
-      this.commit(currentNavigation, {
-        title: 'Not found',
-        element: this.notFound(),
-      });
+      document.body.classList.remove('is-auth-page');
+      this.commit(currentNavigation, { title: 'Not found', element: this.notFound() });
       return;
     }
+
+    document.body.classList.toggle('is-auth-page', match.route.auth === 'guest');
 
     const auth = authStore.snapshot;
     if (match.route.auth === 'required' && auth.status !== 'authenticated') {
@@ -98,7 +98,7 @@ export class Router {
       return;
     }
     if (match.route.auth === 'guest' && auth.status === 'authenticated') {
-      this.navigate('/dashboard', true);
+      this.navigate('/', true);
       return;
     }
 
@@ -112,16 +112,13 @@ export class Router {
       });
       this.commit(currentNavigation, page);
     } catch (error) {
-      this.commit(currentNavigation, {
-        title: 'Error',
-        element: this.errorView(error),
-      });
+      this.commit(currentNavigation, { title: 'Error', element: this.errorView(error) });
     }
   }
 
   private commit(navigationId: number, page: PageView): void {
     if (navigationId !== this.navigationId) return;
-    document.title = `${page.title} · King Mongkut Social`;
+    document.title = `${page.title} · 3K book`;
     this.outlet.replaceChildren(page.element);
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
@@ -147,26 +144,22 @@ export class Router {
   }
 
   private notFound(): HTMLElement {
-    const section = el('section', { className: 'empty-state page-shell' });
-    section.append(
+    return el('section', { className: 'empty-state page-shell' },
       el('p', { className: 'eyebrow', text: '404' }),
       el('h1', { text: 'Page not found' }),
       el('p', { text: 'The page you requested does not exist or has moved.' }),
-      el('a', { className: 'button button--primary', text: 'Back to posts', attrs: { href: '/' } }),
+      el('a', { className: 'button button--primary', text: 'Back to feed', attrs: { href: '/' } }),
     );
-    return section;
   }
 
   private errorView(error: unknown): HTMLElement {
-    const section = el('section', { className: 'empty-state page-shell' });
-    section.append(
+    const retry = el('button', { className: 'button button--primary', text: 'Try again', attrs: { type: 'button' } });
+    retry.addEventListener('click', () => this.refresh());
+    return el('section', { className: 'empty-state page-shell' },
       el('p', { className: 'eyebrow', text: 'Request failed' }),
       el('h1', { text: 'We could not load this page' }),
       el('p', { text: errorMessage(error) }),
+      retry,
     );
-    const retry = el('button', { className: 'button button--primary', text: 'Try again', attrs: { type: 'button' } });
-    retry.addEventListener('click', () => this.refresh());
-    section.append(retry);
-    return section;
   }
 }

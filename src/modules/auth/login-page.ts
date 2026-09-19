@@ -1,72 +1,91 @@
 import { authApi } from '../../core/auth/auth-api';
+import { requestGoogleCode } from '../../core/auth/google-auth';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
-import { toast } from '../../core/ui/toast';
-import { loginSchema } from '../../validation/schemas';
-import { clearFieldErrors, field, showZodErrors } from '../shared/form';
+import type { University } from '../../types/api';
 
 function safeReturnTo(value: string | null): string {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard';
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/';
   return value;
 }
 
+const institutions: Array<{ university: University; label: string; domain: string; className: string }> = [
+  { university: 'KMITL', label: 'Sign in with KMITL Account', domain: '@kmitl.ac.th', className: 'institution-button--kmitl' },
+  { university: 'KMUTT', label: 'Sign in with KMUTT Account', domain: '@mail.kmutt.ac.th', className: 'institution-button--kmutt' },
+  { university: 'KMUTNB', label: 'Sign in with KMUTNB Account', domain: '@email.kmutnb.ac.th', className: 'institution-button--kmutnb' },
+];
+
 export function loginPage(context: RouteContext): PageView {
-  const section = el('section', { className: 'auth-page page-shell' });
-  const panel = el('div', { className: 'auth-card' });
-  const heading = el('div', { className: 'auth-card__heading' },
-    el('p', { className: 'eyebrow', text: 'Welcome back' }),
-    el('h1', { text: 'Sign in to your account' }),
-    el('p', { className: 'muted', text: 'Your access token stays in memory. The refresh token remains in an HttpOnly cookie.' }),
+  const page = el('section', { className: 'login-page' });
+  const intro = el('div', { className: 'login-brand' },
+    el('div', { className: 'login-brand__mark', text: '✣' }),
+    el('h1', { text: '3K book' }),
+    el('p', {
+      text: 'The social network for KMITL, KMUTT, and KMUTNB students. Connect, collaborate, and build the future together.',
+    }),
   );
 
-  const form = el('form', { className: 'form', attrs: { novalidate: 'true' } });
-  const email = el('input', {
-    className: 'input',
-    attrs: { id: 'email', name: 'email', type: 'email', autocomplete: 'email', required: 'true' },
-  });
-  const password = el('input', {
-    className: 'input',
-    attrs: { id: 'password', name: 'password', type: 'password', autocomplete: 'current-password', required: 'true' },
-  });
-  const submit = el('button', { className: 'button button--primary button--full', text: 'Sign in', attrs: { type: 'submit' } });
-  const formError = el('p', { className: 'form-error', attrs: { role: 'alert' } });
-  form.append(field('email', 'Email', email), field('password', 'Password', password), formError, submit);
+  const card = el('div', { className: 'login-card' },
+    el('h2', { text: 'Choose your institution' }),
+    el('p', { text: 'Sign in securely with your university Google account.' }),
+  );
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    clearFieldErrors(form);
-    formError.textContent = '';
+  const error = el('p', { className: 'form-error login-error', attrs: { role: 'alert' } });
+  const buttons = el('div', { className: 'institution-buttons' });
 
-    const result = loginSchema.safeParse({ email: email.value.trim(), password: password.value });
-    if (!result.success) {
-      showZodErrors(form, result.error);
-      return;
-    }
+  for (const institution of institutions) {
+    const button = el('button', {
+      className: `institution-button ${institution.className}`,
+      attrs: { type: 'button', title: `Only ${institution.domain} accounts are allowed` },
+    },
+      el('span', { text: institution.label }),
+      el('span', { className: 'institution-button__arrow', text: '→' }),
+    );
 
-    submit.disabled = true;
-    submit.textContent = 'Signing in…';
-    try {
-      await authApi.login(result.data);
-      toast.success('Signed in successfully');
-      const returnTo = safeReturnTo(context.query.get('returnTo'));
-      window.history.pushState(null, '', returnTo);
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    } catch (error) {
-      formError.textContent = errorMessage(error);
-      submit.disabled = false;
-      submit.textContent = 'Sign in';
-    }
-  });
+    button.addEventListener('click', async () => {
+      error.textContent = '';
+      const allButtons = buttons.querySelectorAll<HTMLButtonElement>('button');
+      allButtons.forEach((item) => { item.disabled = true; });
+      const original = button.firstElementChild?.textContent ?? institution.label;
+      if (button.firstElementChild) button.firstElementChild.textContent = 'Opening Google…';
 
-  panel.append(
-    heading,
-    form,
-    el('p', { className: 'auth-card__footer' },
-      document.createTextNode('New here? '),
-      el('a', { className: 'text-link', text: 'Create an account', attrs: { href: '/register' } }),
+      try {
+        const code = await requestGoogleCode(institution.university);
+        if (button.firstElementChild) button.firstElementChild.textContent = 'Signing in…';
+        await authApi.googleLogin(code, institution.university);
+        const returnTo = safeReturnTo(context.query.get('returnTo'));
+        window.history.pushState(null, '', returnTo);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch (cause) {
+        error.textContent = errorMessage(cause);
+        allButtons.forEach((item) => { item.disabled = false; });
+        if (button.firstElementChild) button.firstElementChild.textContent = original;
+      }
+    });
+
+    buttons.append(button);
+  }
+
+  card.append(
+    buttons,
+    error,
+    el('div', { className: 'login-card__secure' },
+      el('span', { text: '▣' }),
+      el('span', { text: 'Secure Google SSO Authentication' }),
     ),
+    el('p', { className: 'login-card__domains', text: 'Allowed: @kmitl.ac.th · @mail.kmutt.ac.th · @email.kmutnb.ac.th' }),
   );
-  section.append(panel);
-  return { title: 'Login', element: section };
+
+  const legal = el('div', { className: 'login-legal' },
+    el('span', { text: 'Privacy Policy' }),
+    el('span', { text: '•' }),
+    el('span', { text: 'Terms of Service' }),
+    el('span', { text: '•' }),
+    el('span', { text: 'Contact Support' }),
+    el('small', { text: '© 2026 3K book · Tri-Institute Engineering Exchange.' }),
+  );
+
+  page.append(intro, card, legal);
+  return { title: 'Sign in', element: page };
 }

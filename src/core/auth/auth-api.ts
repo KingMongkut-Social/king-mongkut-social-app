@@ -1,4 +1,4 @@
-import type { ApiSuccess, AuthPayload } from '../../types/api';
+import type { ApiSuccess, AuthPayload, University } from '../../types/api';
 import { apiClient } from '../api/api-client';
 import { authStore } from './auth-store';
 
@@ -9,6 +9,7 @@ export interface LoginInput {
 
 export interface RegisterInput extends LoginInput {
   name: string;
+  university: University;
 }
 
 export const authApi = {
@@ -26,6 +27,17 @@ export const authApi = {
     const result = await apiClient.request<ApiSuccess<AuthPayload>>('/auth/register', {
       method: 'POST',
       body: input,
+      auth: false,
+      retryOnUnauthorized: false,
+    });
+    authStore.setAuthenticated(result.data.user, result.data.accessToken);
+  },
+
+  async googleLogin(code: string, university: University): Promise<void> {
+    const result = await apiClient.request<ApiSuccess<AuthPayload>>('/auth/google', {
+      method: 'POST',
+      body: { code, university },
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
       auth: false,
       retryOnUnauthorized: false,
     });
