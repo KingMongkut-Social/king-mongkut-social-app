@@ -20,7 +20,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   const header = el('header', { className: 'site-header' });
   const brand = el('a', { className: 'brand', attrs: { href: '/' } },
     el('span', { className: 'brand__mark', text: '✣' }),
-    el('span', { className: 'brand__text', text: '3K book' }),
+    el('span', { className: 'brand__text', text: 'KingMongkut Social' }),
   );
 
   const search = el('form', { className: 'top-search', attrs: { role: 'search' } });

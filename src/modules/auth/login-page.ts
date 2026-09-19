@@ -20,7 +20,7 @@ export function loginPage(context: RouteContext): PageView {
   const page = el('section', { className: 'login-page' });
   const intro = el('div', { className: 'login-brand' },
     el('div', { className: 'login-brand__mark', text: '✣' }),
-    el('h1', { text: '3K book' }),
+    el('h1', { text: 'KingMongkut Social' }),
     el('p', {
       text: 'The social network for KMITL, KMUTT, and KMUTNB students. Connect, collaborate, and build the future together.',
     }),
@@ -83,7 +83,7 @@ export function loginPage(context: RouteContext): PageView {
     el('span', { text: 'Terms of Service' }),
     el('span', { text: '•' }),
     el('span', { text: 'Contact Support' }),
-    el('small', { text: '© 2026 3K book · Tri-Institute Engineering Exchange.' }),
+    el('small', { text: '© 2026 KingMongkut Social · Tri-Institute Engineering Exchange.' }),
   );
 
   page.append(intro, card, legal);

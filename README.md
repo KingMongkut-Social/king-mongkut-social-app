@@ -1,6 +1,6 @@
-# King Mongkut Social Frontend
+# KingMongkut Social Frontend
 
-Production-oriented Vite + Vanilla TypeScript SPA for the King Mongkut Social backend.
+Production-oriented Vite + Vanilla TypeScript SPA for the KingMongkut Social backend.
 
 ## Stack
 

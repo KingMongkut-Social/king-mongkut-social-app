@@ -118,7 +118,7 @@ export class Router {
 
   private commit(navigationId: number, page: PageView): void {
     if (navigationId !== this.navigationId) return;
-    document.title = `${page.title} · 3K book`;
+    document.title = `${page.title} · KingMongkut Social`;
     this.outlet.replaceChildren(page.element);
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
