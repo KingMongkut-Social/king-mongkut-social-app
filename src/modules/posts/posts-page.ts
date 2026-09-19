@@ -3,7 +3,6 @@ import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
-import type { University } from '../../types/api';
 import { pagination, socialPostCard } from './post-components';
 import { postsApi } from './posts-api';
 
