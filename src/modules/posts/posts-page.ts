@@ -102,7 +102,7 @@ function rightRail(): HTMLElement {
       el('div', { className: 'rail-profile' },
         el('span', { className: `uni-dot uni-dot--${user?.university.toLowerCase() ?? 'kmitl'}` }),
         el('div', {},
-          el('strong', { text: user?.university ?? '3K' }),
+          el('strong', { text: user?.university ?? 'KingMongkut' }),
           el('span', { text: 'Connected to the KingMongkut Social community' }),
         ),
       ),
