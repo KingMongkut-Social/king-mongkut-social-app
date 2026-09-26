@@ -24,17 +24,6 @@ class AuthStore {
   }
 
   setAuthenticated(user: User, accessToken: string): void {
-    try {
-      const stored = localStorage.getItem(`mock_profile_${user._id}`);
-      if (stored) {
-        const extra = JSON.parse(stored) as { faculty?: string; department?: string };
-        const u = user as unknown as Record<string, unknown>;
-        if (extra.faculty && !u.faculty) u.faculty = extra.faculty;
-        if (extra.department && !u.department) u.department = extra.department;
-      }
-    } catch {
-      // ignore
-    }
     this.state = { status: 'authenticated', user, accessToken };
     this.emit();
   }

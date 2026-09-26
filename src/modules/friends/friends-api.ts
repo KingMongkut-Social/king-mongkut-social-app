@@ -3,6 +3,8 @@ import { apiClient } from '../../core/api/api-client';
 export interface FriendUser {
   id: string;
   name: string;
+  faculty?: string;
+  department?: string;
   university: 'KMITL' | 'KMUTNB' | 'KMUTT';
   relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends';
   requestId: string | null;

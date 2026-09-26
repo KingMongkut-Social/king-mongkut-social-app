@@ -21,7 +21,7 @@ The frontend follows the backend authentication contract:
 - A protected request that receives `401` triggers one shared refresh request. Concurrent `401`s reuse the same in-flight refresh to avoid token-rotation races.
 - After successful refresh, the original request retries once.
 - User-authored post content is inserted into the DOM with `textContent`, not injected as HTML.
-- Protected dashboard routes require authenticated state.
+- Protected member routes require an authenticated user with a complete profile. Faculty and department are persisted by the API.
 - Login `returnTo` values only accept same-origin relative paths to avoid open redirects.
 
 ## Backend compatibility
@@ -50,7 +50,7 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-Start the backend separately on `http://localhost:4000`.
+Start the backend separately on `http://localhost:4000` and configure its Google OAuth client using [the setup guide](../king-mongkut-social-api/docs/google-auth.md). Client secrets stay exclusively on the backend. Only `@kmitl.ac.th`, `@mail.kmutt.ac.th` and `@email.kmutnb.ac.th` accounts are accepted.
 
 ## Environment
 
@@ -78,8 +78,9 @@ npm run check      # typecheck + lint + tests
 | --- | --- | --- |
 | `/` | Public | Published posts, search, pagination |
 | `/posts/:id` | Public / optional auth | Read a published post; owner/admin can also read drafts |
-| `/login` | Guest | Login |
-| `/register` | Guest | Register |
+| `/login`, `/register` | Guest | Google sign-in / automatic registration |
+| `/auth/callback` | Public | Route the restored session after Google |
+| `/complete-profile` | Authenticated | Save faculty and department before member access |
 | `/dashboard` | Authenticated | Current user's drafts + published posts |
 | `/dashboard/posts/new` | Authenticated | Create post |
 | `/dashboard/posts/:id/edit` | Authenticated owner/admin | Edit post |
@@ -134,8 +135,9 @@ src/
 
 This frontend was built against the backend contract bundled with the project:
 
-- `POST /auth/register`
-- `POST /auth/login`
+- `GET /auth/google` (browser navigation)
+- `GET /auth/google/callback` (Google redirect)
+- `PATCH /auth/profile`
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /auth/me`

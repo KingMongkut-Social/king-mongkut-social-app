@@ -6,7 +6,8 @@ export interface User {
   name: string;
   email: string;
   role: Role;
-  university?: string | undefined;
+  university: 'KMITL' | 'KMUTNB' | 'KMUTT';
+  needsProfileCompletion: boolean;
   faculty?: string | undefined;
   department?: string | undefined;
   createdAt: string;
@@ -18,6 +19,8 @@ export interface PostAuthor {
   name: string;
   email?: string | undefined;
   university?: string | undefined;
+  faculty?: string | undefined;
+  department?: string | undefined;
 }
 
 export interface Post {

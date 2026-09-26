@@ -1,3 +1,5 @@
+import { afterLoginPath } from '../auth/auth-navigation';
+import { safeReturnTo } from '../auth/return-to';
 import { authStore } from '../auth/auth-store';
 import { el } from '../ui/dom';
 import { errorMessage } from '../ui/error-message';
@@ -11,12 +13,14 @@ export interface RouteContext {
 export interface PageView {
   element: HTMLElement;
   title: string;
+  redirectTo?: string;
 }
 
 export interface RouteDefinition {
   path: string;
   handler: (context: RouteContext) => PageView | Promise<PageView>;
   auth?: 'required' | 'guest';
+  incompleteProfileAllowed?: boolean;
 }
 
 interface CompiledRoute extends RouteDefinition {
@@ -93,12 +97,18 @@ export class Router {
 
     const auth = authStore.snapshot;
     if (match.route.auth === 'required' && auth.status !== 'authenticated') {
-      const returnTo = encodeURIComponent(`${url.pathname}${url.search}`);
+      const returnTo = encodeURIComponent(url.pathname === '/complete-profile'
+        ? safeReturnTo(url.searchParams.get('returnTo')) : `${url.pathname}${url.search}`);
       this.navigate(`/login?returnTo=${returnTo}`, true);
       return;
     }
     if (match.route.auth === 'guest' && auth.status === 'authenticated') {
-      this.navigate('/dashboard', true);
+      this.navigate(afterLoginPath(url.searchParams.get('returnTo')), true);
+      return;
+    }
+
+    if (match.route.auth === 'required' && auth.user?.needsProfileCompletion && !match.route.incompleteProfileAllowed) {
+      this.navigate(afterLoginPath(url.pathname + url.search), true);
       return;
     }
 
@@ -110,6 +120,8 @@ export class Router {
         query: url.searchParams,
         url,
       });
+      if (currentNavigation !== this.navigationId) return;
+      if (page.redirectTo) { this.navigate(page.redirectTo, true); return; }
       this.commit(currentNavigation, page);
     } catch (error) {
       this.commit(currentNavigation, {

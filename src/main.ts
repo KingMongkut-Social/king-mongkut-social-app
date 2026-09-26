@@ -2,6 +2,8 @@ import './styles.css';
 import { bindAuthNavigation, mountLayout } from './app/layout';
 import { apiClient } from './core/api/api-client';
 import { Router, type RouteDefinition } from './core/router/router';
+import { callbackPage } from './modules/auth/callback-page';
+import { completeProfilePage } from './modules/auth/complete-profile-page';
 import { loginPage } from './modules/auth/login-page';
 import { registerPage } from './modules/auth/register-page';
 import { myPostsPage } from './modules/posts/my-posts-page';
@@ -19,6 +21,8 @@ const routes: RouteDefinition[] = [
   { path: '/', handler: postsPage },
   { path: '/login', handler: loginPage, auth: 'guest' },
   { path: '/register', handler: registerPage, auth: 'guest' },
+  { path: '/auth/callback', handler: callbackPage },
+  { path: '/complete-profile', handler: completeProfilePage, auth: 'required', incompleteProfileAllowed: true },
   { path: '/posts/:id', handler: postDetailPage },
   { path: '/dashboard', handler: myPostsPage, auth: 'required' },
   { path: '/dashboard/posts/new', handler: postEditorPage, auth: 'required' },

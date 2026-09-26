@@ -233,7 +233,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   const updatePageLayoutState = (): void => {
     const path = window.location.pathname;
-    const isAuth = path === '/login' || path === '/register';
+    const isAuth = ['/login', '/register', '/complete-profile', '/auth/callback'].includes(path);
     document.body.classList.toggle('is-auth-page', isAuth);
   };
 

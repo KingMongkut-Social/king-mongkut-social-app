@@ -1,3 +1,4 @@
+import { requireMember } from '../../core/auth/auth-navigation';
 import { authStore } from '../../core/auth/auth-store';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
@@ -233,12 +234,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       toast.error('กรุณากรอกข้อความหรือเลือกรูปภาพก่อนโพสต์');
       return;
     }
-    if (authStore.snapshot.status !== 'authenticated') {
-      toast.info('กรุณาเข้าสู่ระบบก่อนเผยแพร่โพสต์');
-      window.history.pushState(null, '', '/login');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-      return;
-    }
+    if (!requireMember()) return;
     try {
       const postTitle = text ? text.slice(0, 50) : 'รูปภาพ';
       const postContent = text || '[รูปภาพ]';
@@ -249,20 +245,6 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
         tags: [authStore.snapshot.user?.university || 'KMITL'],
       });
       const newPostId = result.data?.post?._id;
-      const currentUser = authStore.snapshot.user;
-      if (newPostId) {
-        try {
-          const meta = {
-            authorName: currentUser?.name,
-            authorInitial: currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'ส',
-            department: currentUser?.department || 'ภาควิชาวิศวกรรมคอมพิวเตอร์',
-            faculty: currentUser?.faculty || 'คณะวิศวกรรมศาสตร์',
-          };
-          localStorage.setItem(`post_meta_${newPostId}`, JSON.stringify(meta));
-        } catch {
-          // ignore
-        }
-      }
       if (newPostId && currentImages.length > 0) {
         try {
           const localPostImages = JSON.parse(localStorage.getItem('local_post_images') || '{}') as Record<string, string[]>;

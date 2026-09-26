@@ -1,3 +1,4 @@
+import { requireMember } from '../../core/auth/auth-navigation';
 import { authStore } from '../../core/auth/auth-store';
 import { notificationStore } from '../../core/notifications/notification-store';
 import { el } from '../../core/ui/dom';
@@ -28,18 +29,10 @@ export function postCard(post: Post, options: { mine?: boolean; isSample?: boole
   const authorData = post.user || post.author;
   const authorDisplayName = authorName(authorData);
   const authorObj = typeof authorData === 'object' && authorData ? (authorData as unknown as Record<string, unknown>) : null;
-  const authorId = typeof authorObj?._id === 'string' ? authorObj._id : '';
-
+  const authorId = typeof authorData === 'string' ? authorData
+    : typeof authorObj?._id === 'string' ? authorObj._id : '';
   const currentUser = authStore.snapshot.user;
-  const isMine = Boolean(
-    options.mine ||
-    (currentUser && (
-      (authorId && currentUser._id === authorId) ||
-      authorDisplayName === currentUser.name ||
-      authorDisplayName === 'คุณ' ||
-      (currentUser.name && authorDisplayName.toLowerCase() === currentUser.name.toLowerCase())
-    ))
-  );
+  const isMine = Boolean(options.mine || (currentUser && currentUser._id === authorId));
 
   let finalAuthorName = authorDisplayName;
   let avatarLetter = 'ส';
@@ -51,56 +44,18 @@ export function postCard(post: Post, options: { mine?: boolean; isSample?: boole
     avatarLetter = authorDisplayName.charAt(0).toUpperCase();
   }
 
-  // Extra Author Info (Faculty, Department)
-  let authorDept = '';
-  let authorFaculty = '';
-
-  // 1. Check local post meta
-  try {
-    const postMetaRaw = localStorage.getItem(`post_meta_${post._id}`);
-    if (postMetaRaw) {
-      const postMeta = JSON.parse(postMetaRaw) as { department?: string; faculty?: string; authorInitial?: string; authorName?: string };
-      if (postMeta.department) authorDept = postMeta.department;
-      if (postMeta.faculty) authorFaculty = postMeta.faculty;
-      if (postMeta.authorInitial) avatarLetter = postMeta.authorInitial;
-      if (postMeta.authorName) finalAuthorName = postMeta.authorName;
-    }
-  } catch {
-    // ignore
-  }
-
-  // 2. Check author mock profile
-  if (authorId && (!authorDept || !authorFaculty)) {
-    try {
-      const stored = localStorage.getItem(`mock_profile_${authorId}`);
-      if (stored) {
-        const extra = JSON.parse(stored) as { department?: string; faculty?: string };
-        if (extra.department && !authorDept) authorDept = extra.department;
-        if (extra.faculty && !authorFaculty) authorFaculty = extra.faculty;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // 3. Check current user session
+  // Profile fields come from the API, including populated authors on public posts.
+  let authorDept = typeof authorObj?.department === 'string' ? authorObj.department : '';
+  let authorFaculty = typeof authorObj?.faculty === 'string' ? authorObj.faculty : '';
   if (isMine && currentUser) {
-    if (!authorDept && currentUser.department) authorDept = currentUser.department;
-    if (!authorFaculty && currentUser.faculty) authorFaculty = currentUser.faculty;
+    authorDept = currentUser.department ?? authorDept;
+    authorFaculty = currentUser.faculty ?? authorFaculty;
   }
-
-  // 4. Check authorData direct fields
-  if (!authorDept && typeof authorObj?.department === 'string') authorDept = authorObj.department;
-  if (!authorFaculty && typeof authorObj?.faculty === 'string') authorFaculty = authorObj.faculty;
-
-  // 5. Default fallback if sample Sarah Jenkins or general post
-  if (options.isSample || finalAuthorName.includes('Sarah')) {
-    if (!authorDept) authorDept = 'ภาควิชาวิศวกรรมคอมพิวเตอร์';
-    if (!authorFaculty) authorFaculty = 'คณะวิศวกรรมศาสตร์';
-  } else if (!authorDept) {
-    authorDept = 'ภาควิชาวิศวกรรมคอมพิวเตอร์';
-    if (!authorFaculty) authorFaculty = 'คณะวิศวกรรมศาสตร์';
+  if (options.isSample) {
+    authorDept ||= 'ภาควิชาวิศวกรรมคอมพิวเตอร์';
+    authorFaculty ||= 'คณะวิศวกรรมศาสตร์';
   }
+  authorDept ||= 'ยังไม่ระบุภาควิชา';
 
   const avatar = el('div', {
     className: 'post-avatar',
@@ -433,6 +388,7 @@ export function postCard(post: Post, options: { mine?: boolean; isSample?: boole
   updateLikersUI();
 
   likeBtn.addEventListener('click', () => {
+    if (!requireMember()) return;
     const currentUser = authStore.snapshot.user;
     if (!currentUser) {
       toast.info('กรุณาเข้าสู่ระบบก่อนกดถูกใจ');
@@ -635,6 +591,7 @@ export function postCard(post: Post, options: { mine?: boolean; isSample?: boole
 
       replyForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (!requireMember()) return;
         const replyContent = rInput.value.trim();
         if (!replyContent) return;
 
@@ -707,6 +664,7 @@ export function postCard(post: Post, options: { mine?: boolean; isSample?: boole
 
   inputForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (!requireMember()) return;
     const content = commentInput.value.trim();
     if (!content) return;
 

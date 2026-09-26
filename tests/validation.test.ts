@@ -1,25 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { postSchema, registerSchema } from '../src/validation/schemas';
+import { postSchema, profileSchema } from '../src/validation/schemas';
 
-describe('registerSchema', () => {
-  it('accepts a password compatible with the backend policy', () => {
-    const result = registerSchema.safeParse({
-      name: 'Ada Lovelace',
-      email: 'ada@example.com',
-      password: 'StrongPass123',
-      university: 'KMITL',
-    });
-    expect(result.success).toBe(true);
+describe('profileSchema', () => {
+  it('trims faculty and department', () => {
+    expect(profileSchema.parse({ faculty: ' วิศวกรรมศาสตร์ ', department: ' คอมพิวเตอร์ ' }))
+      .toEqual({ faculty: 'วิศวกรรมศาสตร์', department: 'คอมพิวเตอร์' });
   });
 
-  it('rejects weak passwords', () => {
-    const result = registerSchema.safeParse({
-      name: 'Ada',
-      email: 'ada@example.com',
-      password: 'weakpassword',
-      university: 'KMITL',
-    });
-    expect(result.success).toBe(false);
+  it('rejects blank, missing and oversized fields and identity edits', () => {
+    for (const input of [
+      { faculty: ' ', department: 'Computer' },
+      { faculty: 'Engineering' },
+      { faculty: 'A'.repeat(151), department: 'Computer' },
+      { faculty: 'Engineering', department: 'A'.repeat(151) },
+      { faculty: 'Engineering', department: 'Computer', university: 'KMITL' },
+    ]) expect(profileSchema.safeParse(input).success).toBe(false);
   });
 });
 

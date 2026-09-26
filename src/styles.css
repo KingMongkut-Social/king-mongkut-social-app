@@ -2241,3 +2241,27 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   border-color: var(--brand-rust);
   color: var(--brand-rust);
 }
+
+/* Google authentication and persisted profile onboarding */
+.google-sign-in {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid #747775;
+  border-radius: 4px;
+  color: #1f1f1f;
+  background: #fff;
+  font: 500 14px/1.4 Arial, 'IBM Plex Sans Thai', sans-serif;
+  cursor: pointer;
+}
+.google-sign-in:hover { background: #f2f2f2; }
+.google-sign-in:focus-visible { outline: 3px solid #4285f4; outline-offset: 3px; }
+.google-sign-in:disabled { opacity: .6; cursor: wait; }
+.google-sign-in__icon { display: inline-flex; flex: 0 0 20px; }
+.auth-domain-list { padding-left: 20px; margin: 24px 0; text-align: left; line-height: 2; }
+.auth-profile-form { display: grid; gap: 16px; margin: 24px 0; text-align: left; }
+.auth-profile-identity { overflow-wrap: anywhere; color: var(--text-muted, #736b63); }
