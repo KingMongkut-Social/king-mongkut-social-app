@@ -44,8 +44,8 @@ function imageControl(kind: ImageKind, initialUrl: string | null | undefined, se
   const preview = el('span', { className: `edit-profile-image-preview edit-profile-image-preview--${kind}` });
   const image = el('img', { attrs: { alt: kind === 'avatar' ? 'ตัวอย่างรูปโปรไฟล์' : 'ตัวอย่างรูปหน้าปก' } });
   preview.append(image);
-  const choose = el('button', { className: 'edit-profile-image-button', text: 'เปลี่ยนรูป', attrs: { type: 'button' } });
-  const remove = el('button', { className: 'edit-profile-image-remove', text: 'ลบรูป', attrs: { type: 'button', 'aria-label': kind === 'avatar' ? 'ลบรูปโปรไฟล์' : 'ลบรูปหน้าปก' } });
+  const choose = el('button', { className: 'button button--secondary button--small edit-profile-image-button', text: 'เปลี่ยนรูป', attrs: { type: 'button' } });
+  const remove = el('button', { className: 'button button--danger button--small edit-profile-image-remove', text: 'ลบรูป', attrs: { type: 'button', 'aria-label': kind === 'avatar' ? 'ลบรูปโปรไฟล์' : 'ลบรูปหน้าปก' } });
   const filename = el('span', { className: 'edit-profile-image-filename', attrs: { 'aria-live': 'polite' } });
   const input = el('input', { className: 'edit-profile-file-input', attrs: {
     id, name: id, type: 'file', accept: 'image/jpeg,image/png,image/gif,image/webp,image/avif',
@@ -208,8 +208,8 @@ export async function editProfilePage(): Promise<PageView> {
   );
   const formError = el('p', { className: 'edit-profile-form-error', attrs: { role: 'alert' } });
   const actions = el('div', { className: 'edit-profile-actions' });
-  const cancel = el('button', { className: 'edit-profile-cancel', text: 'ยกเลิก', attrs: { type: 'button' } });
-  const save = el('button', { className: 'edit-profile-save', text: 'บันทึก', attrs: { type: 'submit' } });
+  const cancel = el('button', { className: 'button button--secondary edit-profile-cancel', text: 'ยกเลิก', attrs: { type: 'button' } });
+  const save = el('button', { className: 'button button--primary edit-profile-save', text: 'บันทึก', attrs: { type: 'submit' } });
   cancel.addEventListener('click', () => navigateTo('/profile'));
   actions.append(cancel, save);
   form.append(formError, actions);
