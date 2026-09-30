@@ -502,13 +502,14 @@
     padding-bottom: calc(86px + env(safe-area-inset-bottom)) !important;
   }
 
-  .is-chat-page .chat-page {
-    height: calc(100dvh - 202px);
-  }
-
   .is-auth-page .mobile-primary-nav,
   .is-edit-profile-page .mobile-primary-nav {
     display: none !important;
+  }
+
+  .is-auth-page .app-content,
+  .is-edit-profile-page .app-content {
+    padding-bottom: 0 !important;
   }
 }
 
