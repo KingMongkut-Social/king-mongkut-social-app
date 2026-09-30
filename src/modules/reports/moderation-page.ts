@@ -1,5 +1,6 @@
 import { authStore } from '../../core/auth/auth-store';
 import type { PageView } from '../../core/router/router';
+import { confirmAction } from '../../core/ui/confirm-dialog';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
@@ -16,7 +17,7 @@ const reasonLabels: Record<string, string> = {
 
 export async function moderationPage(): Promise<PageView> {
   const root = el('section', { className: 'platform-page moderation-page' });
-  root.append(el('h1', { className: 'platform-title', text: 'Reports — Moderation' }));
+  root.append(el('h1', { className: 'platform-title', text: 'การดูแลระบบ' }));
 
   if (authStore.snapshot.user?.role !== 'admin') {
     root.append(el('div', { className: 'platform-state platform-state--error', text: 'หน้านี้สำหรับผู้ดูแลระบบเท่านั้น' }));
@@ -39,7 +40,15 @@ export async function moderationPage(): Promise<PageView> {
           attrs: { type: 'button' },
         });
         button.addEventListener('click', async () => {
-          const note = window.prompt('บันทึกผู้ดูแล (ไม่บังคับ)', '') ?? '';
+          const confirmed = await confirmAction({
+            title: label,
+            message: `ยืนยันการดำเนินการ "${label}" สำหรับรายงานนี้หรือไม่?`,
+            confirmText: 'ยืนยัน',
+            cancelText: 'ยกเลิก',
+            variant: action === 'dismiss' ? 'default' : 'danger',
+          });
+          if (!confirmed) return;
+          const note = window.prompt ? (window.prompt('บันทึกผู้ดูแล (ไม่บังคับ)', '') ?? '') : '';
           button.disabled = true;
           try {
             await reportsApi.moderate(report._id, action, note);

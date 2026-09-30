@@ -1,0 +1,96 @@
+/* Application Shell & Responsive Grid */
+
+.app-layout {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--header-height));
+  min-height: calc(100dvh - var(--header-height));
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) calc(var(--mobile-nav-height) + var(--space-6));
+  gap: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+  .app-layout {
+    padding: var(--space-6) var(--space-6) var(--space-10);
+    gap: var(--space-8);
+  }
+}
+
+/* App Main Content Area */
+.app-content {
+  flex: 1;
+  min-width: 0;
+  max-width: var(--main-max-width);
+  width: 100%;
+}
+
+/* Feed Three-Column Layout on Desktop */
+.feed-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+@media (min-width: 1120px) {
+  .feed-layout {
+    grid-template-columns: minmax(0, 1fr) var(--right-panel-width);
+  }
+}
+
+.feed-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.feed-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-heading);
+}
+
+.feed-widgets {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+}
+
+@media (min-width: 1120px) {
+  .feed-widgets {
+    display: flex;
+  }
+}
+
+/* Auth Pages (Fullscreen Centered) */
+.is-auth-page .app-sidebar,
+.is-auth-page .mobile-primary-nav {
+  display: none !important;
+}
+
+.is-auth-page .app-layout {
+  max-width: 900px;
+  padding: var(--space-8) var(--space-4);
+  justify-content: center;
+}
+
+/* Chat Page Shell Adjustments */
+@media (min-width: 769px) {
+  .is-chat-page .app-content {
+    max-width: 1100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .is-chat-page .app-layout {
+    padding: 0;
+  }
+}

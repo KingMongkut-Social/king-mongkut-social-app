@@ -4,6 +4,7 @@ import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
+import { confirmAction } from '../../core/ui/confirm-dialog';
 import type { PaginatedPosts, Post } from '../../types/api';
 import { removeFriend, respondFriendRequest, sendFriendRequest } from '../friends/friends-api';
 import { groupsApi, type CommunityGroup } from '../groups/groups-api';
@@ -202,7 +203,14 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
           attrs: { type: 'button' },
         });
         unfriend.addEventListener('click', async () => {
-          if (!profile.requestId || !window.confirm(`เลิกเป็นเพื่อนกับ ${profile.name}?`)) return;
+          if (!profile.requestId) return;
+          const confirmed = await confirmAction({
+            title: 'เลิกเป็นเพื่อน',
+            message: `เลิกเป็นเพื่อนกับ ${profile.name}? คุณจะไม่เห็นสถานะออนไลน์ของผู้ใช้นี้ และ Direct Chat ใหม่อาจไม่สามารถเริ่มได้`,
+            confirmText: 'เลิกเป็นเพื่อน',
+            danger: true,
+          });
+          if (!confirmed) return;
           unfriend.disabled = true;
           try {
             await removeFriend(profile.requestId);

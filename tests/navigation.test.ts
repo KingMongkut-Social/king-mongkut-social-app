@@ -75,7 +75,7 @@ describe('auth-aware sidebar navigation', () => {
     expect(sidebarActionForState(state))
       .toEqual({ label: '+ สร้างโพสต์ใหม่', href: '/dashboard/posts/new' });
     expect(mobileItemsForState(state, location('/chat')).map((entry) => entry.id))
-      .toEqual(['feed', 'connections', 'chat', 'profile']);
+      .toEqual(['feed', 'search', 'create', 'chat', 'profile']);
   });
 
   it('adds moderation only for administrators', () => {

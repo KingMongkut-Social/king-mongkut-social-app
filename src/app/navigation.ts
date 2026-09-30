@@ -10,7 +10,10 @@ export type NavigationIcon =
   | 'posts'
   | 'shield'
   | 'search'
-  | 'user';
+  | 'user'
+  | 'plus';
+
+export type NavigationSection = 'discover' | 'social' | 'your-space' | 'account' | 'admin';
 
 export interface NavigationItem {
   id: string;
@@ -18,6 +21,7 @@ export interface NavigationItem {
   href: string;
   icon: NavigationIcon;
   active: boolean;
+  section?: NavigationSection | undefined;
 }
 
 export interface NavigationLocation {
@@ -35,8 +39,11 @@ function item(
   href: string,
   icon: NavigationIcon,
   active: boolean,
+  section?: NavigationSection,
 ): NavigationItem {
-  return { id, label, href, icon, active };
+  return section !== undefined
+    ? { id, label, href, icon, active, section }
+    : { id, label, href, icon, active };
 }
 
 export function sidebarItemsForState(
@@ -46,7 +53,7 @@ export function sidebarItemsForState(
   const path = location.pathname;
   const saved = isSavedFeed(location);
   const items: NavigationItem[] = [
-    item('feed', 'ฟีดข่าว', '/', 'feed', (path === '/' && !saved) || path.startsWith('/posts/')),
+    item('feed', 'ฟีดข่าว', '/', 'feed', (path === '/' && !saved) || path.startsWith('/posts/'), 'discover'),
   ];
 
   const isCompleteMember = state.status === 'authenticated'
@@ -55,15 +62,15 @@ export function sidebarItemsForState(
 
   if (isCompleteMember) {
     items.push(
-      item('connections', 'เพื่อน & การเชื่อมต่อ', '/connections', 'connections', path === '/connections'),
-      item('chat', 'แชท', '/chat', 'chats', path === '/chat'),
+      item('connections', 'เพื่อน & การเชื่อมต่อ', '/connections', 'connections', path === '/connections', 'social'),
+      item('chat', 'แชท', '/chat', 'chats', path === '/chat', 'social'),
     );
   }
 
   items.push(
-    item('universities', 'สถาบัน', '/universities', 'institutions', path.startsWith('/universities')),
-    item('groups', 'กลุ่ม', '/groups', 'groups', path.startsWith('/groups')),
-    item('search', 'สำรวจ', '/search', 'search', path === '/search'),
+    item('universities', 'สถาบัน', '/universities', 'institutions', path.startsWith('/universities'), 'discover'),
+    item('groups', 'กลุ่ม', '/groups', 'groups', path.startsWith('/groups'), 'discover'),
+    item('search', 'สำรวจ', '/search', 'search', path === '/search', 'discover'),
   );
 
   if (state.status === 'authenticated' && state.user) {
@@ -74,14 +81,15 @@ export function sidebarItemsForState(
         '/complete-profile',
         'user',
         path === '/complete-profile',
+        'account',
       ));
       return items;
     }
 
     items.push(
-      item('saved', 'บันทึกไว้', '/?saved=1', 'bookmark', saved),
-      item('dashboard', 'โพสต์ของฉัน', '/dashboard', 'posts', path.startsWith('/dashboard')),
-      item('profile', 'โปรไฟล์', '/profile', 'user', path === '/profile' || path.startsWith('/profile/')),
+      item('saved', 'บันทึกไว้', '/?saved=1', 'bookmark', saved, 'your-space'),
+      item('dashboard', 'โพสต์ของฉัน', '/dashboard', 'posts', path.startsWith('/dashboard'), 'your-space'),
+      item('profile', 'โปรไฟล์', '/profile', 'user', path === '/profile' || path.startsWith('/profile/'), 'account'),
     );
 
     if (state.user.role === 'admin') {
@@ -91,6 +99,7 @@ export function sidebarItemsForState(
         '/admin/moderation',
         'shield',
         path === '/admin/moderation',
+        'admin',
       ));
     }
   }
@@ -102,17 +111,31 @@ export function mobileItemsForState(
   state: Readonly<AuthState>,
   location: NavigationLocation,
 ): NavigationItem[] {
-  const all = sidebarItemsForState(state, location);
+  const path = location.pathname;
 
   if (state.status !== 'authenticated' || !state.user) {
-    return all.filter((entry) => ['feed', 'search', 'universities'].includes(entry.id));
+    return [
+      item('feed', 'ฟีด', '/', 'feed', path === '/' || path.startsWith('/posts/')),
+      item('universities', 'สถาบัน', '/universities', 'institutions', path.startsWith('/universities')),
+      item('search', 'สำรวจ', '/search', 'search', path === '/search'),
+    ];
   }
 
   if (state.user.needsProfileCompletion) {
-    return all.filter((entry) => ['feed', 'complete-profile', 'search'].includes(entry.id));
+    return [
+      item('feed', 'ฟีด', '/', 'feed', path === '/' || path.startsWith('/posts/')),
+      item('search', 'สำรวจ', '/search', 'search', path === '/search'),
+      item('complete-profile', 'โปรไฟล์', '/complete-profile', 'user', path === '/complete-profile'),
+    ];
   }
 
-  return all.filter((entry) => ['feed', 'connections', 'chat', 'profile'].includes(entry.id));
+  return [
+    item('feed', 'หน้าแรก', '/', 'feed', (path === '/' && !isSavedFeed(location)) || path.startsWith('/posts/')),
+    item('search', 'สำรวจ', '/search', 'search', path === '/search'),
+    item('create', 'สร้างโพสต์', '/dashboard/posts/new', 'posts', path === '/dashboard/posts/new'),
+    item('chat', 'แชท', '/chat', 'chats', path === '/chat'),
+    item('profile', 'โปรไฟล์', '/profile', 'user', path === '/profile' || path.startsWith('/profile/')),
+  ];
 }
 
 export function sidebarActionForState(

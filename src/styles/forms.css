@@ -1,0 +1,162 @@
+/* Forms & Inputs System */
+
+.input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+select,
+textarea {
+  width: 100%;
+  min-height: var(--touch-target-desktop);
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  font-size: var(--font-base);
+  line-height: var(--line-height-normal);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+@media (max-width: 768px) {
+  .input,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    min-height: var(--touch-target-mobile);
+    padding: 10px 14px;
+  }
+}
+
+.input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(224, 84, 56, 0.12);
+}
+
+.input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+textarea.input,
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+label {
+  display: block;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-heading);
+  margin-bottom: var(--space-1);
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: var(--font-sm);
+  margin: var(--space-1) 0 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Header search bar pill */
+.search-pill-input {
+  width: 100%;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 16px 0 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
+}
+
+.search-pill-input:focus {
+  background: var(--surface-card);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(224, 84, 56, 0.1);
+}
+
+/* Platform search input */
+.platform-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: var(--space-4);
+}
+
+.platform-search input {
+  flex: 1;
+}
+
+.platform-search--large input {
+  height: 44px;
+  font-size: var(--font-md);
+  padding: 0 18px;
+  border-radius: var(--radius-full);
+}
+
+/* Combobox (Faculty & Department Autocomplete / Creatable) */
+.academic-combobox {
+  position: relative;
+  width: 100%;
+}
+
+.academic-combobox__input {
+  width: 100%;
+}
+
+.academic-combobox__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  padding: var(--space-1);
+  margin: 0;
+  list-style: none;
+}
+
+.academic-combobox__item {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.academic-combobox__item:hover,
+.academic-combobox__item--highlighted {
+  background-color: var(--surface-hover);
+  color: var(--brand-rust);
+}
+
+.academic-combobox__create-prompt {
+  font-size: var(--font-sm);
+  color: var(--brand-rust);
+  font-weight: var(--font-weight-medium);
+}

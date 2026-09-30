@@ -130,7 +130,7 @@ export async function editProfilePage(): Promise<PageView> {
   syncUser(user);
 
   const root = el('section', { className: 'edit-profile-page' });
-  root.append(el('h1', { className: 'edit-profile-page-title', text: 'Edit Profile' }));
+  root.append(el('h1', { className: 'edit-profile-page-title', text: 'แก้ไขโปรไฟล์' }));
   const card = el('div', { className: 'edit-profile-card' });
   card.append(el('h2', { className: 'edit-profile-card-title', text: 'แก้ไขโปรไฟล์' }));
   const form = el('form', { className: 'edit-profile-form', attrs: { novalidate: 'true' } });

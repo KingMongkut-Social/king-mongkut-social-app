@@ -2,6 +2,7 @@ import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
+import { confirmAction } from '../../core/ui/confirm-dialog';
 import { pagination, postCard, searchForm } from './post-components';
 import { postsApi } from './posts-api';
 
@@ -40,7 +41,12 @@ export async function myPostsPage(context: RouteContext): Promise<PageView> {
       wrapper.append(postCard(post, { mine: true }));
       const deleteButton = el('button', { className: 'danger-link', text: 'ลบโพสต์', attrs: { type: 'button' } });
       deleteButton.addEventListener('click', async () => {
-        const confirmed = window.confirm(`ต้องการลบโพสต์ “${post.title}” ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`);
+        const confirmed = await confirmAction({
+          title: 'ยืนยันการลบโพสต์',
+          message: `ต้องการลบโพสต์ “${post.title}” ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`,
+          confirmText: 'ลบโพสต์',
+          danger: true,
+        });
         if (!confirmed) return;
         deleteButton.disabled = true;
         try {

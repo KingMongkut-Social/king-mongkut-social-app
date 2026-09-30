@@ -1,0 +1,242 @@
+/* Friends & Connections Module */
+
+.connections-page-wrap {
+  width: 100%;
+  max-width: var(--main-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.connections-page-title {
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.connections-subtabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1) var(--space-2);
+  overflow-x: auto;
+  box-shadow: var(--shadow-xs);
+  scrollbar-width: thin;
+}
+
+.subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.subtab-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.subtab-btn--active {
+  color: var(--brand-rust);
+  background: var(--brand-subtle);
+  font-weight: var(--font-weight-bold);
+}
+
+.connections-search-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.connections-search-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.connections-university {
+  width: auto;
+  min-width: 140px;
+}
+
+.connections-status {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Student Cards Grid */
+.connections-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.student-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.student-card:hover {
+  border-color: #dbc9bc;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.student-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.student-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--brand-subtle);
+  color: var(--brand-rust);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.student-name {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-heading);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-name:hover {
+  color: var(--brand-rust);
+}
+
+.student-uni-badge {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+}
+
+.student-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.student-mutual-count {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.connections-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-message-friend {
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.btn-message-friend:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.btn-accept-request {
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--brand-primary);
+  color: #ffffff;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.btn-accept-request:hover {
+  background: var(--brand-hover);
+}
+
+.btn-reject-icon {
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+
+.btn-reject-icon:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.connections-pending-label {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}

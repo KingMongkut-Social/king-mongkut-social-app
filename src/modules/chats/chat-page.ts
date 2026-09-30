@@ -18,6 +18,17 @@ function messageTime(value: string): string {
   return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
+function formatChatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const today = new Date();
+  if (date.toDateString() === today.toDateString()) return 'วันนี้';
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'เมื่อวาน';
+  return new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' }).format(date);
+}
+
 export function chatPage(context: RouteContext): PageView {
   const selfId = authStore.snapshot.user?._id ?? '';
   const root = el('section', { className: 'chat-page' });
@@ -38,13 +49,25 @@ export function chatPage(context: RouteContext): PageView {
 
   const panel = el('div', { className: 'chat-panel' });
   const panelHeader = el('div', { className: 'chat-panel__header' });
+  const backButton = el('button', {
+    className: 'chat-back-button',
+    attrs: { type: 'button', 'aria-label': 'กลับไปหน้ารายการแชท' },
+    text: '← กลับ',
+  });
+  backButton.addEventListener('click', () => {
+    selectedId = null;
+    window.history.replaceState(null, '', '/chat');
+    workspace.classList.remove('chat-workspace--thread-open');
+    renderChats();
+    renderHeader();
+  });
   const panelAvatar = el('span', { className: 'chat-panel__avatar', attrs: { 'aria-hidden': 'true' } });
   const panelIdentity = el('div', { className: 'chat-panel__identity' });
   const panelTitle = el('h2', { text: 'เลือกบทสนทนา' });
   const panelSubtitle = el('span', { className: 'chat-panel__subtitle' });
   panelIdentity.append(panelTitle, panelSubtitle);
   const connection = el('span', { className: 'chat-connection', text: 'กำลังเชื่อมต่อ…', attrs: { role: 'status' } });
-  panelHeader.append(panelAvatar, panelIdentity, connection);
+  panelHeader.append(backButton, panelAvatar, panelIdentity, connection);
   const messageArea = el('div', { className: 'chat-messages', attrs: { role: 'log', 'aria-live': 'polite', 'aria-label': 'ข้อความ' } });
   const loadOlderButton = el('button', { className: 'chat-load-older', text: 'โหลดข้อความก่อนหน้า', attrs: { type: 'button' } });
   const emptyPanel = el('div', { className: 'chat-empty', text: 'เลือกแชทจากรายการ หรือไปที่หน้าเพื่อนเพื่อเริ่มพูดคุย' });
@@ -125,6 +148,7 @@ export function chatPage(context: RouteContext): PageView {
 
   function renderHeader(): void {
     const chat = chats.find((item) => item.id === selectedId);
+    workspace.classList.toggle('chat-workspace--thread-open', Boolean(selectedId));
     panelTitle.textContent = chat ? chatTitle(chat, selfId) : 'เลือกบทสนทนา';
     panelAvatar.hidden = !chat;
     panelAvatar.textContent = chat?.type === 'group' ? '👥' : '';
@@ -169,12 +193,35 @@ export function chatPage(context: RouteContext): PageView {
       messageArea.append(el('p', { className: 'chat-message-state', text: 'ยังไม่มีข้อความ เริ่มพูดคุยกันได้เลย' }));
     }
     const chat = chats.find((item) => item.id === selectedId);
+    let prevMessage: ChatMessage | null = null;
+    let prevDateStr = '';
+
     for (const message of messages) {
+      const msgDate = new Date(message.createdAt);
+      const dateStr = Number.isNaN(msgDate.getTime()) ? '' : msgDate.toDateString();
+      if (dateStr && dateStr !== prevDateStr) {
+        prevDateStr = dateStr;
+        const separator = el('div', { className: 'chat-date-separator' });
+        separator.append(el('span', { text: formatChatDate(message.createdAt) }));
+        messageArea.append(separator);
+      }
+
       const self = message.senderId === selfId;
+      const isGrouped = Boolean(
+        prevMessage &&
+        prevMessage.senderId === message.senderId &&
+        Math.abs(new Date(message.createdAt).getTime() - new Date(prevMessage.createdAt).getTime()) < 2 * 60 * 1000
+      );
+      prevMessage = message;
+
       const sender = chat?.members.find((member) => member.id === message.senderId)?.name || 'สมาชิก';
-      const item = el('article', { className: `chat-message ${self ? 'chat-message--self' : ''}` });
-      if (!self && chat?.type === 'group') item.append(el('span', { className: 'chat-message__sender', text: sender }));
-      item.append(el('p', { className: 'chat-message__content', text: message.content }));
+      const item = el('article', {
+        className: `chat-message ${self ? 'chat-message--self chat-message--mine' : 'chat-message--theirs'} ${isGrouped ? 'chat-message--grouped' : ''}`.trim(),
+      });
+      if (!self && chat?.type === 'group' && !isGrouped) {
+        item.append(el('span', { className: 'chat-message__sender', text: sender }));
+      }
+      item.append(el('p', { className: 'chat-message__content chat-message__bubble', text: message.content }));
       item.append(el('time', { className: 'chat-message__time', text: messageTime(message.createdAt), attrs: { datetime: message.createdAt } }));
       messageArea.append(item);
     }
@@ -193,6 +240,7 @@ export function chatPage(context: RouteContext): PageView {
   async function selectChat(chatId: string): Promise<void> {
     if (disposed) return;
     selectedId = chatId;
+    workspace.classList.add('chat-workspace--thread-open');
     const version = ++messageVersion;
     messages = [];
     hasOlder = false;

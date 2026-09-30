@@ -1,0 +1,213 @@
+/* Application States (Loading, Skeletons, Empty, Error) */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #ede7e0 25%, #f7f3ee 37%, #ede7e0 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-text--title {
+  height: 22px;
+  width: 60%;
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-text--short {
+  width: 40%;
+}
+
+.skeleton-avatar {
+  border-radius: var(--radius-full);
+}
+
+.skeleton-avatar--sm {
+  width: 36px;
+  height: 36px;
+}
+
+.skeleton-avatar--md {
+  width: 44px;
+  height: 44px;
+}
+
+.skeleton-avatar--lg {
+  width: 80px;
+  height: 80px;
+}
+
+/* Skeleton Post Card */
+.skeleton-post-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-post-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.skeleton-post-card__body {
+  height: 60px;
+  border-radius: var(--radius-md);
+}
+
+/* Empty State Component */
+.empty-state,
+.platform-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-10) var(--space-6);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.empty-state__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  color: var(--brand-rust);
+  margin-bottom: var(--space-2);
+}
+
+.empty-state__title {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.empty-state__description {
+  font-size: var(--font-base);
+  color: var(--text-muted);
+  max-width: 440px;
+  line-height: var(--line-height-normal);
+  margin: 0;
+}
+
+.empty-state__action {
+  margin-top: var(--space-2);
+}
+
+/* Error State */
+.platform-state--error,
+.error-state {
+  border-color: rgba(220, 38, 38, 0.3);
+  background: var(--danger-subtle);
+  color: var(--danger-text);
+}
+
+/* Toast Notifications */
+.toast-root {
+  position: fixed;
+  right: 18px;
+  bottom: calc(var(--mobile-nav-height) + 18px);
+  z-index: 100;
+  display: grid;
+  gap: 10px;
+  width: min(380px, calc(100vw - 36px));
+}
+
+@media (min-width: 900px) {
+  .toast-root {
+    bottom: 18px;
+  }
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #25201b;
+  color: #ffffff;
+  box-shadow: var(--shadow-lg);
+  padding: 12px 16px;
+  line-height: var(--line-height-normal);
+  font-size: var(--font-base);
+}
+
+.toast--success {
+  background: var(--success);
+}
+
+.toast--error {
+  background: var(--danger);
+}
+
+.toast__close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.pagination__link {
+  min-width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-sm);
+  transition: all var(--transition-fast);
+}
+
+.pagination__link:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.pagination__link.is-current {
+  background: var(--brand-rust);
+  border-color: var(--brand-rust);
+  color: #ffffff;
+}

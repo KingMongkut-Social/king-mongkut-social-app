@@ -1,6 +1,4 @@
 import './styles.css';
-import './app/navbar.css';
-import './app/sidebar.css';
 import { bindAuthNavigation, mountLayout } from './app/layout';
 import { apiClient } from './core/api/api-client';
 import { Router, type RouteDefinition } from './core/router/router';
@@ -22,6 +20,7 @@ import { groupsPage } from './modules/groups/groups-page';
 import { groupPage } from './modules/groups/group-page';
 import { searchPage } from './modules/search/search-page';
 import { moderationPage } from './modules/reports/moderation-page';
+import { notificationsPage } from './modules/notifications/notifications-page';
 
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('App root not found');
@@ -48,6 +47,7 @@ const routes: RouteDefinition[] = [
   { path: '/groups', handler: groupsPage },
   { path: '/groups/:id', handler: groupPage },
   { path: '/search', handler: searchPage },
+  { path: '/notifications', handler: notificationsPage, auth: 'required' },
   { path: '/admin/moderation', handler: moderationPage, auth: 'required', role: 'admin' },
 ];
 

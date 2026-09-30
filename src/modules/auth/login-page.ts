@@ -6,7 +6,7 @@ import { googleErrorMessage } from '../../core/ui/error-message';
 export function loginPage(context: RouteContext): PageView {
   const container = el('div', { className: 'auth-landing-page' });
   const hero = el('div', { className: 'auth-landing-hero' },
-    el('h1', { className: 'auth-site-title', text: 'King’s society' }),
+    el('h1', { className: 'auth-site-title', text: 'KingMongkut Social' }),
     el('p', { className: 'auth-site-description', text: 'พื้นที่แลกเปลี่ยนและเชื่อมต่อเพื่อนนักศึกษา 3 พระจอมฯ' }),
   );
   const card = el('section', { className: 'auth-sso-card' },

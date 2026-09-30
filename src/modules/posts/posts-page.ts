@@ -4,6 +4,7 @@ import { realtime } from '../../core/realtime/socket';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
+import { createEmptyState, createErrorState } from '../../core/ui/feedback';
 import { toast } from '../../core/ui/toast';
 import type { Post } from '../../types/api';
 import { listFriends, type AcceptedFriend } from '../friends/friends-api';
@@ -431,6 +432,21 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
 
   attachments.append(photoBtn, tagFriendBtn, feelingWrap, fileInput);
 
+  const cancelBtn = el('button', {
+    className: 'button button--ghost composer-cancel-btn',
+    text: 'ยกเลิก',
+    attrs: { type: 'button' },
+  });
+  cancelBtn.addEventListener('click', () => {
+    postInput.value = '';
+    clearSelectedImages();
+    selectedFeeling = null;
+    selectedTaggedFriends = [];
+    renderExtrasBar();
+    createBox.classList.remove('is-expanded');
+    updateComposerState();
+  });
+
   const postBtn = el('button', {
     className: 'btn-post',
     text: 'โพสต์',
@@ -481,7 +497,8 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     }
   });
 
-  actionRow.append(attachments, postBtn);
+  const composerActionsRight = el('div', { className: 'composer-actions-right' }, cancelBtn, postBtn);
+  actionRow.append(attachments, composerActionsRight);
   createBox.append(topRow, extrasBar, previewContainer, actionRow);
 
   if (!savedOnly) feedMain.append(createBox);
@@ -489,11 +506,29 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   // 3. Posts List
   // If there are real posts in DB, render them
   if (feedError) {
-    feedMain.append(el('div', { className: 'feed-state', text: `ไม่สามารถโหลดโพสต์ได้: ${feedError}` }));
+    const errorEl = createErrorState({
+      message: `ไม่สามารถโหลดโพสต์ได้: ${feedError}`,
+      onRetry: () => {
+        window.location.reload();
+      },
+    });
+    errorEl.classList.add('feed-state');
+    feedMain.append(errorEl);
   } else if (posts.length > 0) {
     posts.forEach((p) => feedMain.append(postCard(p)));
   } else {
-    feedMain.append(el('div', { className: 'feed-state', text: savedOnly ? 'ยังไม่มีโพสต์ที่บันทึกไว้' : search ? 'ไม่พบโพสต์ที่ค้นหา' : 'ยังไม่มีโพสต์ในฟีด เริ่มโพสต์เรื่องราวของคุณได้เลย' }));
+    const emptyEl = createEmptyState({
+      title: savedOnly ? 'ยังไม่มีโพสต์ที่บันทึกไว้' : search ? 'ไม่พบโพสต์ที่ค้นหา' : 'ยังไม่มีโพสต์ในฟีด',
+      description: savedOnly
+        ? 'คุณสามารถกดบันทึกโพสต์ที่น่าสนใจเพื่ออ่านภายหลังได้'
+        : search
+          ? `ไม่พบผลลัพธ์ที่ตรงกับ "${search}" ลองค้นหาด้วยคำอื่น`
+          : 'เริ่มแชร์เรื่องราวหรือประสบการณ์ของคุณให้กับชาวสามพระจอมกันเถอะ!',
+      actionText: savedOnly ? 'ดูฟีดทั้งหมด' : search ? 'ล้างการค้นหา' : undefined,
+      actionHref: savedOnly ? '/' : search ? '/' : undefined,
+    });
+    emptyEl.classList.add('feed-state');
+    feedMain.append(emptyEl);
   }
 
   const pager = pagination(page, pages, search, '/', savedOnly ? { saved: '1' } : {});

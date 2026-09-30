@@ -3,6 +3,7 @@ import { authStore } from '../../core/auth/auth-store';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
+import { confirmAction } from '../../core/ui/confirm-dialog';
 import { formatRelativeTime } from '../../core/utils/format';
 import type { Post, PostComment, PostReaction } from '../../types/api';
 import { postsApi } from './posts-api';
@@ -192,7 +193,13 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     if (currentUserId === author._id) {
       const remove = el('button', { className: 'btn-reply-comment', attrs: { type: 'button' }, text: 'ลบ' });
       remove.addEventListener('click', async () => {
-        if (!window.confirm('ลบความคิดเห็นนี้?')) return;
+        const confirmed = await confirmAction({
+          title: 'ยืนยันการลบความคิดเห็น',
+          message: 'คุณต้องการลบความคิดเห็นนี้ใช่หรือไม่?',
+          confirmText: 'ลบความคิดเห็น',
+          danger: true,
+        });
+        if (!confirmed) return;
         remove.disabled = true;
         try {
           await postsApi.removeComment(post._id, comment._id);

@@ -3,6 +3,7 @@ import { env } from '../../config/env';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
+import { confirmAction } from '../../core/ui/confirm-dialog';
 import { authorName, formatDate, formatRelativeTime } from '../../core/utils/format';
 import { paginationWindow } from '../../core/utils/pagination';
 import type { Post } from '../../types/api';
@@ -337,7 +338,12 @@ export function postCard(
     deleteItem.addEventListener('click', async (e) => {
       e.stopPropagation();
       dropdown.style.display = 'none';
-      const confirmed = window.confirm('ต้องการลบโพสต์นี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้');
+      const confirmed = await confirmAction({
+        title: 'ยืนยันการลบโพสต์',
+        message: 'ต้องการลบโพสต์นี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
+        confirmText: 'ลบโพสต์',
+        danger: true,
+      });
       if (!confirmed) return;
 
       try {

@@ -34,7 +34,7 @@ export async function universityPage(context: RouteContext): Promise<PageView> {
 
     const layout = el('div', { className: 'community-layout' });
     const feed = el('div', { className: 'community-feed' });
-    feed.append(el('h2', { text: 'Community Feed' }));
+    feed.append(el('h2', { text: 'ฟีดชุมชน' }));
     if (posts.items.length) posts.items.forEach((post) => feed.append(postCard(post)));
     else feed.append(el('div', { className: 'platform-state', text: 'ยังไม่มีโพสต์ในชุมชนนี้' }));
     const pager = pagination(posts.page, posts.pages, '', `/universities/${code}`);

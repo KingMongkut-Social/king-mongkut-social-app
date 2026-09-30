@@ -1,0 +1,96 @@
+/* Groups Module */
+
+.groups-page {
+  width: 100%;
+  max-width: var(--main-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.platform-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.platform-title {
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.group-invitations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.group-invitations h2 {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+}
+
+.group-invitation-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.group-invitation-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Group Card */
+.group-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.group-card__cover {
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(135deg, #e8dfd8 0%, #d5c8be 100%);
+}
+
+.group-card h2 {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-heading);
+  padding: var(--space-3) var(--space-4) 0;
+  margin: 0;
+}
+
+.group-card p {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+  padding: 0 var(--space-4);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.group-card .platform-meta {
+  padding: 0 var(--space-4) var(--space-4);
+  margin-top: auto;
+}

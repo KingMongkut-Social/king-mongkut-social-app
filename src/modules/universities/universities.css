@@ -1,0 +1,203 @@
+/* Universities Module */
+
+.universities-page,
+.university-detail-page {
+  width: 100%;
+  max-width: var(--main-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.university-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
+}
+
+.university-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.university-card__banner {
+  height: 100px;
+  background: linear-gradient(135deg, #fceee9 0%, #f6d8ce 100%);
+}
+
+.university-card--kmitl .university-card__banner {
+  background: linear-gradient(135deg, #fef0e7 0%, #fcd6be 100%);
+}
+
+.university-card--kmutt .university-card__banner {
+  background: linear-gradient(135deg, #fde8e9 0%, #f8c8cb 100%);
+}
+
+.university-card--kmutnb .university-card__banner {
+  background: linear-gradient(135deg, #f8e9ea 0%, #ecc9cb 100%);
+}
+
+.university-card__body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.university-card__body h2 {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.university-card__body p {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* University Detail Hero */
+.university-hero {
+  position: relative;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  margin-bottom: var(--space-4);
+}
+
+.university-hero__cover {
+  height: 160px;
+  background: linear-gradient(135deg, #f2eae1 0%, #e2d5c7 100%);
+}
+
+.university-hero--kmitl .university-hero__cover {
+  background: linear-gradient(135deg, #fef0e7 0%, #fcd6be 100%);
+}
+
+.university-hero--kmutt .university-hero__cover {
+  background: linear-gradient(135deg, #fde8e9 0%, #f8c8cb 100%);
+}
+
+.university-hero--kmutnb .university-hero__cover {
+  background: linear-gradient(135deg, #f8e9ea 0%, #ecc9cb 100%);
+}
+
+.university-hero__logo {
+  position: absolute;
+  top: 110px;
+  left: 24px;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full);
+  background: var(--surface-card);
+  border: 3px solid var(--surface-card);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--brand-rust);
+}
+
+.university-hero__body {
+  padding: 36px var(--space-6) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.university-hero__body h1 {
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.university-hero__body p {
+  font-size: var(--font-base);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Community Layout inside University */
+.community-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+
+@media (min-width: 900px) {
+  .community-layout {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+}
+
+.community-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.community-feed h2,
+.community-sidebar h2 {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-heading);
+  margin: 0 0 var(--space-2);
+}
+
+.community-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-xs);
+  height: fit-content;
+}
+
+.community-person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.community-person:hover {
+  background: var(--surface-hover);
+}
+
+.community-person span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.community-person strong {
+  font-size: var(--font-base);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.community-person small {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}

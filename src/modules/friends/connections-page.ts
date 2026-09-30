@@ -3,6 +3,7 @@ import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
+import { confirmAction } from '../../core/ui/confirm-dialog';
 import {
   cancelFriendRequest, listFriends, listFriendRequests, listSuggestedFriends, removeFriend,
   respondFriendRequest, searchFriends, sendFriendRequest,
@@ -98,8 +99,14 @@ export function connectionsPage(context?: RouteContext): PageView {
       const actions = el('div', { className: 'connections-actions' }, messageAction(user.id));
       if (user.requestId) {
         const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
-        remove.addEventListener('click', () => {
-          if (!window.confirm(`เลิกเป็นเพื่อนกับ ${user.name}?`)) return;
+        remove.addEventListener('click', async () => {
+          const confirmed = await confirmAction({
+            title: 'เลิกเป็นเพื่อน',
+            message: `เลิกเป็นเพื่อนกับ ${user.name}? คุณจะไม่เห็นสถานะออนไลน์ของผู้ใช้นี้ และ Direct Chat ใหม่อาจไม่สามารถเริ่มได้`,
+            confirmText: 'เลิกเป็นเพื่อน',
+            danger: true,
+          });
+          if (!confirmed) return;
           void act(remove, () => removeFriend(user.requestId!), 'เลิกเป็นเพื่อนแล้ว');
         });
         actions.append(remove);
@@ -161,8 +168,14 @@ export function connectionsPage(context?: RouteContext): PageView {
       for (const friend of friends) {
         const actions = el('div', { className: 'connections-actions' }, messageAction(friend.id));
         const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
-        remove.addEventListener('click', () => {
-          if (!window.confirm(`เลิกเป็นเพื่อนกับ ${friend.name}?`)) return;
+        remove.addEventListener('click', async () => {
+          const confirmed = await confirmAction({
+            title: 'เลิกเป็นเพื่อน',
+            message: `เลิกเป็นเพื่อนกับ ${friend.name}? คุณจะไม่เห็นสถานะออนไลน์ของผู้ใช้นี้ และ Direct Chat ใหม่อาจไม่สามารถเริ่มได้`,
+            confirmText: 'เลิกเป็นเพื่อน',
+            danger: true,
+          });
+          if (!confirmed) return;
           void act(remove, () => removeFriend(friend.friendshipId), 'เลิกเป็นเพื่อนแล้ว');
         });
         actions.append(remove);

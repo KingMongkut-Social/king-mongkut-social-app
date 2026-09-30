@@ -1,0 +1,104 @@
+/* Mobile Primary Bottom Navigation */
+
+.mobile-primary-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px rgba(45, 33, 23, 0.06);
+}
+
+@media (min-width: 900px) {
+  .mobile-primary-nav {
+    display: none !important;
+  }
+}
+
+.is-auth-page .mobile-primary-nav {
+  display: none !important;
+}
+
+.mobile-primary-nav__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: var(--touch-target-mobile);
+  padding: 4px 2px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-medium);
+  gap: 2px;
+  transition: color var(--transition-fast);
+}
+
+.mobile-primary-nav__link:hover {
+  color: var(--text-primary);
+}
+
+.mobile-primary-nav__link--active {
+  color: var(--brand-rust);
+  font-weight: var(--font-weight-bold);
+}
+
+.mobile-primary-nav__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-primary-nav__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.mobile-primary-nav__label {
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* Distinctive Center Create Post Button on Mobile */
+.mobile-primary-nav__link[data-nav-id="create"] {
+  position: relative;
+  top: -8px;
+  flex: 0 0 52px;
+}
+
+.mobile-primary-nav__link[data-nav-id="create"] .mobile-primary-nav__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(224, 84, 56, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.mobile-primary-nav__link[data-nav-id="create"]:active .mobile-primary-nav__icon {
+  transform: scale(0.92);
+}
+
+.mobile-primary-nav__link[data-nav-id="create"] .mobile-primary-nav__icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.5;
+}
+
+.mobile-primary-nav__link[data-nav-id="create"] .mobile-primary-nav__label {
+  display: none;
+}

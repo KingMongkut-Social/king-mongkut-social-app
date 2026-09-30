@@ -39,18 +39,18 @@ function createGroupDialog(): HTMLDialogElement {
   const form = el('form', { className: 'platform-dialog__form' });
   const name = el('input', {
     className: 'input',
-    attrs: { name: 'name', type: 'text', minlength: '2', maxlength: '100', required: 'true', placeholder: 'ชื่อกลุ่ม' },
+    attrs: { id: 'create-group-name', name: 'name', type: 'text', minlength: '2', maxlength: '100', required: 'true', placeholder: 'ชื่อกลุ่ม' },
   });
   const description = el('textarea', {
     className: 'input textarea',
-    attrs: { name: 'description', maxlength: '2000', rows: '4', placeholder: 'รายละเอียดกลุ่ม' },
+    attrs: { id: 'create-group-desc', name: 'description', maxlength: '2000', rows: '4', placeholder: 'รายละเอียดกลุ่ม' },
   });
-  const privacy = el('select', { className: 'input', attrs: { name: 'privacy', 'aria-label': 'ความเป็นส่วนตัว' } });
+  const privacy = el('select', { className: 'input', attrs: { id: 'create-group-privacy', name: 'privacy', 'aria-label': 'ความเป็นส่วนตัว' } });
   privacy.append(
     el('option', { text: 'กลุ่มสาธารณะ — ทุกคนเข้าร่วมได้', attrs: { value: 'public' } }),
     el('option', { text: 'กลุ่มส่วนตัว — ต้องได้รับคำเชิญ', attrs: { value: 'private' } }),
   );
-  const university = el('select', { className: 'input', attrs: { name: 'university', 'aria-label': 'สถาบัน' } });
+  const university = el('select', { className: 'input', attrs: { id: 'create-group-univ', name: 'university', 'aria-label': 'สถาบัน' } });
   university.append(el('option', { text: 'ทุกสถาบัน', attrs: { value: '' } }));
   for (const code of ['KMITL', 'KMUTT', 'KMUTNB'] as const) {
     const option = el('option', { text: code, attrs: { value: code } });
@@ -63,11 +63,11 @@ function createGroupDialog(): HTMLDialogElement {
   cancel.addEventListener('click', () => dialog.close());
 
   form.append(
-    el('h2', { text: 'สร้าง Community Group' }),
-    el('label', { text: 'ชื่อกลุ่ม' }), name,
-    el('label', { text: 'รายละเอียด' }), description,
-    el('label', { text: 'ความเป็นส่วนตัว' }), privacy,
-    el('label', { text: 'สถาบัน' }), university,
+    el('h2', { text: 'สร้างกลุ่มชุมชน' }),
+    el('label', { text: 'ชื่อกลุ่ม', attrs: { for: 'create-group-name' } }), name,
+    el('label', { text: 'รายละเอียด', attrs: { for: 'create-group-desc' } }), description,
+    el('label', { text: 'ความเป็นส่วนตัว', attrs: { for: 'create-group-privacy' } }), privacy,
+    el('label', { text: 'สถาบัน', attrs: { for: 'create-group-univ' } }), university,
     status,
     el('div', { className: 'platform-dialog__actions' }, cancel, submit),
   );
@@ -109,7 +109,7 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
   const root = el('section', { className: 'platform-page groups-page' });
   const header = el('div', { className: 'platform-heading-row' });
   header.append(
-    el('div', {}, el('p', { className: 'eyebrow', text: 'Community' }), el('h1', { className: 'platform-title', text: 'กลุ่ม' })),
+    el('div', {}, el('p', { className: 'eyebrow', text: 'ชุมชน' }), el('h1', { className: 'platform-title', text: 'กลุ่ม' })),
   );
 
   if (authStore.snapshot.status === 'authenticated') {

@@ -21,6 +21,7 @@ const icons = {
   search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   bell: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
   user: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  plus: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
 };
 
 const accountIcons = {
@@ -65,6 +66,14 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   // Right Header Actions
   const headerActions = el('div', { className: 'site-header__actions' });
+
+  // Mobile search icon button (accessible when input is hidden on mobile)
+  const mobileSearchBtn = el('a', {
+    className: 'icon-btn site-header__mobile-search-btn',
+    attrs: { href: '/search', 'aria-label': 'ค้นหา', title: 'ค้นหา' },
+  });
+  mobileSearchBtn.innerHTML = icons.search;
+  headerActions.append(mobileSearchBtn);
 
   // Notification Bell & Interactive Dropdown
   const bellWrap = el('div', { className: 'notification-bell-wrap' });
@@ -296,16 +305,42 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       return link;
     };
 
-    for (const entry of sidebarItemsForState(state, location)) {
-      navList.append(createNavItem(entry));
+    const sectionHeadings: Record<string, string> = {
+      discover: 'สำรวจ',
+      social: 'การเชื่อมต่อ',
+      'your-space': 'พื้นที่ของคุณ',
+      account: 'บัญชี',
+      admin: 'ผู้ดูแลระบบ',
+    };
+
+    const sidebarItems = sidebarItemsForState(state, location);
+    const sectionOrder: string[] = ['discover', 'social', 'your-space', 'account', 'admin'];
+    const grouped = new Map<string, NavigationItem[]>();
+    for (const item of sidebarItems) {
+      const s = item.section || 'discover';
+      if (!grouped.has(s)) grouped.set(s, []);
+      grouped.get(s)!.push(item);
+    }
+
+    for (const secKey of sectionOrder) {
+      const itemsInSec = grouped.get(secKey);
+      if (!itemsInSec || itemsInSec.length === 0) continue;
+      const groupEl = el('div', { className: 'sidebar__group' });
+      const secTitle = el('div', { className: 'sidebar__section-title', text: sectionHeadings[secKey] || secKey });
+      groupEl.append(secTitle);
+      for (const entry of itemsInSec) {
+        groupEl.append(createNavItem(entry));
+      }
+      navList.append(groupEl);
     }
 
     const mobileLabels: Record<string, string> = {
-      feed: 'ฟีด',
-      connections: 'เพื่อน',
+      feed: 'หน้าแรก',
+      search: 'สำรวจ',
+      create: 'สร้าง',
       chat: 'แชท',
       profile: 'โปรไฟล์',
-      search: 'สำรวจ',
+      connections: 'เพื่อน',
       universities: 'สถาบัน',
       'complete-profile': 'โปรไฟล์',
     };
@@ -443,6 +478,11 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         createMenuLink('/profile', 'ดูโปรไฟล์', 'ดูหน้าโปรไฟล์และกิจกรรมของคุณ', accountIcons.profile),
         createMenuLink('/profile/edit', 'แก้ไขโปรไฟล์', 'เปลี่ยนข้อมูลและรูปโปรไฟล์', accountIcons.edit),
         createMenuLink('/dashboard', 'โพสต์ของฉัน', 'จัดการโพสต์ที่คุณสร้างไว้', accountIcons.posts),
+        createMenuLink('/notifications', 'การแจ้งเตือน', 'ดูประวัติการแจ้งเตือนทั้งหมด', icons.bell),
+        createMenuLink('/connections', 'เพื่อน & การเชื่อมต่อ', 'ดูรายชื่อเพื่อนและคำขอ', icons.connections),
+        createMenuLink('/groups', 'กลุ่มชุมชน', 'ค้นพบและจัดการกลุ่มของคุณ', icons.groups),
+        createMenuLink('/universities', 'สถาบัน 3 พระจอมฯ', 'ดูชุมชนของแต่ละสถาบัน', icons.institutions),
+        createMenuLink('/?saved=1', 'โพสต์ที่บันทึกไว้', 'ดูโพสต์ที่คุณบันทึกเก็บไว้', icons.bookmark),
       );
 
       if (user.role === 'admin') {
