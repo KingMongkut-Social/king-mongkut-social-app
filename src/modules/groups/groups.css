@@ -1,27 +1,9 @@
 /* Groups Module */
 
 .groups-page {
-  width: 100%;
-  max-width: var(--main-max-width);
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.platform-heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.platform-title {
-  font-size: var(--font-2xl);
-  font-weight: var(--font-weight-extrabold);
-  color: var(--text-heading);
-  margin: 0;
 }
 
 .group-invitations {

@@ -7,6 +7,7 @@ import { clear, el } from '../core/ui/dom';
 import { errorMessage } from '../core/ui/error-message';
 import { toast } from '../core/ui/toast';
 import { createAvatar } from '../core/ui/avatar';
+import { createNotificationTypeBadge } from '../core/ui/notification-icon';
 import { formatRelativeTime } from '../core/utils/format';
 import { profileImageUrl } from '../modules/profile/profile-api';
 import { searchApi, type SearchResult, type SearchUser, type SearchGroup } from '../modules/search/search-api';
@@ -336,13 +337,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         size: 'sm',
         className: 'notification-avatar',
       });
-      const typeBadge = el('span', { className: 'notification-type-badge' });
-      if (n.type === 'post_reaction') typeBadge.textContent = '❤️';
-      else if (n.type === 'post_comment') typeBadge.textContent = '💬';
-      else if (n.type === 'comment_reply') typeBadge.textContent = '↩️';
-      else if (n.type === 'friend_request') typeBadge.textContent = '👤';
-      else if (n.type === 'friend_accept') typeBadge.textContent = '🤝';
-      else typeBadge.textContent = '👥';
+      const typeBadge = createNotificationTypeBadge(n.type);
       avatarWrap.append(avatar, typeBadge);
 
       // Body

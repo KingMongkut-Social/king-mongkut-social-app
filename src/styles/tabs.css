@@ -1,0 +1,81 @@
+/* Shared Tabs */
+
+.tabs,
+.search-tabs,
+.connections-subtabs,
+.profile-tabs,
+.group-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-1);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.tab,
+.search-tab-btn,
+.subtab-btn,
+.profile-tab,
+.group-tab {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.tab:hover,
+.search-tab-btn:hover,
+.subtab-btn:hover,
+.profile-tab:hover,
+.group-tab:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.tab[aria-selected="true"],
+.tab--active,
+.search-tab-btn--active,
+.subtab-btn--active,
+.profile-tab--active,
+.group-tab--active {
+  color: var(--brand-rust);
+  background: var(--brand-subtle);
+  font-weight: var(--font-weight-bold);
+}
+
+.tab:focus-visible,
+.search-tab-btn:focus-visible,
+.subtab-btn:focus-visible,
+.profile-tab:focus-visible,
+.group-tab:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand-primary) 28%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1023px) {
+  .tab,
+  .search-tab-btn,
+  .subtab-btn,
+  .profile-tab,
+  .group-tab { min-height: var(--touch-target-mobile); }
+}
