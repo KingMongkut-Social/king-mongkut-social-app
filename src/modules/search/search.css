@@ -1,53 +1,9 @@
 /* Search Module */
 
 .search-page {
-  width: 100%;
-  max-width: var(--main-max-width);
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.search-tabs {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  background: var(--surface-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-1) var(--space-2);
-  overflow-x: auto;
-  box-shadow: var(--shadow-xs);
-  scrollbar-width: thin;
-}
-
-.search-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  padding: 6px 14px;
-  border-radius: var(--radius-md);
-  border: none;
-  background: transparent;
-  font-size: var(--font-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-
-.search-tab-btn:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
-}
-
-.search-tab-btn--active {
-  background: var(--brand-subtle);
-  color: var(--brand-rust);
-  font-weight: var(--font-weight-bold);
 }
 
 .search-results {
