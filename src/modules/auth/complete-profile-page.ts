@@ -7,6 +7,8 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { profileSchema } from '../../validation/schemas';
 import { clearFieldErrors, field, showZodErrors } from '../shared/form';
+import { createAcademicCombobox } from '../profile/academic-combobox';
+import { searchDepartments, searchFaculties } from '../profile/academic-data';
 
 export function completeProfilePage(context: RouteContext): PageView {
   const user = authStore.snapshot.user;
@@ -17,21 +19,44 @@ export function completeProfilePage(context: RouteContext): PageView {
   const page = el('div', { className: 'auth-landing-page' });
   const card = el('section', { className: 'auth-sso-card' },
     el('h1', { className: 'auth-card-title', text: 'เติมข้อมูลโปรไฟล์ของคุณ' }),
-    el('p', { className: 'auth-card-subtitle', text: 'กรอกคณะและภาควิชาก่อนเริ่มใช้งาน กรอกเพียงครั้งเดียวและใช้ต่อได้ทุกอุปกรณ์' }),
+    el('p', { className: 'auth-card-subtitle', text: 'กรอกหรือค้นหาเลือกคณะและภาควิชาก่อนเริ่มใช้งาน หากไม่มีในรายการสามารถพิมพ์เพิ่มเองได้' }),
     el('p', { className: 'auth-profile-identity', text: (user?.email ?? '') + ' · ' + (user?.university ?? '') }),
   );
   const form = el('form', { className: 'auth-profile-form', attrs: { novalidate: 'true' } });
-  const faculty = el('input', { className: 'input', attrs: {
-    id: 'faculty', name: 'faculty', type: 'text', required: 'true', maxlength: '150', autocomplete: 'off',
-  } });
-  const department = el('input', { className: 'input', attrs: {
-    id: 'department', name: 'department', type: 'text', required: 'true', maxlength: '150', autocomplete: 'off',
-  } });
-  faculty.value = user?.faculty ?? '';
-  department.value = user?.department ?? '';
+
+  const facultyCombobox = createAcademicCombobox({
+    id: 'faculty',
+    name: 'faculty',
+    placeholder: 'พิมพ์ค้นหา หรือเลือกคณะ... (สามารถระบุเองได้)',
+    initialValue: user?.faculty ?? '',
+    getSuggestions: (q) => searchFaculties(q, user?.university),
+    onSelect: () => {
+      departmentCombobox.refresh();
+      if (!departmentCombobox.getValue().trim()) {
+        departmentCombobox.open();
+      }
+    },
+  });
+
+  const departmentCombobox = createAcademicCombobox({
+    id: 'department',
+    name: 'department',
+    placeholder: 'พิมพ์ค้นหา หรือเลือกภาควิชา... (สามารถระบุเองได้)',
+    initialValue: user?.department ?? '',
+    getSuggestions: (q) => searchDepartments(q, facultyCombobox.getValue(), user?.university),
+  });
+
+  const faculty = facultyCombobox.input;
+  const department = departmentCombobox.input;
+
   const error = el('p', { className: 'form-error', attrs: { role: 'alert' } });
   const submit = el('button', { className: 'button button--primary button--full', text: 'บันทึกและเข้าใช้งาน', attrs: { type: 'submit' } });
-  form.append(field('faculty', 'คณะ', faculty), field('department', 'ภาควิชา / สาขาวิชา', department), error, submit);
+  form.append(
+    field('faculty', 'คณะ', facultyCombobox.container, 'พิมพ์ค้นหาหรือเลือกจากรายการทั้งหมด หากไม่มีสามารถพิมพ์ระบุเองได้'),
+    field('department', 'ภาควิชา / สาขาวิชา', departmentCombobox.container, 'พิมพ์ค้นหาหรือเลือกจากรายการทั้งหมด หากไม่มีสามารถพิมพ์ระบุเองได้'),
+    error,
+    submit,
+  );
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (submit.disabled) return;

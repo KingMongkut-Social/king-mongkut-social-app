@@ -7,6 +7,9 @@ import { toast } from '../../core/ui/toast';
 import type { User } from '../../types/api';
 import { profileApi, profileImageUrl, type EditProfileInput } from './profile-api';
 
+import { createAcademicCombobox } from './academic-combobox';
+import { searchDepartments, searchFaculties } from './academic-data';
+
 type ImageKind = 'avatar' | 'cover';
 const acceptedImageTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']);
 
@@ -158,8 +161,32 @@ export async function editProfilePage(): Promise<PageView> {
   const university = textInput('edit-profile-university', user.university, 20);
   university.readOnly = true;
   university.title = 'มหาวิทยาลัยยืนยันจากอีเมลบัญชีของคุณ';
-  const faculty = textInput('edit-profile-faculty', user.faculty || '', 150);
-  const department = textInput('edit-profile-department', user.department || '', 150);
+  const facultyCombobox = createAcademicCombobox({
+    id: 'edit-profile-faculty',
+    name: 'edit-profile-faculty',
+    placeholder: 'พิมพ์ค้นหา หรือเลือกคณะ... (สามารถระบุเองได้)',
+    initialValue: user.faculty || '',
+    inputClassName: 'edit-profile-input academic-combobox__input',
+    getSuggestions: (q) => searchFaculties(q, user.university),
+    onSelect: () => {
+      departmentCombobox.refresh();
+      if (!departmentCombobox.getValue().trim()) {
+        departmentCombobox.open();
+      }
+    },
+  });
+
+  const departmentCombobox = createAcademicCombobox({
+    id: 'edit-profile-department',
+    name: 'edit-profile-department',
+    placeholder: 'พิมพ์ค้นหา หรือเลือกภาควิชา... (สามารถระบุเองได้)',
+    initialValue: user.department || '',
+    inputClassName: 'edit-profile-input academic-combobox__input',
+    getSuggestions: (q) => searchDepartments(q, facultyCombobox.getValue(), user.university),
+  });
+
+  const faculty = facultyCombobox.input;
+  const department = departmentCombobox.input;
   const year = el('select', { className: 'edit-profile-input', attrs: {
     id: 'edit-profile-year', name: 'edit-profile-year', 'aria-describedby': 'edit-profile-year-error',
   } });
@@ -175,8 +202,8 @@ export async function editProfilePage(): Promise<PageView> {
     row('Username', username.id, username),
     row('Bio', bio.id, bio),
     row('มหาวิทยาลัย', university.id, university),
-    row('คณะ', faculty.id, faculty),
-    row('ภาควิชา', department.id, department),
+    row('คณะ', faculty.id, facultyCombobox.container),
+    row('ภาควิชา', department.id, departmentCombobox.container),
     row('ชั้นปี', year.id, year),
   );
   const formError = el('p', { className: 'edit-profile-form-error', attrs: { role: 'alert' } });

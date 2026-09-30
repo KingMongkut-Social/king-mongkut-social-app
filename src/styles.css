@@ -2266,6 +2266,138 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .auth-profile-form { display: grid; gap: 16px; margin: 24px 0; text-align: left; }
 .auth-profile-identity { overflow-wrap: anywhere; color: var(--text-muted, #736b63); }
 
+/* Academic Combobox (Faculty & Department Autocomplete / Creatable) */
+.academic-combobox {
+  position: relative;
+  width: 100%;
+}
+.academic-combobox__wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.academic-combobox__input {
+  width: 100%;
+  padding-right: 56px !important;
+}
+.academic-combobox__clear {
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted, #736b63);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color 0.15s, background-color 0.15s;
+}
+.academic-combobox__clear:hover {
+  color: var(--text, #1d2530);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+.academic-combobox__toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted, #736b63);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background-color 0.15s;
+}
+.academic-combobox__toggle:hover {
+  color: var(--brand-rust, #9e3407);
+  background-color: var(--accent-soft, #fbf0ea);
+}
+.academic-combobox__popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-dark, #d8d0c7);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+  z-index: 150;
+  max-height: 260px;
+  overflow-y: auto;
+  animation: modalFadeIn 0.15s ease-out;
+}
+.academic-combobox__group-header {
+  padding: 8px 12px 6px;
+  background: var(--surface-subtle, #f6f3ee);
+  border-bottom: 1px solid var(--border-light, #f1ede8);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--muted, #736b63);
+  letter-spacing: 0.02em;
+}
+.academic-combobox__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light, #f1ede8);
+  font-size: 0.88rem;
+  color: var(--text, #1d2530);
+  transition: background-color 0.12s ease;
+}
+.academic-combobox__item:last-child {
+  border-bottom: none;
+}
+.academic-combobox__item:hover,
+.academic-combobox__item.is-active {
+  background-color: var(--accent-soft, #fbf0ea);
+  color: var(--accent, #9e3407);
+}
+.academic-combobox__item-text {
+  flex: 1;
+  text-align: left;
+  line-height: 1.35;
+}
+.academic-combobox__item-badge {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.academic-combobox__item--custom {
+  background-color: #fff9f5;
+  color: var(--brand-rust, #9e3407);
+  font-weight: 600;
+  border-top: 1px dashed var(--border-dark, #d8d0c7);
+  width: 100%;
+  border-left: none;
+  border-right: none;
+  text-align: left;
+}
+.academic-combobox__item--custom:hover {
+  background-color: #faede4;
+}
+.academic-combobox__empty {
+  padding: 14px 12px;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--muted, #736b63);
+}
+
+
 /* Post Friend Action Button (Top Right of Post) */
 .post-friend-btn {
   display: inline-flex;
