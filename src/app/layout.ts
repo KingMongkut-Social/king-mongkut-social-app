@@ -332,7 +332,10 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     if (sidebarAction) {
       sidebarFooter.append(el('a', {
         className: 'btn-create-project',
-        attrs: { href: sidebarAction.href },
+        attrs: {
+          href: sidebarAction.href,
+          'data-action-kind': sidebarAction.href === '/dashboard/posts/new' ? 'create' : 'continue',
+        },
         text: sidebarAction.label,
       }));
     }
