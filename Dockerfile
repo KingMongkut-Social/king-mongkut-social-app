@@ -1,7 +1,7 @@
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 COPY . .
 ARG VITE_API_BASE_URL=http://localhost:4000/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL

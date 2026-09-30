@@ -23,7 +23,23 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Typecheck, lint, and test
         run: npm run check
       - name: Build
         run: npm run build
+      - name: Build Docker image
+        run: docker build --build-arg VITE_API_BASE_URL=http://localhost:4000/api/v1 -t king-mongkut-social-app:ci .
+      - name: Smoke test Nginx image and SPA fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f kms-app-ci >/dev/null 2>&1 || true' EXIT
+          docker run -d --name kms-app-ci -p 8080:80 king-mongkut-social-app:ci
+          for i in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8080/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8080/healthz
+          curl --fail --silent http://127.0.0.1:8080/groups/example >/dev/null

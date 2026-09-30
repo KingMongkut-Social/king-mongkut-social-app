@@ -222,11 +222,12 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     }
   });
 
-  document.addEventListener('click', (e) => {
+  const onComposerDocumentClick = (e: MouseEvent) => {
     if (!createBox.contains(e.target as Node)) {
       mentionPopover.close();
     }
-  });
+  };
+  document.addEventListener('click', onComposerDocumentClick);
 
   // Image attachment & preview handling (supports multiple images)
   const fileInput = el('input', {
@@ -390,11 +391,12 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     feelingPopover.style.display = isHidden ? 'block' : 'none';
   });
 
-  document.addEventListener('click', (e) => {
+  const onFeelingDocumentClick = (e: MouseEvent) => {
     if (!feelingWrap.contains(e.target as Node)) {
       feelingPopover.style.display = 'none';
     }
-  });
+  };
+  document.addEventListener('click', onFeelingDocumentClick);
 
   fileInput.addEventListener('change', async () => {
     const files = fileInput.files;
@@ -577,6 +579,8 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     element: container,
     dispose: () => {
       disposed = true;
+      document.removeEventListener('click', onComposerDocumentClick);
+      document.removeEventListener('click', onFeelingDocumentClick);
       unsubPresence();
       unsubFriends();
       unsubConnection();

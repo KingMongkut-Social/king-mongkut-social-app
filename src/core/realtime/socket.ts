@@ -22,6 +22,8 @@ export interface RealtimeNotification {
   createdAt: string;
 }
 const notificationListeners = new Set<Listener<RealtimeNotification>>();
+const notificationReadListeners = new Set<Listener<{ id: string }>>();
+const notificationsReadAllListeners = new Set<Listener<{ readAt: string }>>();
 export interface PresenceUpdate { userId: string; isOnline: boolean }
 const presenceListeners = new Set<Listener<PresenceUpdate>>();
 const connectionListeners = new Set<Listener<boolean>>();
@@ -91,6 +93,12 @@ function syncSocket(): void {
   next.on('notification:new', (notification: RealtimeNotification) => {
     for (const listener of notificationListeners) listener(notification);
   });
+  next.on('notification:read', (payload: { id: string }) => {
+    for (const listener of notificationReadListeners) listener(payload);
+  });
+  next.on('notification:read-all', (payload: { readAt: string }) => {
+    for (const listener of notificationsReadAllListeners) listener(payload);
+  });
 }
 
 function subscribe<T>(set: Set<Listener<T>>, listener: Listener<T>): () => void {
@@ -129,6 +137,8 @@ export const realtime = {
   },
   onPresenceUpdated: (listener: Listener<PresenceUpdate>): (() => void) => subscribe(presenceListeners, listener),
   onNotification: (listener: Listener<RealtimeNotification>): (() => void) => subscribe(notificationListeners, listener),
+  onNotificationRead: (listener: Listener<{ id: string }>): (() => void) => subscribe(notificationReadListeners, listener),
+  onNotificationsReadAll: (listener: Listener<{ readAt: string }>): (() => void) => subscribe(notificationsReadAllListeners, listener),
 };
 
 authStore.subscribe(syncSocket);
