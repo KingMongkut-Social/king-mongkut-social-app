@@ -227,10 +227,15 @@
   place-items: center;
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.14);
-  content: '+';
-  font-size: 1rem;
+  content: '→';
+  font-size: 0.95rem;
   font-weight: 500;
   line-height: 1;
+}
+
+.btn-create-project[data-action-kind='create']::before {
+  content: '+';
+  font-size: 1rem;
 }
 
 .btn-create-project:hover {
