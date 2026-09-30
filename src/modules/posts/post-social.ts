@@ -4,6 +4,7 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { confirmAction } from '../../core/ui/confirm-dialog';
+import { reactIcon, type AppIconName } from '../../core/ui/react-icon';
 import { createAvatar, createUniversityBadge } from '../../core/ui/avatar';
 import { formatRelativeTime } from '../../core/utils/format';
 import type { Post, PostComment, PostReaction } from '../../types/api';
@@ -14,13 +15,13 @@ function action(label: string, className = ''): HTMLButtonElement {
   return el('button', { className: `reaction-btn ${className}`.trim(), attrs: { type: 'button' }, text: label });
 }
 
-const REACTIONS: ReadonlyArray<{ value: PostReaction; emoji: string; label: string }> = [
-  { value: 'LIKE', emoji: '👍', label: 'ถูกใจ' },
-  { value: 'LOVE', emoji: '❤️', label: 'รักเลย' },
-  { value: 'HAHA', emoji: '😂', label: 'ฮ่าๆ' },
-  { value: 'WOW', emoji: '😮', label: 'ว้าว' },
-  { value: 'SAD', emoji: '😢', label: 'เศร้า' },
-  { value: 'ANGRY', emoji: '😡', label: 'โกรธ' },
+const REACTIONS: ReadonlyArray<{ value: PostReaction; icon: AppIconName; label: string }> = [
+  { value: 'LIKE', icon: 'thumbs-up', label: 'ถูกใจ' },
+  { value: 'LOVE', icon: 'heart', label: 'รักเลย' },
+  { value: 'HAHA', icon: 'laugh', label: 'ฮ่าๆ' },
+  { value: 'WOW', icon: 'surprise', label: 'ว้าว' },
+  { value: 'SAD', icon: 'sad', label: 'เศร้า' },
+  { value: 'ANGRY', icon: 'angry', label: 'โกรธ' },
 ];
 
 function reactionMeta(value: PostReaction | null | undefined) {
@@ -79,8 +80,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     const button = el('button', {
       className: 'reaction-choice',
       attrs: { type: 'button', title: item.label, 'aria-label': item.label },
-      text: item.emoji,
-    });
+    }, reactIcon(item.icon));
     button.addEventListener('click', () => void applyReaction(item.value));
     reactionPicker.append(button);
   }
@@ -88,12 +88,19 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
 
   const renderSummary = (): void => {
     summary.replaceChildren();
+    const likesSummary = el('span', { className: 'post-social-summary__likes' });
+    likesSummary.append(reactIcon('heart'), document.createTextNode(` ${likesCount}`));
     summary.append(
-      el('span', { className: 'post-social-summary__likes', text: `❤️ ${likesCount}` }),
+      likesSummary,
       el('span', { className: 'post-social-summary__comments', text: `ความคิดเห็น ${commentsCount}` }),
     );
     const meta = reactionMeta(currentReaction);
-    likeBtn.textContent = meta ? `${meta.emoji} ${meta.label}` : 'ถูกใจ';
+    likeBtn.replaceChildren();
+    if (meta) {
+      likeBtn.append(reactIcon(meta.icon), document.createTextNode(` ${meta.label}`));
+    } else {
+      likeBtn.textContent = 'ถูกใจ';
+    }
     likeBtn.classList.toggle('reaction-btn--liked', liked);
     likeBtn.setAttribute('aria-pressed', String(liked));
     saveBtn.textContent = saved ? 'บันทึกแล้ว' : 'บันทึก';
