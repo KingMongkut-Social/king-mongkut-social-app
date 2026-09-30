@@ -512,7 +512,7 @@ export function searchFaculties(
       label: item.name,
       badge,
       badgeClass,
-      group: groupName,
+      ...(groupName ? { group: groupName } : {}),
     });
   }
 
@@ -625,7 +625,7 @@ export function searchDepartments(
           label: dept,
           badge,
           badgeClass,
-          group: normQuery ? undefined : fItem.name,
+          ...(!normQuery ? { group: fItem.name } : {}),
         });
 
         // Limit broad results if no query is given so list is manageable

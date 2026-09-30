@@ -2,6 +2,7 @@ import { authApi } from '../core/auth/auth-api';
 import { authStore } from '../core/auth/auth-store';
 import { notificationStore } from '../core/notifications/notification-store';
 import type { Router } from '../core/router/router';
+import { mobileItemsForState, sidebarActionForState, sidebarItemsForState, type NavigationItem } from './navigation';
 import { clear, el } from '../core/ui/dom';
 import { errorMessage } from '../core/ui/error-message';
 import { toast } from '../core/ui/toast';
@@ -207,12 +208,6 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   sidebarTop.append(navTitle, navSubtitle, navList);
 
   const sidebarFooter = el('div', { className: 'sidebar__footer' });
-  const createProjectBtn = el('a', {
-    className: 'btn-create-project',
-    attrs: { href: '/dashboard/posts/new' },
-    text: '+ สร้างโปรเจกต์ใหม่',
-  });
-  sidebarFooter.append(createProjectBtn);
 
   sidebar.append(sidebarTop, sidebarFooter);
 
@@ -238,87 +233,69 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     clear(navList);
     clear(mobileNav);
     clear(userActionSlot);
+    clear(sidebarFooter);
 
     const currentPath = window.location.pathname;
-    const savedOnly = new URLSearchParams(window.location.search).get('saved') === '1';
+    const state = authStore.snapshot;
+    const location = { pathname: currentPath, search: window.location.search };
     updatePageLayoutState();
 
-    const createNavItem = (label: string, href: string, iconSvg: string, isActive: boolean): HTMLElement => {
+    const createNavItem = (entry: NavigationItem): HTMLElement => {
       const link = el('a', {
-        className: `sidebar__link ${isActive ? 'sidebar__link--active' : ''}`,
-        attrs: { href },
+        className: `sidebar__link ${entry.active ? 'sidebar__link--active' : ''}`,
+        attrs: {
+          href: entry.href,
+          ...(entry.active ? { 'aria-current': 'page' } : {}),
+        },
       });
       const iconSpan = el('span', { className: 'sidebar__icon' });
-      iconSpan.innerHTML = iconSvg;
-      const textSpan = el('span', { text: label });
-      link.append(iconSpan, textSpan);
+      iconSpan.innerHTML = icons[entry.icon];
+      link.append(iconSpan, el('span', { text: entry.label }));
       return link;
     };
 
-    const isProfilePage = currentPath === '/profile' || (currentPath.startsWith('/profile/') && currentPath !== '/profile/edit');
-    const isCompactSocialPage = isProfilePage || currentPath === '/connections' || currentPath === '/chat';
-    if (isCompactSocialPage) {
-      const unavailable = (label: string): HTMLElement => el('span', {
-        className: 'sidebar__link sidebar__link--unavailable',
-        text: label,
-        attrs: { 'aria-disabled': 'true' },
-      });
-      const notificationsLink = el('button', {
-        className: 'sidebar__link sidebar__link--button',
-        text: 'การแจ้งเตือน',
-        attrs: { type: 'button' },
-      });
-      notificationsLink.addEventListener('click', () => bellBtn.click());
-      navList.append(
-        createNavItem('ฟีดข่าว', '/', icons.feed, false),
-        createNavItem('เพื่อน & การเชื่อมต่อ', '/connections', icons.connections, currentPath === '/connections'),
-        createNavItem('ข้อความ', '/chat', icons.chats, currentPath === '/chat'),
-        notificationsLink,
-        createNavItem('สถาบัน', '/universities', icons.institutions, currentPath.startsWith('/universities')),
-        createNavItem('สำรวจ', '/search', icons.search, currentPath === '/search'),
-        createNavItem('กลุ่ม', '/groups', icons.connections, currentPath.startsWith('/groups')),
-        createNavItem('บันทึกไว้', '/?saved=1', icons.feed, false),
-        authStore.snapshot.status === 'authenticated'
-          ? createNavItem('ตั้งค่า', '/profile/edit', icons.user, false)
-          : unavailable('ตั้งค่า'),
-      );
-    } else {
-      navList.append(
-        createNavItem('ฟีดข่าว', '/', icons.feed, (currentPath === '/' && !savedOnly) || currentPath.startsWith('/posts')),
-        createNavItem('เพื่อน & การเชื่อมต่อ', '/connections', icons.connections, currentPath === '/connections'),
-        createNavItem('แชท', '/chat', icons.chats, currentPath === '/chat'),
-        createNavItem('สถาบัน', '/universities', icons.institutions, currentPath.startsWith('/universities')),
-        createNavItem('กลุ่ม', '/groups', icons.connections, currentPath.startsWith('/groups')),
-        createNavItem('สำรวจ', '/search', icons.search, currentPath === '/search'),
-      );
+    for (const entry of sidebarItemsForState(state, location)) {
+      navList.append(createNavItem(entry));
     }
 
-    for (const [label, href, active] of [
-      ['ฟีด', '/', currentPath === '/' || currentPath.startsWith('/posts')],
-      ['เพื่อน', '/connections', currentPath === '/connections'],
-      ['แชท', '/chat', currentPath === '/chat'],
-    ] as const) {
+    const mobileLabels: Record<string, string> = {
+      feed: 'ฟีด',
+      connections: 'เพื่อน',
+      chat: 'แชท',
+      profile: 'โปรไฟล์',
+      search: 'สำรวจ',
+      universities: 'สถาบัน',
+      'complete-profile': 'โปรไฟล์',
+    };
+    for (const entry of mobileItemsForState(state, location)) {
       mobileNav.append(el('a', {
-        className: `mobile-primary-nav__link ${active ? 'mobile-primary-nav__link--active' : ''}`,
-        text: label,
-        attrs: { href, 'aria-current': active ? 'page' : 'false' },
+        className: `mobile-primary-nav__link ${entry.active ? 'mobile-primary-nav__link--active' : ''}`,
+        text: mobileLabels[entry.id] ?? entry.label,
+        attrs: {
+          href: entry.href,
+          ...(entry.active ? { 'aria-current': 'page' } : {}),
+        },
       }));
     }
 
-    const state = authStore.snapshot;
-    if (state.status === 'authenticated' && state.user) {
-      if (!isCompactSocialPage) {
-        navList.append(
-          createNavItem('บันทึกไว้', '/?saved=1', icons.feed, currentPath === '/' && savedOnly),
-          createNavItem('โพสต์ของฉัน', '/dashboard', icons.feed, currentPath.startsWith('/dashboard')),
-        );
-      }
-      if (state.user.role === 'admin') {
-        navList.append(
-          createNavItem('การดูแลระบบ', '/admin/moderation', icons.user, currentPath === '/admin/moderation'),
-        );
-      }
+    const sidebarAction = sidebarActionForState(state);
+    if (sidebarAction) {
+      sidebarFooter.append(el('a', {
+        className: 'btn-create-project',
+        attrs: { href: sidebarAction.href },
+        text: sidebarAction.label,
+      }));
+    }
 
+    const authenticated = state.status === 'authenticated' && Boolean(state.user);
+    bellWrap.hidden = !authenticated;
+    if (!authenticated) {
+      notifDropdown.style.display = 'none';
+    }
+
+    if (state.status === 'loading') return;
+
+    if (state.status === 'authenticated' && state.user) {
       const initial = state.user.name ? state.user.name.charAt(0).toUpperCase() : 'ส';
       const userBtn = el('a', {
         className: 'user-avatar-btn',
@@ -326,7 +303,6 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         text: initial,
       });
       userBtn.append(el('span', { className: 'header-user-label', text: state.user.name }));
-
 
       const logoutBtn = el('button', {
         className: 'icon-btn',
@@ -345,14 +321,16 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       });
 
       userActionSlot.append(userBtn, logoutBtn);
-    } else {
-      const loginLink = el('a', {
-        className: 'icon-btn',
-        attrs: { href: '/login', title: 'เข้าสู่ระบบ' },
-      });
-      loginLink.innerHTML = icons.user;
-      userActionSlot.append(loginLink);
+      return;
     }
+
+    const loginLink = el('a', {
+      className: 'icon-btn',
+      attrs: { href: '/login', title: 'เข้าสู่ระบบ', 'aria-label': 'เข้าสู่ระบบ' },
+    });
+    loginLink.innerHTML = icons.user;
+    loginLink.append(el('span', { className: 'header-action-label', text: 'เข้าสู่ระบบ' }));
+    userActionSlot.append(loginLink);
   };
 
   renderNav();
