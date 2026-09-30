@@ -7,6 +7,7 @@ import { clear, el } from '../core/ui/dom';
 import { errorMessage } from '../core/ui/error-message';
 import { toast } from '../core/ui/toast';
 import { formatRelativeTime } from '../core/utils/format';
+import { profileImageUrl } from '../modules/profile/profile-api';
 
 const icons = {
   feed: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>`,
@@ -16,6 +17,15 @@ const icons = {
   search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   bell: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
   user: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+};
+
+const accountIcons = {
+  profile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
+  posts: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>`,
+  logout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>`,
+  chevron: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`,
 };
 
 export function mountLayout(root: HTMLElement): HTMLElement {
@@ -178,6 +188,12 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   bellBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    const accountMenu = root.querySelector<HTMLElement>('.account-menu');
+    const accountTrigger = root.querySelector<HTMLElement>('.account-menu-trigger');
+    if (accountMenu && accountTrigger) {
+      accountMenu.hidden = true;
+      accountTrigger.setAttribute('aria-expanded', 'false');
+    }
     const isHidden = notifDropdown.style.display === 'none';
     notifDropdown.style.display = isHidden ? 'block' : 'none';
   });
@@ -190,6 +206,26 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   bellWrap.append(bellBtn, notifBadge, notifDropdown);
   const userActionSlot = el('div', { className: 'site-header__user-slot' });
+
+  document.addEventListener('click', (e) => {
+    if (userActionSlot.contains(e.target as Node)) return;
+    const menu = userActionSlot.querySelector<HTMLElement>('.account-menu');
+    const trigger = userActionSlot.querySelector<HTMLElement>('.account-menu-trigger');
+    if (!menu || !trigger) return;
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    notifDropdown.style.display = 'none';
+    const menu = userActionSlot.querySelector<HTMLElement>('.account-menu');
+    const trigger = userActionSlot.querySelector<HTMLButtonElement>('.account-menu-trigger');
+    if (!menu || !trigger || menu.hidden) return;
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.focus();
+  });
 
   headerActions.append(bellWrap, userActionSlot);
   headerInner.append(brand, searchWrap, headerActions);
@@ -296,31 +332,159 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     if (state.status === 'loading') return;
 
     if (state.status === 'authenticated' && state.user) {
-      const initial = state.user.name ? state.user.name.charAt(0).toUpperCase() : 'ส';
-      const userBtn = el('a', {
-        className: 'user-avatar-btn',
-        attrs: { href: '/profile', title: `โปรไฟล์: ${state.user.name} (${state.user.email})` },
-        text: initial,
+      const user = state.user;
+      const initial = user.name ? user.name.charAt(0).toUpperCase() : 'ส';
+      const menuWrap = el('div', { className: 'account-menu-wrap' });
+      const trigger = el('button', {
+        className: 'account-menu-trigger',
+        attrs: {
+          type: 'button',
+          'aria-label': `เปิดเมนูบัญชีของ ${user.name}`,
+          'aria-haspopup': 'menu',
+          'aria-expanded': 'false',
+        },
       });
-      userBtn.append(el('span', { className: 'header-user-label', text: state.user.name }));
 
-      const logoutBtn = el('button', {
-        className: 'icon-btn',
-        attrs: { type: 'button', 'aria-label': 'ออกจากระบบ', title: 'ออกจากระบบ' },
+      const createAvatar = (large = false): HTMLElement => {
+        const avatar = el('span', {
+          className: `account-avatar${large ? ' account-avatar--large' : ''}`,
+          text: initial,
+          attrs: { 'aria-hidden': 'true' },
+        });
+        if (user.avatarUrl) {
+          const image = el('img', {
+            attrs: {
+              src: profileImageUrl(user.avatarUrl),
+              alt: '',
+              loading: 'eager',
+              referrerpolicy: 'no-referrer',
+            },
+          });
+          image.addEventListener('error', () => {
+            avatar.replaceChildren(document.createTextNode(initial));
+          }, { once: true });
+          avatar.replaceChildren(image);
+        }
+        return avatar;
+      };
+
+      const triggerIdentity = el('span', { className: 'account-trigger__identity' });
+      triggerIdentity.append(
+        el('span', { className: 'account-trigger__name', text: user.name }),
+        el('span', {
+          className: 'account-trigger__meta',
+          text: user.username ? `@${user.username}` : user.university,
+        }),
+      );
+      const chevron = el('span', { className: 'account-trigger__chevron', attrs: { 'aria-hidden': 'true' } });
+      chevron.innerHTML = accountIcons.chevron;
+      trigger.append(createAvatar(), triggerIdentity, chevron);
+
+      const menu = el('div', {
+        className: 'account-menu',
+        attrs: { role: 'menu', 'aria-label': 'เมนูบัญชี', hidden: '' },
       });
-      logoutBtn.innerHTML = `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`;
+
+      const profileSummary = el('div', { className: 'account-menu__profile' });
+      const profileCopy = el('span', { className: 'account-menu__profile-copy' });
+      profileCopy.append(
+        el('span', { className: 'account-menu__profile-name', text: user.name }),
+        el('span', { className: 'account-menu__profile-email', text: user.email }),
+        el('span', { className: 'account-menu__profile-university', text: user.university }),
+      );
+      profileSummary.append(createAvatar(true), profileCopy);
+
+      const closeMenu = (): void => {
+        menu.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+      };
+
+      const createMenuLink = (
+        href: string,
+        label: string,
+        hint: string,
+        iconSvg: string,
+      ): HTMLAnchorElement => {
+        const link = el('a', {
+          className: 'account-menu__item',
+          attrs: { href, role: 'menuitem' },
+        }) as HTMLAnchorElement;
+        const icon = el('span', { className: 'account-menu__item-icon', attrs: { 'aria-hidden': 'true' } });
+        icon.innerHTML = iconSvg;
+        const copy = el('span', { className: 'account-menu__item-copy' });
+        copy.append(
+          el('span', { className: 'account-menu__item-label', text: label }),
+          el('span', { className: 'account-menu__item-hint', text: hint }),
+        );
+        link.append(icon, copy);
+        link.addEventListener('click', closeMenu);
+        return link;
+      };
+
+      const items = el('div', { className: 'account-menu__items' });
+      items.append(
+        createMenuLink('/profile', 'ดูโปรไฟล์', 'ดูหน้าโปรไฟล์และกิจกรรมของคุณ', accountIcons.profile),
+        createMenuLink('/profile/edit', 'แก้ไขโปรไฟล์', 'เปลี่ยนข้อมูลและรูปโปรไฟล์', accountIcons.edit),
+        createMenuLink('/dashboard', 'โพสต์ของฉัน', 'จัดการโพสต์ที่คุณสร้างไว้', accountIcons.posts),
+      );
+
+      if (user.role === 'admin') {
+        items.append(createMenuLink(
+          '/admin/moderation',
+          'การดูแลระบบ',
+          'ตรวจสอบรายงานและจัดการเนื้อหา',
+          accountIcons.shield,
+        ));
+      }
+
+      const footer = el('div', { className: 'account-menu__items' });
+      const logoutBtn = el('button', {
+        className: 'account-menu__item account-menu__item--danger',
+        attrs: { type: 'button', role: 'menuitem' },
+      });
+      const logoutIcon = el('span', { className: 'account-menu__item-icon', attrs: { 'aria-hidden': 'true' } });
+      logoutIcon.innerHTML = accountIcons.logout;
+      const logoutCopy = el('span', { className: 'account-menu__item-copy' });
+      const logoutLabel = el('span', { className: 'account-menu__item-label', text: 'ออกจากระบบ' });
+      logoutCopy.append(
+        logoutLabel,
+        el('span', { className: 'account-menu__item-hint', text: 'สิ้นสุดเซสชันบนอุปกรณ์นี้' }),
+      );
+      logoutBtn.append(logoutIcon, logoutCopy);
+
       logoutBtn.addEventListener('click', async () => {
+        logoutBtn.disabled = true;
+        logoutLabel.textContent = 'กำลังออกจากระบบ...';
+        closeMenu();
         try {
           await authApi.logout();
           toast.success('ออกจากระบบสำเร็จ');
-          window.history.pushState(null, '', '/login');
-          window.dispatchEvent(new PopStateEvent('popstate'));
         } catch (error) {
           toast.error(errorMessage(error));
+        } finally {
+          window.history.pushState(null, '', '/login');
+          window.dispatchEvent(new PopStateEvent('popstate'));
         }
       });
 
-      userActionSlot.append(userBtn, logoutBtn);
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const opening = menu.hidden;
+        notifDropdown.style.display = 'none';
+        menu.hidden = !opening;
+        trigger.setAttribute('aria-expanded', opening ? 'true' : 'false');
+      });
+
+      menu.append(
+        profileSummary,
+        el('div', { className: 'account-menu__divider', attrs: { 'aria-hidden': 'true' } }),
+        items,
+        el('div', { className: 'account-menu__divider', attrs: { 'aria-hidden': 'true' } }),
+        footer,
+      );
+      footer.append(logoutBtn);
+      menuWrap.append(trigger, menu);
+      userActionSlot.append(menuWrap);
       return;
     }
 
