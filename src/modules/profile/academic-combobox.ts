@@ -45,7 +45,7 @@ export function createAcademicCombobox(options: AcademicComboboxOptions): Academ
   const input = el('input', {
     className: options.inputClassName || 'input academic-combobox__input',
     attrs: inputAttrs,
-  }) as HTMLInputElement;
+  });
 
   input.value = options.initialValue ?? '';
 
