@@ -17,6 +17,20 @@ import {
 import { postsApi } from './posts-api';
 import { mountPostSocial } from './post-social';
 
+let postMenuOutsideHandlerInstalled = false;
+
+function ensurePostMenuOutsideHandler(): void {
+  if (postMenuOutsideHandlerInstalled) return;
+  postMenuOutsideHandlerInstalled = true;
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('.post-menu-wrap')) return;
+    document.querySelectorAll<HTMLElement>('.post-actions-dropdown').forEach((dropdown) => {
+      dropdown.style.display = 'none';
+    });
+  });
+}
+
 const postIcons = {
   like: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`,
   comment: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
