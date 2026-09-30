@@ -10,13 +10,13 @@ const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   posts: vi.fn(),
   friends: vi.fn(),
-  chatList: vi.fn(),
+  groupList: vi.fn(),
 }));
 
 vi.mock('../src/modules/profile/profile-api', () => ({
   profileApi: { get: mocks.get, posts: mocks.posts, friends: mocks.friends },
 }));
-vi.mock('../src/modules/chats/chats-api', () => ({ chatsApi: { list: mocks.chatList } }));
+vi.mock('../src/modules/groups/groups-api', () => ({ groupsApi: { userGroups: mocks.groupList } }));
 vi.mock('../src/core/realtime/socket', () => ({
   realtime: { onFriendUpdated: () => () => undefined },
 }));
@@ -45,7 +45,7 @@ beforeEach(() => {
   mocks.get.mockResolvedValue(profile);
   mocks.posts.mockResolvedValue({ items: [], page: 1, limit: 10, total: 0, pages: 1 });
   mocks.friends.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0, pages: 1 });
-  mocks.chatList.mockResolvedValue([]);
+  mocks.groupList.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -105,19 +105,30 @@ describe('profile page tabs', () => {
     view.dispose?.();
   });
 
-  it('shows the signed-in user’s actual group chats', async () => {
+  it('shows the user’s actual community groups instead of chat groups', async () => {
     const viewer: User = {
       _id: viewerId, name: 'Alice', email: 'alice@example.com', role: 'user', university: 'KMITL',
       needsProfileCompletion: false, createdAt: '', updatedAt: '',
     };
     authStore.setAuthenticated(viewer, 'token');
     mocks.get.mockResolvedValue({ ...profile, id: viewerId, name: 'Alice', relationshipStatus: 'self' });
-    mocks.chatList.mockResolvedValue([{ id: 'group-1', type: 'group', name: 'Study team', members: [viewer], lastMessage: null, createdAt: '', updatedAt: '' }]);
+    mocks.groupList.mockResolvedValue([{
+      id: 'group-1',
+      name: 'AI Community',
+      description: '',
+      coverUrl: null,
+      privacy: 'private',
+      university: 'KMITL',
+      memberCount: 12,
+      membershipRole: 'member',
+      joined: true,
+      createdAt: '',
+    }]);
     const view = await profilePage(context('?tab=groups', `/profile/${viewerId}`));
     expect(mocks.get).toHaveBeenCalledWith(viewerId);
-    expect(mocks.chatList).toHaveBeenCalledOnce();
-    expect(view.element.querySelector<HTMLAnchorElement>('.profile-groups-grid a')?.getAttribute('href')).toBe('/chat?chatId=group-1');
-    expect(view.element.querySelector('.profile-groups-grid')?.textContent).toContain('Study team');
+    expect(mocks.groupList).toHaveBeenCalledWith(viewerId);
+    expect(view.element.querySelector<HTMLAnchorElement>('.profile-groups-grid a')?.getAttribute('href')).toBe('/groups/group-1');
+    expect(view.element.querySelector('.profile-groups-grid')?.textContent).toContain('AI Community');
     view.dispose?.();
   });
 });

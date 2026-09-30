@@ -6,11 +6,11 @@ import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import type { PaginatedPosts, Post } from '../../types/api';
 import { respondFriendRequest, sendFriendRequest } from '../friends/friends-api';
-import { chatsApi, type Chat } from '../chats/chats-api';
 import { getPostImages, pagination, postCard } from '../posts/post-components';
 import { assetUrl } from '../posts/posts-api';
 import { profileApi, profileImageUrl, type PaginatedProfileFriends, type UserProfile } from './profile-api';
 import { openReportDialog } from '../reports/report-dialog';
+import { groupsApi, type CommunityGroup } from '../groups/groups-api';
 
 type ProfileTab = 'posts' | 'about' | 'friends' | 'photos' | 'groups';
 const profileTabs: ReadonlyArray<{ id: ProfileTab; label: string }> = [
@@ -266,14 +266,12 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
     }
   } else if (tab === 'photos') {
     await renderPhotos(section, profile.id, () => disposed);
-  } else if (isSelf) {
+  } else {
     try {
-      renderGroups(section, (await chatsApi.list()).filter((chat) => chat.type === 'group'));
+      renderGroups(section, await groupsApi.userGroups(profile.id));
     } catch (cause) {
       section.append(profileState(`ไม่สามารถโหลดกลุ่มได้: ${errorMessage(cause)}`));
     }
-  } else {
-    section.append(profileState('ยังไม่มีข้อมูลกลุ่มของผู้ใช้นี้ให้แสดง'));
   }
 
   const unsubscribeFriend = realtime.onFriendUpdated(() => { void refreshProfile(); });
@@ -374,17 +372,20 @@ async function renderPhotos(section: HTMLElement, userId: string, isDisposed: ()
   await load();
 }
 
-function renderGroups(section: HTMLElement, groups: Chat[]): void {
+function renderGroups(section: HTMLElement, groups: CommunityGroup[]): void {
   if (!groups.length) {
-    section.append(profileState('คุณยังไม่มีกลุ่มสนทนา'));
+    section.append(profileState('ยังไม่มีกลุ่มชุมชนที่แสดงได้'));
     return;
   }
   const grid = el('div', { className: 'profile-groups-grid' });
   for (const group of groups) {
-    const card = el('a', { className: 'profile-person-card', attrs: { href: `/chat?chatId=${encodeURIComponent(group.id)}` } });
+    const card = el('a', { className: 'profile-person-card', attrs: { href: `/groups/${encodeURIComponent(group.id)}` } });
     card.append(el('span', { className: 'profile-group-icon', text: '👥', attrs: { 'aria-hidden': 'true' } }));
     const info = el('span', { className: 'profile-person-info' });
-    info.append(el('strong', { text: group.name || 'กลุ่มสนทนา' }), el('small', { text: `${group.members.length} สมาชิก` }));
+    info.append(
+      el('strong', { text: group.name }),
+      el('small', { text: `${group.memberCount} สมาชิก · ${group.privacy === 'private' ? 'ส่วนตัว' : 'สาธารณะ'}` }),
+    );
     card.append(info);
     grid.append(card);
   }

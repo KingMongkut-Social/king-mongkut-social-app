@@ -177,6 +177,14 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     });
     footer.append(reply);
 
+    if (currentUserId && currentUserId !== author._id) {
+      const report = el('button', { className: 'btn-reply-comment', attrs: { type: 'button' }, text: 'รายงาน' });
+      report.addEventListener('click', () => {
+        openReportDialog({ targetType: 'comment', targetId: comment._id, title: 'รายงานความคิดเห็น' });
+      });
+      footer.append(report);
+    }
+
     if (currentUserId === author._id) {
       const remove = el('button', { className: 'btn-reply-comment', attrs: { type: 'button' }, text: 'ลบ' });
       remove.addEventListener('click', async () => {

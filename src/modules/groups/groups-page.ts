@@ -19,11 +19,14 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
       const name = window.prompt('ชื่อกลุ่ม');
       if (!name?.trim()) return;
       const description = window.prompt('รายละเอียดกลุ่ม', '') ?? '';
+      const privacy = window.confirm('ต้องการสร้างเป็นกลุ่มส่วนตัวหรือไม่?\nกด OK = ส่วนตัว, Cancel = สาธารณะ')
+        ? 'private' as const
+        : 'public' as const;
       try {
         const group = await groupsApi.create({
           name: name.trim(),
           description,
-          privacy: 'public',
+          privacy,
           university: authStore.snapshot.user?.university ?? null,
         });
         window.history.pushState(null, '', `/groups/${group.id}`);

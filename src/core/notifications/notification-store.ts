@@ -66,6 +66,22 @@ class NotificationStore {
       this.notifications = [mapped, ...this.notifications.filter((item) => item.id !== mapped.id)];
       this.notify();
     });
+    realtime.onNotificationRead(({ id }) => {
+      const item = this.notifications.find((notification) => notification.id === id);
+      if (!item || item.read) return;
+      item.read = true;
+      this.notify();
+    });
+    realtime.onNotificationsReadAll(() => {
+      let changed = false;
+      for (const item of this.notifications) {
+        if (!item.read) {
+          item.read = true;
+          changed = true;
+        }
+      }
+      if (changed) this.notify();
+    });
   }
 
   private notify(): void {

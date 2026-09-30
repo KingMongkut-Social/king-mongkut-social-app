@@ -3876,3 +3876,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .report-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }
 .group-hero__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .profile-friend-btn--report { border-color: var(--border-dark); background: #fff; color: var(--muted); }
+
+
+/* Production readiness: community group management */
+.group-post__actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+.group-member-list { display: grid; gap: 8px; }
+.group-member-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.group-member-row__identity { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.group-member-row__identity small { color: var(--muted-light); }
+.group-member-row__controls { display: flex; align-items: center; gap: 8px; }
+.group-member-row__controls select {
+  padding: 7px 9px; border: 1px solid var(--border-dark); border-radius: 8px; background: #fff;
+}
+.moderation-tabs { display: flex; gap: 18px; margin-top: 18px; border-bottom: 1px solid var(--border); }
+.moderation-tabs .community-tab { padding-bottom: 10px; }
+@media (max-width: 580px) {
+  .group-member-row { align-items: flex-start; flex-wrap: wrap; }
+  .group-member-row__controls { width: 100%; justify-content: flex-end; }
+}

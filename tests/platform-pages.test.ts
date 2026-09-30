@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   universities: vi.fn(),
   groups: vi.fn(),
   reports: vi.fn(),
+  moderate: vi.fn(),
 }));
 
 vi.mock('../src/modules/universities/universities-api', () => ({
@@ -20,7 +21,7 @@ vi.mock('../src/modules/groups/groups-api', () => ({
   groupsApi: { list: mocks.groups, create: vi.fn() },
 }));
 vi.mock('../src/modules/reports/reports-api', () => ({
-  reportsApi: { list: mocks.reports, moderate: vi.fn() },
+  reportsApi: { list: mocks.reports, moderate: mocks.moderate },
 }));
 
 function context(path = '/groups'): RouteContext {
@@ -96,13 +97,32 @@ describe('platform completion pages', () => {
   });
 
   it('protects moderation in the UI and renders the queue for admins', async () => {
-    const denied = await moderationPage();
+    const denied = await moderationPage(context('/admin/moderation'));
     expect(denied.element.textContent).toContain('ผู้ดูแลระบบเท่านั้น');
 
     authStore.setAuthenticated(admin, 'admin-token');
-    const view = await moderationPage();
+    const view = await moderationPage(context('/admin/moderation'));
     expect(mocks.reports).toHaveBeenCalledOnce();
     expect(view.element.querySelector('.moderation-card')?.textContent).toContain('Spam');
     expect(view.element.querySelector('.moderation-card')?.textContent).toContain('Repeated promotion');
   });
+
+  it('shows a restore action for a resolved user suspension report', async () => {
+    authStore.setAuthenticated(admin, 'admin-token');
+    mocks.reports.mockResolvedValue([{
+      _id: 'cccccccccccccccccccccccc',
+      reporter: { _id: 'dddddddddddddddddddddddd', name: 'Reporter', university: 'KMUTT' },
+      targetType: 'user',
+      targetId: 'eeeeeeeeeeeeeeeeeeeeeeee',
+      reason: 'harassment',
+      details: 'Account review',
+      status: 'resolved',
+      action: 'suspend_user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }]);
+    const view = await moderationPage(context('/admin/moderation?status=resolved'));
+    expect(mocks.reports).toHaveBeenCalledWith('resolved');
+    expect(view.element.querySelector('.moderation-actions')?.textContent).toContain('คืนสถานะบัญชี');
+  });
+
 });
