@@ -1,6 +1,7 @@
 import { authStore } from '../../core/auth/auth-store';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
+import { reactIcon } from '../../core/ui/react-icon';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { createUniversityBadge } from '../../core/ui/avatar';
@@ -122,7 +123,7 @@ export function renderGroupCard(group: CommunityGroup): HTMLElement {
       },
     });
     img.addEventListener('error', () => {
-      coverWrap.replaceChildren(el('div', { className: 'group-card__cover-fallback', text: '👥' }));
+      coverWrap.replaceChildren(el('div', { className: 'group-card__cover-fallback' }, reactIcon('users')));
     });
     coverWrap.append(img);
   } else {
@@ -132,7 +133,7 @@ export function renderGroupCard(group: CommunityGroup): HTMLElement {
     else if (code.includes('KMUTT')) grad = 'linear-gradient(135deg, rgba(239, 108, 0, 0.25) 0%, rgba(245, 124, 0, 0.5) 100%)';
     else if (code.includes('KMUTNB')) grad = 'linear-gradient(135deg, rgba(216, 67, 21, 0.25) 0%, rgba(191, 54, 12, 0.5) 100%)';
     coverWrap.style.background = grad;
-    coverWrap.append(el('div', { className: 'group-card__cover-fallback', text: '👥' }));
+    coverWrap.append(el('div', { className: 'group-card__cover-fallback' }, reactIcon('users')));
   }
 
   const badges = el('div', { className: 'group-card__badges' });
@@ -141,8 +142,11 @@ export function renderGroupCard(group: CommunityGroup): HTMLElement {
   }
   const privacyBadge = el('span', {
     className: 'badge-tag',
-    text: group.privacy === 'private' ? '🔒 ส่วนตัว' : '🌐 สาธารณะ',
   });
+  privacyBadge.append(
+    reactIcon(group.privacy === 'private' ? 'lock' : 'globe'),
+    document.createTextNode(group.privacy === 'private' ? ' ส่วนตัว' : ' สาธารณะ'),
+  );
   badges.append(privacyBadge);
   coverWrap.append(badges);
 

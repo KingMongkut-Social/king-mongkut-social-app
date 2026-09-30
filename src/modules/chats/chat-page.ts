@@ -3,6 +3,7 @@ import { realtime } from '../../core/realtime/socket';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { createAvatar } from '../../core/ui/avatar';
 import { clear, el } from '../../core/ui/dom';
+import { reactIcon } from '../../core/ui/react-icon';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
@@ -190,7 +191,7 @@ export function chatPage(context: RouteContext): PageView {
       });
       const peer = chat.type === 'direct' ? chat.members.find((member) => member.id !== selfId) : null;
       const avatar = chat.type === 'group'
-        ? el('span', { className: 'chat-list__avatar', text: '👥' })
+        ? el('span', { className: 'chat-list__avatar' }, reactIcon('users'))
         : createAvatar({
           url: peer?.avatarUrl,
           name: peer?.name,
@@ -216,7 +217,7 @@ export function chatPage(context: RouteContext): PageView {
     clear(panelAvatar);
     panelAvatar.hidden = !chat;
     if (chat?.type === 'group') {
-      panelAvatar.textContent = '👥';
+      panelAvatar.replaceChildren(reactIcon('users'));
       panelSubtitle.classList.remove('chat-panel__subtitle--online');
       panelSubtitle.textContent = `${chat.members.length} สมาชิก`;
     } else if (chat) {

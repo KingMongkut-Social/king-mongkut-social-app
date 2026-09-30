@@ -1,6 +1,7 @@
 import type { PageView, RouteContext } from '../../core/router/router';
 import { clear, el } from '../../core/ui/dom';
 import { createEmptyState, createErrorState } from '../../core/ui/feedback';
+import { reactIcon, type AppIconName } from '../../core/ui/react-icon';
 import { createAvatar, createUniversityBadge } from '../../core/ui/avatar';
 import { profileImageUrl } from '../profile/profile-api';
 import { toast } from '../../core/ui/toast';
@@ -62,11 +63,11 @@ function renderGroupRow(group: SearchGroup): HTMLElement {
       },
     });
     img.addEventListener('error', () => {
-      thumb.replaceChildren(el('span', { className: 'community-person__avatar', text: '👥' }));
+      thumb.replaceChildren(el('span', { className: 'community-person__avatar' }, reactIcon('users')));
     });
     thumb.append(img);
   } else {
-    thumb.append(el('span', { className: 'community-person__avatar', text: '👥' }));
+    thumb.append(el('span', { className: 'community-person__avatar' }, reactIcon('users')));
   }
 
   const info = el('span', { className: 'search-group-info' });
@@ -136,13 +137,13 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
     const hubTitle = el('h2', { className: 'explore-hub__title', text: 'หมวดหมู่สำรวจลัด' });
     const hubGrid = el('div', { className: 'explore-hub__grid' });
 
-    const shortcuts = [
-      { href: '/connections', icon: '👥', title: 'เพื่อน & การเชื่อมต่อ', desc: 'ค้นหาเพื่อนนักศึกษาและเครือข่าย' },
-      { href: '/groups', icon: '🌐', title: 'กลุ่มชุมชน', desc: 'กลุ่มกิจกรรม สโมสร และชมรมความสนใจ' },
-      { href: '/universities', icon: '🏛️', title: 'สถาบัน 3 พระจอมฯ', desc: 'ลาดกระบัง • ธนบุรี • พระนครเหนือ' },
-      { href: '/chat', icon: '💬', title: 'ข้อความ & แชท', desc: 'พูดคุยส่วนตัวและสนทนากลุ่ม' },
-      { href: '/?saved=1', icon: '🔖', title: 'โพสต์ที่บันทึกไว้', desc: 'โพสต์ที่คุณบุ๊กมาร์กไว้เพื่ออ่านต่อ' },
-      { href: '/notifications', icon: '🔔', title: 'การแจ้งเตือน', desc: 'ติดตามกิจกรรมและการโต้ตอบล่าสุด' },
+    const shortcuts: ReadonlyArray<{ href: string; icon: AppIconName; title: string; desc: string }> = [
+      { href: '/connections', icon: 'users', title: 'เพื่อน & การเชื่อมต่อ', desc: 'ค้นหาเพื่อนนักศึกษาและเครือข่าย' },
+      { href: '/groups', icon: 'globe', title: 'กลุ่มชุมชน', desc: 'กลุ่มกิจกรรม สโมสร และชมรมความสนใจ' },
+      { href: '/universities', icon: 'university', title: 'สถาบัน 3 พระจอมฯ', desc: 'ลาดกระบัง • ธนบุรี • พระนครเหนือ' },
+      { href: '/chat', icon: 'comments', title: 'ข้อความ & แชท', desc: 'พูดคุยส่วนตัวและสนทนากลุ่ม' },
+      { href: '/?saved=1', icon: 'bookmark', title: 'โพสต์ที่บันทึกไว้', desc: 'โพสต์ที่คุณบุ๊กมาร์กไว้เพื่ออ่านต่อ' },
+      { href: '/notifications', icon: 'bell', title: 'การแจ้งเตือน', desc: 'ติดตามกิจกรรมและการโต้ตอบล่าสุด' },
     ];
 
     for (const item of shortcuts) {
@@ -151,7 +152,7 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
         attrs: { href: item.href },
       });
       card.append(
-        el('div', { className: 'explore-shortcut-card__icon', text: item.icon }),
+        el('div', { className: 'explore-shortcut-card__icon' }, reactIcon(item.icon)),
         el('div', { className: 'explore-shortcut-card__text' },
           el('strong', { text: item.title }),
           el('small', { text: item.desc }),

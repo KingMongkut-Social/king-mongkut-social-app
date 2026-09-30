@@ -2,6 +2,7 @@ import { authStore } from '../../core/auth/auth-store';
 import { realtime } from '../../core/realtime/socket';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
+import { reactIcon } from '../../core/ui/react-icon';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { confirmAction } from '../../core/ui/confirm-dialog';
@@ -423,7 +424,7 @@ function renderGroups(section: HTMLElement, groups: CommunityGroup[]): void {
   const grid = el('div', { className: 'profile-groups-grid' });
   for (const group of groups) {
     const card = el('a', { className: 'profile-person-card', attrs: { href: `/groups/${encodeURIComponent(group.id)}` } });
-    card.append(el('span', { className: 'profile-group-icon', text: '👥', attrs: { 'aria-hidden': 'true' } }));
+    card.append(el('span', { className: 'profile-group-icon', attrs: { 'aria-hidden': 'true' } }, reactIcon('users')));
     const info = el('span', { className: 'profile-person-info' });
     info.append(
       el('strong', { text: group.name }),

@@ -8,6 +8,7 @@ import { errorMessage } from '../core/ui/error-message';
 import { toast } from '../core/ui/toast';
 import { createAvatar } from '../core/ui/avatar';
 import { createNotificationTypeBadge } from '../core/ui/notification-icon';
+import { reactIcon } from '../core/ui/react-icon';
 import { formatRelativeTime } from '../core/utils/format';
 import { profileImageUrl } from '../modules/profile/profile-api';
 import { searchApi, type SearchResult, type SearchUser, type SearchGroup } from '../modules/search/search-api';
@@ -163,7 +164,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
             });
             iconWrap.append(img);
           } else {
-            iconWrap.textContent = '👥';
+            iconWrap.replaceChildren(reactIcon('users'));
           }
           const info = el('div', { className: 'header-search-autocomplete__info' });
           info.append(
@@ -190,8 +191,11 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     const footerLink = el('a', {
       className: 'header-search-autocomplete__footer',
       attrs: { href: `/search?q=${encodeURIComponent(q)}` },
-      text: `ดูผลลัพธ์ทั้งหมดสำหรับ "${q}" →`,
     });
+    footerLink.append(
+      document.createTextNode(`ดูผลลัพธ์ทั้งหมดสำหรับ "${q}" `),
+      reactIcon('arrow-right'),
+    );
     footerLink.addEventListener('click', (e) => {
       e.preventDefault();
       closeAutocomplete();

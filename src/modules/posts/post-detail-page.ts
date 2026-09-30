@@ -1,6 +1,7 @@
 import { authStore } from '../../core/auth/auth-store';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
+import { reactIcon } from '../../core/ui/react-icon';
 import { authorName, formatDate } from '../../core/utils/format';
 import { getPostImages, postCard, renderPostImagesGrid } from './post-components';
 import { assetUrl, postsApi } from './posts-api';
@@ -47,11 +48,12 @@ export async function postDetailPage(context: RouteContext): Promise<PageView> {
     const media = renderPostImagesGrid(getPostImages(post), post.title);
     if (media) draft.append(media);
     for (const attachment of post.attachments ?? []) {
-      draft.append(el('a', {
+      const attachmentLink = el('a', {
         className: 'text-link',
-        text: `📎 ${attachment.name}`,
         attrs: { href: assetUrl(attachment.url), target: '_blank', rel: 'noopener noreferrer' },
-      }));
+      });
+      attachmentLink.append(reactIcon('paperclip'), document.createTextNode(` ${attachment.name}`));
+      draft.append(attachmentLink);
     }
     draft.append(el('p', { className: 'article__updated muted', text: `อัปเดตล่าสุดเมื่อ ${formatDate(post.updatedAt)}` }));
     section.append(draft);

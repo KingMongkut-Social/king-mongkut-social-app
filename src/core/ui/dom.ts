@@ -1,3 +1,5 @@
+import { reactIcon, type AppIconName } from './react-icon';
+
 export interface ElementOptions {
   className?: string;
   text?: string;
@@ -24,12 +26,12 @@ export function clear(element: Element): void {
 }
 
 export function icon(name: 'arrow' | 'edit' | 'plus' | 'trash' | 'user'): HTMLSpanElement {
-  const glyphs = {
-    arrow: '→',
-    edit: '✎',
-    plus: '+',
-    trash: '×',
-    user: '●',
-  } as const;
-  return el('span', { className: 'icon', text: glyphs[name], attrs: { 'aria-hidden': 'true' } });
+  const icons: Record<typeof name, AppIconName> = {
+    arrow: 'arrow-right',
+    edit: 'edit',
+    plus: 'plus',
+    trash: 'trash',
+    user: 'user',
+  };
+  return el('span', { className: 'icon', attrs: { 'aria-hidden': 'true' } }, reactIcon(icons[name]));
 }
