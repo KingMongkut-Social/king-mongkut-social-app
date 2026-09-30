@@ -580,8 +580,11 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
     const authenticated = state.status === 'authenticated' && Boolean(state.user);
     bellWrap.hidden = !authenticated;
+    searchWrap.hidden = !authenticated;
+    mobileSearchBtn.hidden = !authenticated;
     if (!authenticated) {
       notifDropdown.style.display = 'none';
+      closeAutocomplete();
     }
 
     if (state.status === 'loading') return;

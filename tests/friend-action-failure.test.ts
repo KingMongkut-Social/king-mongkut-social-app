@@ -25,6 +25,13 @@ vi.mock('../src/modules/friends/friends-api', () => ({
 vi.mock('../src/modules/posts/posts-api', () => ({
   postsApi: { listPublished: mocks.listPublished },
 }));
+vi.mock('../src/core/realtime/socket', () => ({
+  realtime: {
+    onPresenceUpdated: () => () => undefined,
+    onFriendUpdated: () => () => undefined,
+    onConnection: () => () => undefined,
+  },
+}));
 
 const ownId = 'a'.repeat(24);
 const targetId = 'b'.repeat(24);
