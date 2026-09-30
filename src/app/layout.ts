@@ -127,6 +127,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       else if (n.type === 'friend_request') actionDesc = ' ส่งคำขอเป็นเพื่อนถึงคุณ';
       else if (n.type === 'friend_accept') actionDesc = ' ตอบรับคำขอเป็นเพื่อนของคุณ';
       else if (n.type === 'group_join') actionDesc = ' เข้าร่วมกลุ่มของคุณ';
+      else if (n.type === 'group_invite') actionDesc = ' เชิญคุณเข้าร่วมกลุ่ม';
       else actionDesc = ' มีกิจกรรมใหม่';
       textLine.append(document.createTextNode(actionDesc));
 
@@ -159,7 +160,9 @@ export function mountLayout(root: HTMLElement): HTMLElement {
           target = n.postId ? `/posts/${encodeURIComponent(n.postId)}` : '/';
         } else if (n.type === 'friend_request' || n.type === 'friend_accept') {
           target = '/connections';
-        } else if (n.type === 'group_join' || n.type === 'group_invite') {
+        } else if (n.type === 'group_invite') {
+          target = '/groups';
+        } else if (n.type === 'group_join') {
           target = n.postId ? `/groups/${encodeURIComponent(n.postId)}` : '/groups';
         }
         window.history.pushState(null, '', target);

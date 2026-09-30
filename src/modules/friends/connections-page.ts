@@ -4,7 +4,7 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import {
-  cancelFriendRequest, listFriends, listFriendRequests, listSuggestedFriends,
+  cancelFriendRequest, listFriends, listFriendRequests, listSuggestedFriends, removeFriend,
   respondFriendRequest, searchFriends, sendFriendRequest,
   type AcceptedFriend, type FriendPerson, type FriendRequests, type FriendUser,
 } from './friends-api';
@@ -94,7 +94,18 @@ export function connectionsPage(context?: RouteContext): PageView {
   }
 
   function requestActions(user: FriendUser): HTMLElement {
-    if (user.relationshipStatus === 'friends') return messageAction(user.id);
+    if (user.relationshipStatus === 'friends') {
+      const actions = el('div', { className: 'connections-actions' }, messageAction(user.id));
+      if (user.requestId) {
+        const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
+        remove.addEventListener('click', () => {
+          if (!window.confirm(`เลิกเป็นเพื่อนกับ ${user.name}?`)) return;
+          void act(remove, () => removeFriend(user.requestId!), 'เลิกเป็นเพื่อนแล้ว');
+        });
+        actions.append(remove);
+      }
+      return actions;
+    }
     if (user.relationshipStatus === 'pending_sent') {
       return el('span', { className: 'connections-pending-label', text: 'ส่งคำขอแล้ว' });
     }
@@ -147,7 +158,16 @@ export function connectionsPage(context?: RouteContext): PageView {
     }
     if (activeTab === 'friends') {
       if (!friends.length) grid.append(emptyState('ยังไม่มีเพื่อนที่ตอบรับแล้ว'));
-      for (const friend of friends) grid.append(studentCard(friend, mutualText(friend), messageAction(friend.id)));
+      for (const friend of friends) {
+        const actions = el('div', { className: 'connections-actions' }, messageAction(friend.id));
+        const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
+        remove.addEventListener('click', () => {
+          if (!window.confirm(`เลิกเป็นเพื่อนกับ ${friend.name}?`)) return;
+          void act(remove, () => removeFriend(friend.friendshipId), 'เลิกเป็นเพื่อนแล้ว');
+        });
+        actions.append(remove);
+        grid.append(studentCard(friend, mutualText(friend), actions));
+      }
     } else if (activeTab === 'incoming') {
       if (!requests.incoming.length) grid.append(emptyState('ยังไม่มีคำขอเป็นเพื่อน'));
       for (const request of requests.incoming) {

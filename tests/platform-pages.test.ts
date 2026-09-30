@@ -17,7 +17,7 @@ vi.mock('../src/modules/universities/universities-api', () => ({
   universitiesApi: { list: mocks.universities },
 }));
 vi.mock('../src/modules/groups/groups-api', () => ({
-  groupsApi: { list: mocks.groups, create: vi.fn() },
+  groupsApi: { list: mocks.groups, create: vi.fn(), invitations: vi.fn().mockResolvedValue([]), respondInvitation: vi.fn() },
 }));
 vi.mock('../src/modules/reports/reports-api', () => ({
   reportsApi: { list: mocks.reports, moderate: vi.fn() },
@@ -89,7 +89,7 @@ describe('platform completion pages', () => {
 
   it('renders community groups from the API', async () => {
     const view = await groupsPage(context());
-    expect(mocks.groups).toHaveBeenCalledWith('');
+    expect(mocks.groups).toHaveBeenCalledWith('', 1);
     expect(view.element.querySelector('.group-card')?.textContent).toContain('AI & Machine Learning');
     expect(view.element.querySelector<HTMLAnchorElement>('.group-card')?.getAttribute('href'))
       .toBe('/groups/bbbbbbbbbbbbbbbbbbbbbbbb');

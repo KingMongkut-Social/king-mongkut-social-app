@@ -100,3 +100,11 @@ export async function cancelFriendRequest(requestId: string): Promise<unknown> {
   });
   return response.data;
 }
+
+
+export async function removeFriend(friendshipId: string): Promise<unknown> {
+  const response = await apiClient.request<ApiSuccess<unknown>>(`/friends/${encodeURIComponent(friendshipId)}`, {
+    method: 'DELETE',
+  });
+  return response.data;
+}
