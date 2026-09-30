@@ -356,6 +356,39 @@
   color: var(--text-primary);
 }
 
+
+.post-friend-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand-primary) 26%, transparent);
+  outline-offset: 2px;
+}
+
+.post-friend-btn--add {
+  color: var(--brand-rust);
+  border-color: color-mix(in srgb, var(--brand-primary) 30%, var(--border));
+  background: var(--brand-subtle);
+}
+
+.post-friend-btn--add:hover {
+  background: color-mix(in srgb, var(--brand-subtle) 72%, var(--brand-primary));
+}
+
+.post-friend-btn--friend {
+  color: var(--text-inverse);
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+}
+
+.post-friend-btn--friend:hover {
+  color: var(--text-inverse);
+  background: var(--brand-hover);
+}
+
+.post-friend-btn--pending {
+  color: var(--text-muted);
+  border-color: var(--border);
+  background: var(--surface-muted);
+}
+
 /* Post Content & Media */
 .post-body-text {
   font-size: var(--font-base);
