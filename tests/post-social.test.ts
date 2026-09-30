@@ -87,4 +87,27 @@ describe('post social controls', () => {
     await vi.waitFor(() => expect(card.querySelector('.comments-list')?.textContent).toContain('Second comment'));
     expect(card.querySelector('.post-social-summary__comments')?.textContent).toContain('2');
   });
+
+  it('renders consistent styled action and comment controls', async () => {
+    const card = document.createElement('article');
+    document.body.append(card);
+    mountPostSocial(card, post, user._id, user.name);
+
+    const footer = card.querySelector('.post-reactions-footer')!;
+    expect(footer.querySelectorAll('.reaction-btn')).toHaveLength(5);
+    expect([...footer.querySelectorAll<HTMLButtonElement>('.reaction-btn')]
+      .find((button) => button.textContent === 'รายงาน')?.classList.contains('reaction-btn--danger')).toBe(true);
+
+    const commentButton = [...footer.querySelectorAll<HTMLButtonElement>('.reaction-btn')]
+      .find((button) => button.textContent === 'แสดงความคิดเห็น')!;
+    commentButton.click();
+    await vi.waitFor(() => expect(mocks.listComments).toHaveBeenCalled());
+
+    const send = card.querySelector<HTMLButtonElement>('.btn-send-comment')!;
+    expect(send.classList.contains('button')).toBe(true);
+    expect(send.classList.contains('button--primary')).toBe(true);
+
+    const reply = card.querySelector<HTMLButtonElement>('.btn-reply-comment')!;
+    expect(reply.classList.contains('button--ghost')).toBe(true);
+  });
 });

@@ -140,3 +140,109 @@ dialog::backdrop {
 .image-lightbox__close:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+
+/* Shared non-native modal overlay used by profile preview and post editor */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(23, 17, 13, 0.48);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  overflow-y: auto;
+}
+
+/* Report dialog */
+.report-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(720px, calc(100dvh - 32px));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-xl);
+  overflow: auto;
+}
+
+.report-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.report-dialog__form h2 {
+  margin: 0;
+  color: var(--text-heading);
+  font-size: var(--font-xl);
+}
+
+.report-dialog__help,
+.report-dialog__status {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+
+.report-dialog__status:not(:empty) {
+  color: var(--danger);
+}
+
+.report-dialog__reasons {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.report-dialog__reason {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+  cursor: pointer;
+}
+
+.report-dialog__reason:has(input:checked) {
+  border-color: color-mix(in srgb, var(--brand-primary) 38%, var(--border));
+  background: var(--brand-subtle);
+}
+
+.report-dialog__reason input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.report-dialog__details-label {
+  margin-bottom: calc(var(--space-2) * -1);
+}
+
+.report-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 639px) {
+  .report-dialog__form {
+    padding: var(--space-4);
+  }
+
+  .report-dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .report-dialog__actions .button {
+    width: 100%;
+  }
+}

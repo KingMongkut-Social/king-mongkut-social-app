@@ -1009,7 +1009,7 @@ export function openEditPostModal(
   });
 
   const postBtn = el('button', {
-    className: 'btn-post',
+    className: 'button button--primary btn-post',
     text: 'โพสต์',
     attrs: { type: 'button' },
   });

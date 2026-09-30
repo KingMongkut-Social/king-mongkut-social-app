@@ -50,7 +50,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   const commentBtn = action('แสดงความคิดเห็น');
   const shareBtn = action('แชร์');
   const saveBtn = action('บันทึก');
-  const reportBtn = action('รายงาน');
+  const reportBtn = action('รายงาน', 'reaction-btn--danger');
   const commentsSection = el('section', { className: 'post-comments-section', attrs: { hidden: 'true', 'aria-label': 'ความคิดเห็น' } });
   const commentsList = el('div', { className: 'comments-list' });
   const moreBtn = action('ดูความคิดเห็นเพิ่มเติม');
@@ -182,7 +182,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     const footer = el('div', { className: 'comment-footer-actions' });
     footer.append(el('span', { className: 'comment-footer', text: formatRelativeTime(comment.createdAt) }));
 
-    const reply = el('button', { className: 'btn-reply-comment', attrs: { type: 'button' }, text: 'ตอบกลับ' });
+    const reply = el('button', { className: 'button button--ghost button--small btn-reply-comment', attrs: { type: 'button' }, text: 'ตอบกลับ' });
     const replyForm = commentForm(comment._id, () => { replyForm.hidden = true; });
     replyForm.hidden = true;
     reply.addEventListener('click', () => {
@@ -193,7 +193,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     footer.append(reply);
 
     if (currentUserId && currentUserId !== author._id) {
-      const report = el('button', { className: 'btn-reply-comment', attrs: { type: 'button' }, text: 'รายงาน' });
+      const report = el('button', { className: 'button button--ghost button--small btn-reply-comment btn-reply-comment--danger', attrs: { type: 'button' }, text: 'รายงาน' });
       report.addEventListener('click', () => {
         openReportDialog({
           targetType: 'comment',
@@ -205,7 +205,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     }
 
     if (currentUserId === author._id) {
-      const remove = el('button', { className: 'btn-reply-comment', attrs: { type: 'button' }, text: 'ลบ' });
+      const remove = el('button', { className: 'button button--ghost button--small btn-reply-comment btn-reply-comment--danger', attrs: { type: 'button' }, text: 'ลบ' });
       remove.addEventListener('click', async () => {
         const confirmed = await confirmAction({
           title: 'ยืนยันการลบความคิดเห็น',
@@ -282,7 +282,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
       className: 'comment-input-field',
       attrs: { type: 'text', placeholder: parentId ? 'เขียนคำตอบ…' : 'เขียนความคิดเห็น…', maxlength: '2000', required: 'true' },
     });
-    const send = el('button', { className: 'btn-send-comment', attrs: { type: 'submit' }, text: 'ส่ง' });
+    const send = el('button', { className: 'button button--primary button--small btn-send-comment', attrs: { type: 'submit' }, text: 'ส่ง' });
     wrap.append(input, send);
     form.append(wrap);
     form.addEventListener('submit', async (event) => {

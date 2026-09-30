@@ -39,7 +39,7 @@ export async function myPostsPage(context: RouteContext): Promise<PageView> {
     for (const post of result.data.items) {
       const wrapper = el('div', { className: 'dashboard-post' });
       wrapper.append(postCard(post, { mine: true }));
-      const deleteButton = el('button', { className: 'danger-link', text: 'ลบโพสต์', attrs: { type: 'button' } });
+      const deleteButton = el('button', { className: 'button button--danger button--small danger-link', text: 'ลบโพสต์', attrs: { type: 'button' } });
       deleteButton.addEventListener('click', async () => {
         const confirmed = await confirmAction({
           title: 'ยืนยันการลบโพสต์',
