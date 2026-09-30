@@ -50,7 +50,12 @@ export const groupsApi = {
     const response = await apiClient.request<ApiSuccess<{ group: CommunityGroup }>>(`/groups/${encodeURIComponent(id)}`);
     return response.data.group;
   },
-  async create(input: { name: string; description: string; privacy: 'public' | 'private'; university?: string | null }) {
+  async create(input: {
+    name: string;
+    description: string;
+    privacy: 'public' | 'private';
+    university?: 'KMITL' | 'KMUTT' | 'KMUTNB' | null;
+  }) {
     const response = await apiClient.request<ApiSuccess<{ group: CommunityGroup }>>('/groups', { method: 'POST', body: input });
     return response.data.group;
   },

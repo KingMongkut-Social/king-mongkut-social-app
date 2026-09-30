@@ -130,10 +130,10 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       else actionDesc = ' มีกิจกรรมใหม่';
       textLine.append(document.createTextNode(actionDesc));
 
-      if (n.contentSnippet || n.postSnippet) {
+      if (n.contentSnippet) {
         const snippet = el('span', {
           className: 'notification-snippet',
-          text: `“${n.contentSnippet || n.postSnippet}”`,
+          text: `“${n.contentSnippet}”`,
         });
         textLine.append(snippet);
       }
