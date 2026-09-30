@@ -1,5 +1,6 @@
 export type Role = 'user' | 'admin';
 export type PostStatus = 'draft' | 'published';
+export type PostReaction = 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY';
 
 export interface User {
   _id: string;
@@ -47,6 +48,8 @@ export interface Post {
   likeCount?: number | undefined;
   commentCount?: number | undefined;
   likedByMe?: boolean | undefined;
+  myReaction?: PostReaction | null | undefined;
+  reactionCounts?: Record<PostReaction, number> | undefined;
   savedByMe?: boolean | undefined;
   createdAt: string;
   updatedAt: string;

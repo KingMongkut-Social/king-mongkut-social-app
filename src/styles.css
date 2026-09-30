@@ -3757,3 +3757,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .is-edit-profile-page .mobile-primary-nav { display: none !important; }
 .is-edit-profile-page .app-layout { display: block; width: 100%; min-height: 100vh; padding: 0; }
 .is-edit-profile-page .app-content { width: 100%; min-height: 100vh; padding: 0; background: #fbf9f6; }
+
+
+/* Platform completion: reactions */
+.reaction-picker-wrap { position: relative; display: flex; flex: 1; }
+.reaction-picker-wrap > .reaction-btn { width: 100%; }
+.reaction-picker {
+  position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 25;
+  display: flex; gap: 3px; padding: 6px; border: 1px solid var(--border);
+  border-radius: 999px; background: #fff; box-shadow: var(--shadow-lg);
+}
+.reaction-picker[hidden] { display: none; }
+.reaction-choice {
+  display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 20px;
+  transition: transform .12s ease, background .12s ease;
+}
+.reaction-choice:hover { transform: scale(1.22); background: var(--surface-subtle); }

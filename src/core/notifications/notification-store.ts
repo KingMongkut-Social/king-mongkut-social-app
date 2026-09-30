@@ -1,151 +1,122 @@
+import { apiClient } from '../api/api-client';
 import { authStore } from '../auth/auth-store';
+import { realtime, type RealtimeNotification } from '../realtime/socket';
+import type { ApiSuccess } from '../../types/api';
 
-export type NotificationType = 'like' | 'comment' | 'reply';
+export type NotificationType = RealtimeNotification['type'];
 
 export interface AppNotification {
   id: string;
-  recipientId?: string | undefined;
-  recipientName?: string | undefined;
   actorName: string;
   actorInitial: string;
   type: NotificationType;
   postId: string;
-  postSnippet?: string | undefined;
   contentSnippet?: string | undefined;
   createdAt: string;
   read: boolean;
 }
 
+interface NotificationList {
+  items: RealtimeNotification[];
+  unreadCount: number;
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
 type NotificationListener = (notifications: AppNotification[]) => void;
+
+function mapNotification(item: RealtimeNotification): AppNotification {
+  const actorName = item.actor?.name || 'ผู้ใช้';
+  return {
+    id: item.id,
+    actorName,
+    actorInitial: actorName.charAt(0).toUpperCase() || 'ส',
+    type: item.type,
+    postId: item.entityId ?? '',
+    ...(item.content ? { contentSnippet: item.content } : {}),
+    createdAt: item.createdAt,
+    read: item.read,
+  };
+}
 
 class NotificationStore {
   private notifications: AppNotification[] = [];
-  private listeners: Set<NotificationListener> = new Set();
-  private initialized = false;
+  private readonly listeners = new Set<NotificationListener>();
+  private loadingForUser: string | null = null;
 
   constructor() {
-    this.init();
-  }
-
-  private init(): void {
-    if (this.initialized) return;
-    this.initialized = true;
-    this.loadFromStorage();
-
-    // Re-load when auth state changes (switching accounts)
-    authStore.subscribe(() => {
-      this.loadFromStorage();
+    authStore.subscribe((state) => {
+      if (state.status === 'authenticated' && state.user) {
+        if (this.loadingForUser !== state.user._id) {
+          this.loadingForUser = state.user._id;
+          void this.refresh();
+        }
+      } else {
+        this.loadingForUser = null;
+        this.notifications = [];
+        this.notify();
+      }
     });
-  }
 
-  private getStorageKey(): string {
-    const user = authStore.snapshot.user;
-    return user?._id ? `user_notifications_${user._id}` : 'user_notifications_guest';
-  }
-
-  private loadFromStorage(): void {
-    const key = this.getStorageKey();
-    try {
-      const raw = localStorage.getItem(key);
-      const stored: unknown = raw ? JSON.parse(raw) : [];
-      const items: unknown[] = Array.isArray(stored) ? stored as unknown[] : [];
-      this.notifications = items.filter((item): item is AppNotification => item !== null
-        && typeof item === 'object'
-        && 'id' in item
-        && typeof item.id === 'string'
-        && !/^notif_demo_[123]$/.test(item.id));
-      if (this.notifications.length !== items.length) this.persist();
-    } catch {
-      this.notifications = [];
-    }
-    this.notify();
-  }
-
-  private persist(): void {
-    const key = this.getStorageKey();
-    try {
-      localStorage.setItem(key, JSON.stringify(this.notifications));
-    } catch {
-      // ignore
-    }
+    realtime.onNotification((notification) => {
+      if (notification.recipientId !== authStore.snapshot.user?._id) return;
+      const mapped = mapNotification(notification);
+      this.notifications = [mapped, ...this.notifications.filter((item) => item.id !== mapped.id)];
+      this.notify();
+    });
   }
 
   private notify(): void {
-    for (const listener of this.listeners) {
-      listener([...this.notifications]);
+    for (const listener of this.listeners) listener([...this.notifications]);
+  }
+
+  async refresh(): Promise<void> {
+    if (authStore.snapshot.status !== 'authenticated') return;
+    try {
+      const result = await apiClient.request<ApiSuccess<NotificationList>>('/notifications?limit=50');
+      this.notifications = result.data.items.map(mapNotification);
+      this.notify();
+    } catch {
+      // Keep the latest successfully loaded notifications.
     }
   }
 
-  public subscribe(listener: NotificationListener): () => void {
+  subscribe(listener: NotificationListener): () => void {
     this.listeners.add(listener);
     listener([...this.notifications]);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return () => this.listeners.delete(listener);
   }
 
-  public getAll(): AppNotification[] {
+  getAll(): AppNotification[] {
     return [...this.notifications];
   }
 
-  public getUnreadCount(): number {
-    return this.notifications.filter((n) => !n.read).length;
+  getUnreadCount(): number {
+    return this.notifications.filter((item) => !item.read).length;
   }
 
-  public markAsRead(notificationId: string): void {
-    const notif = this.notifications.find((n) => n.id === notificationId);
-    if (notif && !notif.read) {
-      notif.read = true;
-      this.persist();
+  markAsRead(notificationId: string): void {
+    const item = this.notifications.find((notification) => notification.id === notificationId);
+    if (!item || item.read) return;
+    item.read = true;
+    this.notify();
+    void apiClient.request(`/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'PATCH' })
+      .catch(() => {
+        item.read = false;
+        this.notify();
+      });
+  }
+
+  markAllAsRead(): void {
+    const previous = this.notifications.map((item) => item.read);
+    this.notifications.forEach((item) => { item.read = true; });
+    this.notify();
+    void apiClient.request('/notifications/read-all', { method: 'PATCH' }).catch(() => {
+      this.notifications.forEach((item, index) => { item.read = previous[index] ?? item.read; });
       this.notify();
-    }
-  }
-
-  public markAllAsRead(): void {
-    let changed = false;
-    this.notifications.forEach((n) => {
-      if (!n.read) {
-        n.read = true;
-        changed = true;
-      }
     });
-    if (changed) {
-      this.persist();
-      this.notify();
-    }
-  }
-
-  /**
-   * Add a new notification (sent to target user's storage)
-   */
-  public addNotification(notification: Omit<AppNotification, 'id' | 'createdAt' | 'read'>): void {
-    const targetUserId = notification.recipientId;
-    const targetKey = targetUserId ? `user_notifications_${targetUserId}` : 'user_notifications_guest';
-
-    const newNotif: AppNotification = {
-      ...notification,
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      createdAt: new Date().toISOString(),
-      read: false,
-    };
-
-    // If current user is the recipient (e.g. testing or local post)
-    const currentUserId = authStore.snapshot.user?._id;
-    if (!targetUserId || targetUserId === currentUserId) {
-      this.notifications.unshift(newNotif);
-      this.persist();
-      this.notify();
-    } else {
-      // Save directly to the recipient's storage box
-      try {
-        const raw = localStorage.getItem(targetKey);
-        const list = raw ? (JSON.parse(raw) as AppNotification[]) : [];
-        list.unshift(newNotif);
-        localStorage.setItem(targetKey, JSON.stringify(list));
-      } catch {
-        // ignore
-      }
-    }
   }
 }
 

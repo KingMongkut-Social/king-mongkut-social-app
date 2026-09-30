@@ -40,7 +40,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const q = searchInput.value.trim();
-      const target = q ? `/?search=${encodeURIComponent(q)}` : '/';
+      const target = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
       window.history.pushState(null, '', target);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }
@@ -106,13 +106,12 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       const avatarWrap = el('div', { className: 'notification-avatar-wrap' });
       const avatar = el('div', { className: 'notification-avatar', text: n.actorInitial });
       const typeBadge = el('span', { className: 'notification-type-badge' });
-      if (n.type === 'like') {
-        typeBadge.textContent = '❤️';
-      } else if (n.type === 'comment') {
-        typeBadge.textContent = '💬';
-      } else {
-        typeBadge.textContent = '↩️';
-      }
+      if (n.type === 'post_reaction') typeBadge.textContent = '❤️';
+      else if (n.type === 'post_comment') typeBadge.textContent = '💬';
+      else if (n.type === 'comment_reply') typeBadge.textContent = '↩️';
+      else if (n.type === 'friend_request') typeBadge.textContent = '👤';
+      else if (n.type === 'friend_accept') typeBadge.textContent = '🤝';
+      else typeBadge.textContent = '👥';
       avatarWrap.append(avatar, typeBadge);
 
       // Body
@@ -122,9 +121,13 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       textLine.append(actor);
 
       let actionDesc = '';
-      if (n.type === 'like') actionDesc = ' ถูกใจโพสต์ของคุณ';
-      else if (n.type === 'comment') actionDesc = ' ได้แสดงความคิดเห็นบนโพสต์ของคุณ';
-      else actionDesc = ' ได้ตอบกลับความคิดเห็นของคุณ';
+      if (n.type === 'post_reaction') actionDesc = ' มีปฏิกิริยาต่อโพสต์ของคุณ';
+      else if (n.type === 'post_comment') actionDesc = ' แสดงความคิดเห็นบนโพสต์ของคุณ';
+      else if (n.type === 'comment_reply') actionDesc = ' ตอบกลับความคิดเห็นของคุณ';
+      else if (n.type === 'friend_request') actionDesc = ' ส่งคำขอเป็นเพื่อนถึงคุณ';
+      else if (n.type === 'friend_accept') actionDesc = ' ตอบรับคำขอเป็นเพื่อนของคุณ';
+      else if (n.type === 'group_join') actionDesc = ' เข้าร่วมกลุ่มของคุณ';
+      else actionDesc = ' มีกิจกรรมใหม่';
       textLine.append(document.createTextNode(actionDesc));
 
       if (n.contentSnippet || n.postSnippet) {
@@ -151,33 +154,16 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       item.addEventListener('click', () => {
         notificationStore.markAsRead(n.id);
         notifDropdown.style.display = 'none';
-
-        const scrollToTargetPost = () => {
-          const targetCard = document.querySelector(`[data-post-id="${n.postId}"]`) || document.getElementById(`post-${n.postId}`);
-          if (targetCard instanceof HTMLElement) {
-            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            targetCard.classList.remove('feed-post-card--highlighted');
-            void targetCard.offsetWidth; // trigger reflow
-            targetCard.classList.add('feed-post-card--highlighted');
-
-            // If action was comment or reply, open the comments section
-            if (n.type === 'comment' || n.type === 'reply') {
-              const commentBtn = targetCard.querySelector<HTMLButtonElement>('.reaction-btn:nth-child(2)');
-              const commentsSec = targetCard.querySelector<HTMLElement>('.post-comments-section');
-              if (commentsSec && commentsSec.style.display === 'none' && commentBtn) {
-                commentBtn.click();
-              }
-            }
-          }
-        };
-
-        if (window.location.pathname !== '/') {
-          window.history.pushState(null, '', '/');
-          window.dispatchEvent(new PopStateEvent('popstate'));
-          setTimeout(scrollToTargetPost, 350);
-        } else {
-          scrollToTargetPost();
+        let target = '/';
+        if (n.type === 'post_reaction' || n.type === 'post_comment' || n.type === 'comment_reply') {
+          target = n.postId ? `/posts/${encodeURIComponent(n.postId)}` : '/';
+        } else if (n.type === 'friend_request' || n.type === 'friend_accept') {
+          target = '/connections';
+        } else if (n.type === 'group_join' || n.type === 'group_invite') {
+          target = n.postId ? `/groups/${encodeURIComponent(n.postId)}` : '/groups';
         }
+        window.history.pushState(null, '', target);
+        window.dispatchEvent(new PopStateEvent('popstate'));
       });
 
       notifList.append(item);
@@ -285,9 +271,9 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         createNavItem('เพื่อน & การเชื่อมต่อ', '/connections', icons.connections, currentPath === '/connections'),
         createNavItem('ข้อความ', '/chat', icons.chats, currentPath === '/chat'),
         notificationsLink,
-        unavailable('สถาบัน'),
-        createNavItem('สำรวจ', '/connections', icons.search, false),
-        unavailable('กลุ่ม'),
+        createNavItem('สถาบัน', '/universities', icons.institutions, currentPath.startsWith('/universities')),
+        createNavItem('สำรวจ', '/search', icons.search, currentPath === '/search'),
+        createNavItem('กลุ่ม', '/groups', icons.connections, currentPath.startsWith('/groups')),
         createNavItem('บันทึกไว้', '/?saved=1', icons.feed, false),
         authStore.snapshot.status === 'authenticated'
           ? createNavItem('ตั้งค่า', '/profile/edit', icons.user, false)
@@ -298,7 +284,9 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         createNavItem('ฟีดข่าว', '/', icons.feed, (currentPath === '/' && !savedOnly) || currentPath.startsWith('/posts')),
         createNavItem('เพื่อน & การเชื่อมต่อ', '/connections', icons.connections, currentPath === '/connections'),
         createNavItem('แชท', '/chat', icons.chats, currentPath === '/chat'),
-        createNavItem('สถาบัน', '#', icons.institutions, false),
+        createNavItem('สถาบัน', '/universities', icons.institutions, currentPath.startsWith('/universities')),
+        createNavItem('กลุ่ม', '/groups', icons.connections, currentPath.startsWith('/groups')),
+        createNavItem('สำรวจ', '/search', icons.search, currentPath === '/search'),
       );
     }
 

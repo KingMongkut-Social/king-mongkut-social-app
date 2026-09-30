@@ -9,6 +9,19 @@ type Listener<T> = (value: T) => void;
 const messageListeners = new Set<Listener<ChatMessage>>();
 const conversationListeners = new Set<Listener<Chat>>();
 const friendListeners = new Set<() => void>();
+
+export interface RealtimeNotification {
+  id: string;
+  recipientId: string;
+  actor: { id: string; name: string; avatarUrl: string | null; university: string } | null;
+  type: 'friend_request' | 'friend_accept' | 'post_reaction' | 'post_comment' | 'comment_reply' | 'group_invite' | 'group_join';
+  entityId: string | null;
+  content: string | null;
+  read: boolean;
+  readAt: string | null;
+  createdAt: string;
+}
+const notificationListeners = new Set<Listener<RealtimeNotification>>();
 export interface PresenceUpdate { userId: string; isOnline: boolean }
 const presenceListeners = new Set<Listener<PresenceUpdate>>();
 const connectionListeners = new Set<Listener<boolean>>();
@@ -75,6 +88,9 @@ function syncSocket(): void {
   next.on('presence:updated', (update: PresenceUpdate) => {
     for (const listener of presenceListeners) listener(update);
   });
+  next.on('notification:new', (notification: RealtimeNotification) => {
+    for (const listener of notificationListeners) listener(notification);
+  });
 }
 
 function subscribe<T>(set: Set<Listener<T>>, listener: Listener<T>): () => void {
@@ -112,6 +128,7 @@ export const realtime = {
     return () => friendListeners.delete(listener);
   },
   onPresenceUpdated: (listener: Listener<PresenceUpdate>): (() => void) => subscribe(presenceListeners, listener),
+  onNotification: (listener: Listener<RealtimeNotification>): (() => void) => subscribe(notificationListeners, listener),
 };
 
 authStore.subscribe(syncSocket);
