@@ -1,9 +1,6 @@
 /* Friends & Connections Module */
 
 .connections-page-wrap {
-  width: 100%;
-  max-width: var(--main-max-width);
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -14,47 +11,6 @@
   font-weight: var(--font-weight-extrabold);
   color: var(--text-heading);
   margin: 0;
-}
-
-.connections-subtabs {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  background: var(--surface-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-1) var(--space-2);
-  overflow-x: auto;
-  box-shadow: var(--shadow-xs);
-  scrollbar-width: thin;
-}
-
-.subtab-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  border: none;
-  background: transparent;
-  font-size: var(--font-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-
-.subtab-btn:hover {
-  color: var(--text-primary);
-  background: var(--surface-hover);
-}
-
-.subtab-btn--active {
-  color: var(--brand-rust);
-  background: var(--brand-subtle);
-  font-weight: var(--font-weight-bold);
 }
 
 .subtab-count {
