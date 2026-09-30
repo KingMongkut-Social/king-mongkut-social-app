@@ -408,7 +408,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         const link = el('a', {
           className: 'account-menu__item',
           attrs: { href, role: 'menuitem' },
-        }) as HTMLAnchorElement;
+        });
         const icon = el('span', { className: 'account-menu__item-icon', attrs: { 'aria-hidden': 'true' } });
         icon.innerHTML = iconSvg;
         const copy = el('span', { className: 'account-menu__item-copy' });
