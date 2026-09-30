@@ -1,43 +1,67 @@
 /* Button System */
 
-.button, button.button {
+.button,
+button.button,
+a.button,
+.btn-post,
+.btn-add-friend {
+  box-sizing: border-box;
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   min-height: var(--touch-target-desktop);
   padding: 8px 16px;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
+  font: inherit;
   font-size: var(--font-base);
   font-weight: var(--font-weight-semibold);
   line-height: 1.25;
   text-align: center;
   text-decoration: none;
-  border: 1px solid transparent;
   cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast),
     box-shadow var(--transition-fast),
     transform var(--transition-fast);
-  user-select: none;
-  white-space: nowrap;
 }
 
-@media (max-width: 768px) {
-  .button, button.button {
+@media (max-width: 1023px) {
+  .button,
+  button.button,
+  a.button,
+  .btn-post,
+  .btn-add-friend {
     min-height: var(--touch-target-mobile);
-    padding: 10px 18px;
   }
 }
 
-.button:active {
+.button:focus-visible,
+.btn-post:focus-visible,
+.btn-add-friend:focus-visible,
+.icon-btn:focus-visible,
+.btn-create-project:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand-primary) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.button:active:not(:disabled),
+.btn-post:active:not(:disabled),
+.btn-add-friend:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-.button:disabled {
-  opacity: 0.6;
+.button:disabled,
+.btn-post:disabled,
+.btn-add-friend:disabled,
+.icon-btn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -47,15 +71,17 @@
 .btn-post,
 .btn-add-friend {
   background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: var(--text-inverse);
   box-shadow: 0 1px 3px rgba(224, 84, 56, 0.25);
 }
 
-.button--primary:hover,
-.btn-post:hover,
-.btn-add-friend:hover {
+.button--primary:hover:not(:disabled),
+.btn-post:hover:not(:disabled),
+.btn-add-friend:hover:not(:disabled) {
   background-color: var(--brand-hover);
-  box-shadow: 0 3px 8px rgba(224, 84, 56, 0.35);
+  border-color: var(--brand-hover);
+  box-shadow: 0 3px 8px rgba(224, 84, 56, 0.25);
 }
 
 /* Secondary */
@@ -65,9 +91,22 @@
   border-color: var(--border);
 }
 
-.button--secondary:hover {
+.button--secondary:hover:not(:disabled) {
   background-color: var(--surface-hover);
   border-color: #d8cfc5;
+  color: var(--text-primary);
+}
+
+/* Ghost */
+.button--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.button--ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
   color: var(--text-primary);
 }
 
@@ -83,29 +122,33 @@
   border-color: rgba(220, 38, 38, 0.2);
 }
 
-.button--danger:hover {
+.button--danger:hover:not(:disabled) {
   background-color: var(--danger);
+  border-color: var(--danger);
   color: var(--text-inverse);
 }
 
-/* Small Button */
+/* Sizes / layout */
 .button--small {
   min-height: 32px;
-  padding: 4px 12px;
-  font-size: var(--font-sm);
+  padding: 5px 11px;
   border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
 }
 
-@media (max-width: 768px) {
+.button--full {
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
   .button--small {
-    min-height: var(--touch-target-mobile);
-    padding: 8px 14px;
-    font-size: var(--font-base);
+    min-height: 40px;
   }
 }
 
 /* Icon Buttons */
 .icon-btn {
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -116,6 +159,7 @@
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-secondary);
+  font: inherit;
   cursor: pointer;
   transition:
     background-color var(--transition-fast),
@@ -123,19 +167,19 @@
     border-color var(--transition-fast);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   .icon-btn {
     min-width: var(--touch-target-mobile);
     min-height: var(--touch-target-mobile);
   }
 }
 
-.icon-btn:hover {
+.icon-btn:hover:not(:disabled) {
   background-color: var(--surface-muted);
   color: var(--text-primary);
 }
 
-/* Sidebar action button */
+/* Sidebar primary action */
 .btn-create-project {
   display: flex;
   align-items: center;
@@ -155,5 +199,5 @@
 
 .btn-create-project:hover {
   background: var(--brand-hover);
-  box-shadow: 0 5px 14px rgba(224, 84, 56, 0.35);
+  box-shadow: 0 5px 14px rgba(224, 84, 56, 0.28);
 }
