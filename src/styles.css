@@ -3876,3 +3876,38 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .report-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; }
 .group-hero__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .profile-friend-btn--report { border-color: var(--border-dark); background: #fff; color: var(--muted); }
+
+
+/* Completed community group flows */
+.platform-dialog {
+  width: min(620px, calc(100vw - 28px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+}
+.platform-dialog::backdrop { background: rgba(35, 25, 22, .42); }
+.platform-dialog__form { display: flex; flex-direction: column; gap: 10px; padding: 24px; }
+.platform-dialog__form h2 { margin: 0 0 6px; }
+.platform-dialog__form label { font-size: 12px; font-weight: 700; color: var(--text-heading); }
+.platform-dialog__form .input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-dark); border-radius: 9px; background: #fff; }
+.platform-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.group-invitations { display: grid; gap: 10px; margin-bottom: 20px; }
+.group-invitations > h2 { margin: 0; font-size: 18px; }
+.group-invitation-card { min-height: 0; }
+.group-invitation-card h3 { margin: 0 0 6px; }
+.group-invitation-actions, .group-hero__actions, .connections-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.group-tab-content { width: 100%; }
+.community-tab { display: inline-flex; padding: 4px 0; border-bottom: 2px solid transparent; }
+.community-tab--active { border-bottom-color: currentColor; }
+.group-invite-list { display: grid; gap: 8px; max-height: 50vh; overflow: auto; }
+.group-invite-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 18px; }
+@media (max-width: 580px) {
+  .community-tabs { gap: 14px; overflow-x: auto; }
+  .group-invite-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .group-invite-row .platform-meta { display: none; }
+}
