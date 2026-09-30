@@ -116,17 +116,31 @@
   --shadow-lg: 0 10px 25px rgba(45, 33, 23, 0.09), 0 3px 8px rgba(45, 33, 23, 0.05);
   --shadow-xl: 0 20px 38px rgba(45, 33, 23, 0.12), 0 5px 12px rgba(45, 33, 23, 0.06);
 
-  /* Layout Constants & Content Widths */
-  --header-height: 64px;
-  --sidebar-width: 240px;
-  --right-rail-width: 300px;
-  --right-panel-width: var(--right-rail-width);
-  --content-narrow: 760px;
-  --content-default: 840px;
-  --content-feed: 1040px;
-  --content-wide: 1200px;
-  --main-max-width: var(--content-default);
-  --mobile-nav-height: 58px;
+  /* Layout Contract */
+  --layout-header-height: 64px;
+  --layout-sidebar-width: 248px;
+  --layout-right-rail-width: 300px;
+  --layout-content-narrow: 680px;
+  --layout-content-standard: 880px;
+  --layout-feed-main-width: 700px;
+  --layout-feed-width: 1024px;
+  --layout-wide-width: 1240px;
+  --layout-shell-max: 1536px;
+  --layout-gutter: 24px;
+  --layout-gutter-mobile: 16px;
+  --layout-mobile-nav-height: 60px;
+
+  /* Compatibility aliases for existing feature styles. */
+  --header-height: var(--layout-header-height);
+  --sidebar-width: var(--layout-sidebar-width);
+  --right-rail-width: var(--layout-right-rail-width);
+  --right-panel-width: var(--layout-right-rail-width);
+  --content-narrow: var(--layout-content-narrow);
+  --content-default: var(--layout-content-standard);
+  --content-feed: var(--layout-feed-width);
+  --content-wide: var(--layout-wide-width);
+  --main-max-width: var(--layout-content-standard);
+  --mobile-nav-height: var(--layout-mobile-nav-height);
 
   /* Touch Targets */
   --touch-target-desktop: 36px;
