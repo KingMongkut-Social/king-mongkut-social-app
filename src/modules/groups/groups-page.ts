@@ -3,6 +3,7 @@ import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { reactIcon } from '../../core/ui/react-icon';
 import { errorMessage } from '../../core/ui/error-message';
+import { createEmptyState, createErrorState } from '../../core/ui/feedback';
 import { toast } from '../../core/ui/toast';
 import { createUniversityBadge } from '../../core/ui/avatar';
 import { profileImageUrl } from '../profile/profile-api';
@@ -175,17 +176,19 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
   const q = context.query.get('q')?.trim() ?? '';
   const page = validPage(context.query.get('page'));
   const root = el('section', { className: 'platform-page groups-page' });
-  const header = el('div', { className: 'platform-heading-row' });
+  let createDialog: HTMLDialogElement | null = null;
+  const header = el('div', { className: 'platform-heading-row page-header' });
   header.append(
     el('div', {}, el('p', { className: 'eyebrow', text: 'ชุมชน' }), el('h1', { className: 'platform-title', text: 'กลุ่ม' })),
   );
 
   if (authStore.snapshot.status === 'authenticated') {
-    const createButton = el('button', { className: 'button button--primary', text: '+ สร้างกลุ่ม', attrs: { type: 'button' } });
-    const dialog = createGroupDialog();
-    createButton.addEventListener('click', () => dialog.showModal());
+    const createButton = el('button', { className: 'button button--primary', attrs: { type: 'button' } });
+    createButton.append(reactIcon('plus'), document.createTextNode(' สร้างกลุ่ม'));
+    createDialog = createGroupDialog();
+    createButton.addEventListener('click', () => createDialog?.showModal());
     header.append(createButton);
-    root.append(dialog);
+    root.append(createDialog);
   }
   root.prepend(header);
 
@@ -251,14 +254,33 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
   root.append(grid);
   try {
     const result = await groupsApi.list(q, page);
-    if (!result.items.length) grid.append(el('div', { className: 'platform-state', text: 'ยังไม่มีกลุ่มที่ตรงกับการค้นหา' }));
+    if (!result.items.length) {
+      const empty = createEmptyState({
+        icon: '<span aria-hidden="true">◌</span>',
+        title: q ? 'ไม่พบกลุ่มที่ตรงกับการค้นหา' : 'ยังไม่มีกลุ่มให้สำรวจ',
+        description: q
+          ? `ไม่พบกลุ่มที่ตรงกับ “${q}” ลองล้างคำค้นหาหรือใช้คำที่กว้างขึ้น`
+          : 'สร้างพื้นที่พูดคุยสำหรับวิชา ชมรม โปรเจกต์ หรือความสนใจของคุณ',
+        actionText: q ? 'ล้างการค้นหา' : authStore.snapshot.status === 'authenticated' ? 'สร้างกลุ่มแรก' : 'เข้าสู่ระบบเพื่อสร้างกลุ่ม',
+        actionHref: q ? '/groups' : authStore.snapshot.status === 'authenticated' ? undefined : '/login?returnTo=%2Fgroups',
+        onAction: !q && authStore.snapshot.status === 'authenticated' ? () => createDialog?.showModal() : undefined,
+      });
+      empty.classList.add('groups-empty-state');
+      grid.append(empty);
+    }
     for (const group of result.items) {
       grid.append(renderGroupCard(group));
     }
     const nav = pager(result.page, result.pages, q);
     if (nav) root.append(nav);
   } catch (error) {
-    grid.append(el('div', { className: 'platform-state platform-state--error', text: errorMessage(error) }));
+    const failure = createErrorState({
+      title: 'โหลดกลุ่มไม่สำเร็จ',
+      message: errorMessage(error),
+      onRetry: () => window.location.reload(),
+    });
+    failure.classList.add('groups-empty-state');
+    grid.append(failure);
   }
   return { title: 'กลุ่ม', element: root };
 }
