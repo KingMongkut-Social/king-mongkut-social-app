@@ -3,7 +3,9 @@ import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
-import { groupsApi } from './groups-api';
+import { createUniversityBadge } from '../../core/ui/avatar';
+import { profileImageUrl } from '../profile/profile-api';
+import { groupsApi, type CommunityGroup } from './groups-api';
 
 function validPage(value: string | null): number {
   const page = Number(value);
@@ -103,6 +105,68 @@ function createGroupDialog(): HTMLDialogElement {
   return dialog;
 }
 
+export function renderGroupCard(group: CommunityGroup): HTMLElement {
+  const card = el('a', {
+    className: 'platform-card group-card',
+    attrs: { href: `/groups/${encodeURIComponent(group.id)}` },
+  });
+
+  const coverWrap = el('div', { className: 'group-card__cover' });
+  if (group.coverUrl) {
+    const img = el('img', {
+      className: 'group-card__cover-img',
+      attrs: {
+        src: profileImageUrl(group.coverUrl),
+        alt: group.name,
+        loading: 'lazy',
+      },
+    });
+    img.addEventListener('error', () => {
+      coverWrap.replaceChildren(el('div', { className: 'group-card__cover-fallback', text: '👥' }));
+    });
+    coverWrap.append(img);
+  } else {
+    const code = (group.university || '').toUpperCase();
+    let grad = 'linear-gradient(135deg, #e8dfd8 0%, #d5c8be 100%)';
+    if (code.includes('KMITL')) grad = 'linear-gradient(135deg, rgba(232, 85, 42, 0.25) 0%, rgba(232, 85, 42, 0.5) 100%)';
+    else if (code.includes('KMUTT')) grad = 'linear-gradient(135deg, rgba(239, 108, 0, 0.25) 0%, rgba(245, 124, 0, 0.5) 100%)';
+    else if (code.includes('KMUTNB')) grad = 'linear-gradient(135deg, rgba(216, 67, 21, 0.25) 0%, rgba(191, 54, 12, 0.5) 100%)';
+    coverWrap.style.background = grad;
+    coverWrap.append(el('div', { className: 'group-card__cover-fallback', text: '👥' }));
+  }
+
+  const badges = el('div', { className: 'group-card__badges' });
+  if (group.university) {
+    badges.append(createUniversityBadge(group.university));
+  }
+  const privacyBadge = el('span', {
+    className: 'badge-tag',
+    text: group.privacy === 'private' ? '🔒 ส่วนตัว' : '🌐 สาธารณะ',
+  });
+  badges.append(privacyBadge);
+  coverWrap.append(badges);
+
+  const body = el('div', { className: 'group-card__body' });
+  const title = el('h2', { text: group.name });
+  const desc = el('p', { text: group.description || 'ชุมชนสำหรับแลกเปลี่ยนและพูดคุย' });
+  body.append(title, desc);
+
+  const footer = el('div', { className: 'group-card__footer' });
+  const meta = el('span', {
+    className: 'platform-meta',
+    text: `${group.memberCount} สมาชิก`,
+  });
+
+  const cta = el('span', {
+    className: `button button--small ${group.joined ? 'button--secondary' : 'button--primary'}`,
+    text: group.joined ? 'เข้าร่วมแล้ว ✓' : 'เข้าชมกลุ่ม',
+  });
+  footer.append(meta, cta);
+
+  card.append(coverWrap, body, footer);
+  return card;
+}
+
 export async function groupsPage(context: RouteContext): Promise<PageView> {
   const q = context.query.get('q')?.trim() ?? '';
   const page = validPage(context.query.get('page'));
@@ -185,12 +249,7 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
     const result = await groupsApi.list(q, page);
     if (!result.items.length) grid.append(el('div', { className: 'platform-state', text: 'ยังไม่มีกลุ่มที่ตรงกับการค้นหา' }));
     for (const group of result.items) {
-      grid.append(el('a', { className: 'platform-card group-card', attrs: { href: `/groups/${group.id}` } },
-        el('div', { className: 'group-card__cover' }),
-        el('h2', { text: group.name }),
-        el('p', { text: group.description || 'ชุมชนสำหรับแลกเปลี่ยนและพูดคุย' }),
-        el('div', { className: 'platform-meta', text: `${group.memberCount} สมาชิก${group.university ? ` · ${group.university}` : ''}` }),
-      ));
+      grid.append(renderGroupCard(group));
     }
     const nav = pager(result.page, result.pages, q);
     if (nav) root.append(nav);

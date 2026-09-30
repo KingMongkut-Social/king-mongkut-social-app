@@ -4,6 +4,8 @@ import type { ApiSuccess } from '../../types/api';
 export interface FriendUser {
   id: string;
   name: string;
+  username?: string | null;
+  avatarUrl?: string | null;
   faculty?: string;
   department?: string;
   university: 'KMITL' | 'KMUTNB' | 'KMUTT';
@@ -15,11 +17,14 @@ export interface FriendUser {
 export interface FriendPerson {
   id: string;
   name: string;
+  username?: string | null;
+  avatarUrl?: string | null;
   university: FriendUser['university'];
   faculty?: string;
   department?: string;
   mutualFriendCount?: number;
 }
+
 
 export interface SuggestedFriend extends FriendUser {
   relationshipStatus: 'none';

@@ -31,6 +31,8 @@ vi.mock('../src/core/realtime/socket', () => ({
     },
     isConnected: () => true,
     sendMessage: mocks.sendMessage,
+    onTyping: () => () => undefined,
+    sendTyping: vi.fn(),
   },
 }));
 vi.mock('../src/modules/chats/chats-api', () => ({

@@ -6,6 +6,8 @@ import { confirmAction } from '../src/core/ui/confirm-dialog';
 import { chatPage } from '../src/modules/chats/chat-page';
 import { notificationsPage } from '../src/modules/notifications/notifications-page';
 import { searchPage } from '../src/modules/search/search-page';
+import { connectionsPage } from '../src/modules/friends/connections-page';
+import { mountLayout } from '../src/app/layout';
 import type { User } from '../src/types/api';
 
 const mocks = vi.hoisted(() => ({
@@ -25,12 +27,15 @@ vi.mock('../src/core/realtime/socket', () => ({
     onConversation: () => () => undefined,
     onPresenceUpdated: () => () => undefined,
     onNotification: () => () => undefined,
+    onFriendUpdated: () => () => undefined,
     onConnection: (listener: (connected: boolean) => void) => {
       listener(true);
       return () => undefined;
     },
     isConnected: () => true,
     sendMessage: vi.fn(),
+    onTyping: () => () => undefined,
+    sendTyping: vi.fn(),
   },
 }));
 
@@ -46,6 +51,13 @@ vi.mock('../src/modules/chats/chats-api', () => ({
 
 vi.mock('../src/modules/friends/friends-api', () => ({
   listFriends: mocks.listFriends,
+  listFriendRequests: vi.fn().mockResolvedValue({ incoming: [], outgoing: [] }),
+  listSuggestedFriends: vi.fn().mockResolvedValue([]),
+  searchFriends: vi.fn().mockResolvedValue([]),
+  sendFriendRequest: vi.fn(),
+  removeFriend: vi.fn(),
+  respondFriendRequest: vi.fn(),
+  cancelFriendRequest: vi.fn(),
 }));
 
 const testUser: User = {
@@ -250,4 +262,83 @@ describe('UX Enhancements', () => {
       page.dispose?.();
     });
   });
+
+  describe('Header Search Autocomplete', () => {
+    it('shows autocomplete suggestions when typing query >= 2 characters', async () => {
+      const root = document.createElement('div');
+      mountLayout(root);
+      document.body.append(root);
+
+      const input = root.querySelector<HTMLInputElement>('.search-pill-input');
+      expect(input).not.toBeNull();
+
+      input!.value = 'Bo';
+      input!.dispatchEvent(new Event('input'));
+
+      const dropdown = root.querySelector<HTMLElement>('.header-search-autocomplete');
+      expect(dropdown).not.toBeNull();
+
+      await vi.waitFor(() => {
+        expect(mocks.search).toHaveBeenCalledWith('Bo', { limit: 5 });
+        expect(dropdown?.style.display).toBe('flex');
+        expect(dropdown?.textContent).toContain('Bob Smith');
+        expect(dropdown?.textContent).toContain('กลุ่มศึกษา AI');
+      });
+
+      // Escape closes autocomplete
+      input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(dropdown?.style.display).toBe('none');
+    });
+
+    it('navigates through items with arrow keys and selects on enter', async () => {
+      const root = document.createElement('div');
+      mountLayout(root);
+      document.body.append(root);
+
+      const input = root.querySelector<HTMLInputElement>('.search-pill-input');
+      input!.value = 'Bo';
+      input!.dispatchEvent(new Event('input'));
+
+      const dropdown = root.querySelector<HTMLElement>('.header-search-autocomplete');
+      await vi.waitFor(() => expect(dropdown?.style.display).toBe('flex'));
+
+      input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      const items = dropdown!.querySelectorAll<HTMLAnchorElement>('.header-search-autocomplete__item');
+      expect(items[0]?.classList.contains('header-search-autocomplete__item--focused')).toBe(true);
+
+      const pushStateSpy = vi.spyOn(window.history, 'pushState');
+      input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(pushStateSpy).toHaveBeenCalledWith(null, '', '/profile/user-bob');
+    });
+  });
+
+  describe('Connections Page Filter and Counters', () => {
+    it('filters friends list instantly by typing in search input', async () => {
+      mocks.listFriends.mockResolvedValue([
+        { id: 'user-bob', name: 'Bob Smith', username: 'bob', university: 'KMUTT', friendshipId: 'f-1' },
+        { id: 'user-charlie', name: 'Charlie Brown', username: 'charlie', university: 'KMITL', friendshipId: 'f-2' },
+      ]);
+
+      const page = connectionsPage();
+      document.body.append(page.element);
+
+      await vi.waitFor(() => {
+        const cards = page.element.querySelectorAll('.student-card');
+        expect(cards).toHaveLength(2);
+      });
+
+      const searchInput = page.element.querySelector<HTMLInputElement>('.connections-search-input');
+      expect(searchInput).not.toBeNull();
+
+      searchInput!.value = 'charlie';
+      searchInput!.dispatchEvent(new Event('input'));
+
+      const filteredCards = page.element.querySelectorAll('.student-card');
+      expect(filteredCards).toHaveLength(1);
+      expect(filteredCards[0]?.textContent).toContain('Charlie Brown');
+
+      page.dispose?.();
+    });
+  });
 });
+

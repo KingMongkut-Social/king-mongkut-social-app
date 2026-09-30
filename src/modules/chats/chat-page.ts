@@ -1,12 +1,14 @@
 import { authStore } from '../../core/auth/auth-store';
 import { realtime } from '../../core/realtime/socket';
 import type { PageView, RouteContext } from '../../core/router/router';
+import { createAvatar } from '../../core/ui/avatar';
 import { clear, el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
-import { listFriends } from '../friends/friends-api';
+import { listFriends, type AcceptedFriend } from '../friends/friends-api';
 import { chatsApi, type Chat, type ChatMessage } from './chats-api';
+
 
 function chatTitle(chat: Chat, selfId: string): string {
   if (chat.type === 'group') return chat.name || 'กลุ่มสนทนา';
@@ -55,11 +57,17 @@ export function chatPage(context: RouteContext): PageView {
     text: '← กลับ',
   });
   backButton.addEventListener('click', () => {
+    if (selectedId && typingTimer) {
+      window.clearTimeout(typingTimer);
+      realtime.sendTyping(selectedId, false);
+    }
     selectedId = null;
     window.history.replaceState(null, '', '/chat');
     workspace.classList.remove('chat-workspace--thread-open');
+    document.body.classList.remove('is-chat-thread-open');
     renderChats();
     renderHeader();
+    renderTypingIndicator();
   });
   const panelAvatar = el('span', { className: 'chat-panel__avatar', attrs: { 'aria-hidden': 'true' } });
   const panelIdentity = el('div', { className: 'chat-panel__identity' });
@@ -71,6 +79,8 @@ export function chatPage(context: RouteContext): PageView {
   const messageArea = el('div', { className: 'chat-messages', attrs: { role: 'log', 'aria-live': 'polite', 'aria-label': 'ข้อความ' } });
   const loadOlderButton = el('button', { className: 'chat-load-older', text: 'โหลดข้อความก่อนหน้า', attrs: { type: 'button' } });
   const emptyPanel = el('div', { className: 'chat-empty', text: 'เลือกแชทจากรายการ หรือไปที่หน้าเพื่อนเพื่อเริ่มพูดคุย' });
+  const typingIndicator = el('div', { className: 'chat-typing-indicator', attrs: { 'aria-live': 'polite' } });
+  typingIndicator.hidden = true;
   const composer = el('form', { className: 'chat-composer' });
   const messageInput = el('textarea', {
     className: 'chat-composer__input',
@@ -78,11 +88,12 @@ export function chatPage(context: RouteContext): PageView {
   });
   const sendButton = el('button', { className: 'button button--primary chat-composer__send', text: 'ส่ง', attrs: { type: 'submit' } });
   composer.append(messageInput, sendButton);
-  panel.append(panelHeader, loadOlderButton, messageArea, emptyPanel, composer);
+  panel.append(panelHeader, loadOlderButton, messageArea, emptyPanel, typingIndicator, composer);
   workspace.append(sidebar, panel);
   root.append(workspace);
 
   let chats: Chat[] = [];
+
   let selectedId: string | null = null;
   let messages: ChatMessage[] = [];
   let hasOlder = false;
@@ -94,6 +105,49 @@ export function chatPage(context: RouteContext): PageView {
   let wasConnected = false;
   let pendingSubmission: { chatId: string; content: string; startedAt: number } | null = null;
   const onlineByUserId = new Map<string, boolean>();
+  let typingTimer: number | undefined;
+  const typingUsersByChat = new Map<string, Set<string>>();
+  const typingExpireTimers = new Map<string, number>();
+
+  function renderTypingIndicator(): void {
+    if (!selectedId) {
+      typingIndicator.hidden = true;
+      return;
+    }
+    const typingUsers = typingUsersByChat.get(selectedId);
+    const chat = chats.find((item) => item.id === selectedId);
+    if (!typingUsers || typingUsers.size === 0 || !chat) {
+      typingIndicator.hidden = true;
+      return;
+    }
+    const names = [...typingUsers]
+      .filter((uid) => uid !== selfId)
+      .map((uid) => chat.members.find((m) => m.id === uid)?.name || 'สมาชิก');
+
+    if (names.length === 0) {
+      typingIndicator.hidden = true;
+      return;
+    }
+
+    clear(typingIndicator);
+    let text = '';
+    if (names.length === 1) {
+      text = `${names[0]} กำลังพิมพ์`;
+    } else if (names.length === 2) {
+      text = `${names[0]} และ ${names[1]} กำลังพิมพ์`;
+    } else {
+      text = `${names[0]} และอีก ${names.length - 1} คนกำลังพิมพ์`;
+    }
+
+    const textEl = el('span', { text });
+    const dots = el('span', { className: 'chat-typing-indicator__dots' },
+      el('span', { className: 'chat-typing-indicator__dot' }),
+      el('span', { className: 'chat-typing-indicator__dot' }),
+      el('span', { className: 'chat-typing-indicator__dot' }),
+    );
+    typingIndicator.append(textEl, dots);
+    typingIndicator.hidden = false;
+  }
 
   function sortedChats(): Chat[] {
     return [...chats].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -134,7 +188,15 @@ export function chatPage(context: RouteContext): PageView {
         className: `chat-list__item ${chat.id === selectedId ? 'chat-list__item--active' : ''}`,
         attrs: { type: 'button', 'aria-current': String(chat.id === selectedId) },
       });
-      const avatar = el('span', { className: 'chat-list__avatar', text: chat.type === 'group' ? '👥' : '' });
+      const peer = chat.type === 'direct' ? chat.members.find((member) => member.id !== selfId) : null;
+      const avatar = chat.type === 'group'
+        ? el('span', { className: 'chat-list__avatar', text: '👥' })
+        : createAvatar({
+          url: peer?.avatarUrl,
+          name: peer?.name,
+          size: 44,
+          isOnline: peer ? onlineByUserId.get(peer.id) : undefined,
+        });
       const body = el('span', { className: 'chat-list__body' });
       const titleLine = el('span', { className: 'chat-list__title', text: title });
       const preview = el('span', { className: 'chat-list__preview', text: chat.lastMessage?.content || (chat.type === 'group' ? `${chat.members.length} สมาชิก` : 'เริ่มบทสนทนา') });
@@ -149,15 +211,23 @@ export function chatPage(context: RouteContext): PageView {
   function renderHeader(): void {
     const chat = chats.find((item) => item.id === selectedId);
     workspace.classList.toggle('chat-workspace--thread-open', Boolean(selectedId));
+    document.body.classList.toggle('is-chat-thread-open', Boolean(selectedId));
     panelTitle.textContent = chat ? chatTitle(chat, selfId) : 'เลือกบทสนทนา';
+    clear(panelAvatar);
     panelAvatar.hidden = !chat;
-    panelAvatar.textContent = chat?.type === 'group' ? '👥' : '';
     if (chat?.type === 'group') {
+      panelAvatar.textContent = '👥';
       panelSubtitle.classList.remove('chat-panel__subtitle--online');
       panelSubtitle.textContent = `${chat.members.length} สมาชิก`;
     } else if (chat) {
       const peer = chat.members.find((member) => member.id !== selfId);
       const online = peer ? onlineByUserId.get(peer.id) : undefined;
+      panelAvatar.append(createAvatar({
+        url: peer?.avatarUrl,
+        name: peer?.name,
+        size: 38,
+        isOnline: online,
+      }));
       panelSubtitle.classList.toggle('chat-panel__subtitle--online', online === true);
       panelSubtitle.textContent = [online === true ? 'ออนไลน์' : online === false ? 'ออฟไลน์' : '', peer?.university].filter(Boolean).join(' · ');
     } else {
@@ -168,7 +238,9 @@ export function chatPage(context: RouteContext): PageView {
     composer.hidden = !chat;
     loadOlderButton.hidden = !chat || !hasOlder || messagesLoading;
     messageArea.hidden = !chat;
+    renderTypingIndicator();
   }
+
 
   conversationSearch.addEventListener('input', renderChats);
 
@@ -239,8 +311,13 @@ export function chatPage(context: RouteContext): PageView {
 
   async function selectChat(chatId: string): Promise<void> {
     if (disposed) return;
+    if (selectedId && typingTimer) {
+      window.clearTimeout(typingTimer);
+      realtime.sendTyping?.(selectedId, false);
+    }
     selectedId = chatId;
     workspace.classList.add('chat-workspace--thread-open');
+    document.body.classList.add('is-chat-thread-open');
     const version = ++messageVersion;
     messages = [];
     hasOlder = false;
@@ -248,6 +325,7 @@ export function chatPage(context: RouteContext): PageView {
     window.history.replaceState(null, '', `/chat?chatId=${encodeURIComponent(chatId)}`);
     renderChats();
     renderMessages();
+    renderTypingIndicator();
     try {
       const latest = await chatsApi.messages(chatId);
       if (disposed || version !== messageVersion) return;
@@ -307,6 +385,11 @@ export function chatPage(context: RouteContext): PageView {
     const content = messageInput.value.trim();
     if (!content) return;
     const chatId = selectedId;
+    if (typingTimer) {
+      window.clearTimeout(typingTimer);
+      typingTimer = undefined;
+    }
+    realtime.sendTyping(chatId, false);
     const startedAt = Date.now();
     pendingSubmission = { chatId, content, startedAt };
     sendButton.disabled = true;
@@ -351,12 +434,33 @@ export function chatPage(context: RouteContext): PageView {
       composer.requestSubmit();
     }
   });
-  messageInput.addEventListener('input', () => { sendButton.hidden = !messageInput.value.trim(); });
+  messageInput.addEventListener('input', () => {
+    sendButton.hidden = !messageInput.value.trim();
+    if (selectedId) {
+      realtime.sendTyping?.(selectedId, true);
+      if (typingTimer) window.clearTimeout(typingTimer);
+      typingTimer = window.setTimeout(() => {
+        if (selectedId) realtime.sendTyping?.(selectedId, false);
+      }, 1500);
+    }
+  });
   sendButton.hidden = true;
 
   const groupDialog = el('dialog', { className: 'chat-group-dialog' });
   const groupForm = el('form', { className: 'chat-group-form' });
   const groupName = el('input', { attrs: { name: 'name', type: 'text', maxlength: '80', required: '', placeholder: 'ชื่อกลุ่ม', 'aria-label': 'ชื่อกลุ่ม' } });
+  const friendSearchInput = el('input', {
+    attrs: {
+      type: 'search',
+      placeholder: 'ค้นหาเพื่อน...',
+      'aria-label': 'ค้นหาเพื่อน',
+      className: 'chat-conversation-search',
+    },
+  });
+  const selectedCounter = el('div', {
+    className: 'text-meta',
+    text: 'เลือกแล้ว: 0 คน',
+  });
   const groupMembers = el('div', { className: 'chat-group-members' });
   const groupError = el('p', { className: 'chat-group-error', attrs: { role: 'alert' } });
   const groupSubmit = el('button', { className: 'button button--primary', text: 'สร้างกลุ่ม', attrs: { type: 'submit' } });
@@ -366,7 +470,8 @@ export function chatPage(context: RouteContext): PageView {
     el('h2', { text: 'สร้างกลุ่มสนทนา' }),
     el('label', { text: 'ชื่อกลุ่ม', attrs: { for: 'chat-group-name' } }),
     groupName,
-    el('p', { text: 'เลือกเพื่อนเข้ากลุ่มอย่างน้อย 1 คน' }),
+    friendSearchInput,
+    selectedCounter,
     groupMembers, groupError,
     el('div', { className: 'chat-group-actions' }, groupCancel, groupSubmit),
   );
@@ -374,26 +479,58 @@ export function chatPage(context: RouteContext): PageView {
   groupDialog.append(groupForm);
   root.append(groupDialog);
 
+  let loadedFriends: AcceptedFriend[] = [];
+
+  const updateSelectedCount = () => {
+    const checked = groupMembers.querySelectorAll<HTMLInputElement>('input[name="member"]:checked');
+    selectedCounter.textContent = `เลือกแล้ว: ${checked.length} คน`;
+  };
+
+  const renderGroupFriends = (filterText = '') => {
+    clear(groupMembers);
+    const term = filterText.trim().toLowerCase();
+    const matching = loadedFriends.filter((f) => !term || f.name.toLowerCase().includes(term) || f.university.toLowerCase().includes(term));
+    if (matching.length === 0) {
+      groupMembers.append(el('p', { text: loadedFriends.length ? 'ไม่พบเพื่อนที่ตรงกับการค้นหา' : 'ยังไม่มีเพื่อนที่ตอบรับแล้ว' }));
+      return;
+    }
+    for (const friend of matching) {
+      const checkbox = el('input', { attrs: { type: 'checkbox', name: 'member', value: friend.id } });
+      checkbox.addEventListener('change', updateSelectedCount);
+      const friendAvatar = createAvatar({
+        url: friend.avatarUrl,
+        name: friend.name,
+        size: 'sm',
+      });
+      groupMembers.append(el('label', { className: 'chat-group-member' },
+        checkbox,
+        friendAvatar,
+        el('span', { text: `${friend.name} · ${friend.university}` }),
+      ));
+    }
+    updateSelectedCount();
+  };
+
+  friendSearchInput.addEventListener('input', () => {
+    renderGroupFriends(friendSearchInput.value);
+  });
+
   groupButton.addEventListener('click', async () => {
     groupError.textContent = '';
     groupName.value = '';
+    friendSearchInput.value = '';
     groupMembers.replaceChildren(el('p', { text: 'กำลังโหลดรายชื่อเพื่อน…' }));
     groupDialog.showModal();
     try {
       const friends = await listFriends();
       if (disposed || !groupDialog.open) return;
-      clear(groupMembers);
-      if (friends.length === 0) {
-        groupMembers.append(el('p', { text: 'ยังไม่มีเพื่อนที่ตอบรับแล้ว' }), el('a', { text: 'ไปหน้าเพื่อน', attrs: { href: '/connections' } }));
-      }
-      for (const friend of friends) {
-        const checkbox = el('input', { attrs: { type: 'checkbox', name: 'member', value: friend.id } });
-        groupMembers.append(el('label', { className: 'chat-group-member' }, checkbox, el('span', { text: `${friend.name} · ${friend.university}` })));
-      }
+      loadedFriends = friends;
+      renderGroupFriends();
     } catch (cause) {
       if (!disposed) groupError.textContent = errorMessage(cause);
     }
   });
+
   groupForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const name = groupName.value.trim();
@@ -416,6 +553,38 @@ export function chatPage(context: RouteContext): PageView {
   });
 
   const unsubscribers = [
+    ...(realtime.onTyping
+      ? [
+          realtime.onTyping(({ chatId, userId, isTyping }) => {
+            if (userId === selfId) return;
+            if (!typingUsersByChat.has(chatId)) {
+              typingUsersByChat.set(chatId, new Set());
+            }
+            const userSet = typingUsersByChat.get(chatId)!;
+            const timerKey = `${chatId}:${userId}`;
+            if (isTyping) {
+              userSet.add(userId);
+              const existing = typingExpireTimers.get(timerKey);
+              if (existing) window.clearTimeout(existing);
+              typingExpireTimers.set(
+                timerKey,
+                window.setTimeout(() => {
+                  userSet.delete(userId);
+                  renderTypingIndicator();
+                }, 3000),
+              );
+            } else {
+              userSet.delete(userId);
+              const existing = typingExpireTimers.get(timerKey);
+              if (existing) {
+                window.clearTimeout(existing);
+                typingExpireTimers.delete(timerKey);
+              }
+            }
+            renderTypingIndicator();
+          }),
+        ]
+      : []),
     realtime.onMessage((message) => {
       if (pendingSubmission && message.chatId === pendingSubmission.chatId && message.senderId === selfId &&
           message.content === pendingSubmission.content && new Date(message.createdAt).getTime() >= pendingSubmission.startedAt - 2000) {
@@ -471,6 +640,15 @@ export function chatPage(context: RouteContext): PageView {
     dispose: () => {
       disposed = true;
       ++messageVersion;
+      if (typingTimer) {
+        window.clearTimeout(typingTimer);
+        typingTimer = undefined;
+      }
+      for (const timer of typingExpireTimers.values()) {
+        window.clearTimeout(timer);
+      }
+      typingExpireTimers.clear();
+      document.body.classList.remove('is-chat-thread-open');
       for (const unsubscribe of unsubscribers) unsubscribe();
       if (groupDialog.open) groupDialog.close();
     },

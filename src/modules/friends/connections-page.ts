@@ -4,6 +4,7 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { confirmAction } from '../../core/ui/confirm-dialog';
+import { createAvatar } from '../../core/ui/avatar';
 import {
   cancelFriendRequest, listFriends, listFriendRequests, listSuggestedFriends, removeFriend,
   respondFriendRequest, searchFriends, sendFriendRequest,
@@ -30,16 +31,30 @@ function mutualText(person: FriendPerson): string {
 function studentCard(person: FriendPerson, summary: string, actions: HTMLElement): HTMLElement {
   const card = el('article', { className: 'student-card' });
   const header = el('div', { className: 'student-card-header' });
-  const avatar = el('div', { className: 'student-avatar', attrs: { 'aria-hidden': 'true' } });
+  const avatar = createAvatar({
+    url: person.avatarUrl,
+    name: person.name,
+    size: 'lg',
+    className: 'student-avatar',
+  });
+  const avatarLink = el('a', {
+    className: 'student-avatar-link',
+    attrs: { href: `/profile/${encodeURIComponent(person.id)}`, 'aria-label': `ดูโปรไฟล์ของ ${person.name}` },
+  }, avatar);
   const info = el('div', { className: 'student-info' });
   info.append(
     el('a', { className: 'student-name', text: person.name, attrs: { href: `/profile/${encodeURIComponent(person.id)}` } }),
+  );
+  if (person.username) {
+    info.append(el('span', { className: 'student-username', text: `@${person.username}` }));
+  }
+  info.append(
     el('span', { className: `student-uni-badge student-uni-badge--${person.university.toLowerCase()}`, text: person.university }),
   );
   const footer = el('div', { className: 'student-card-footer' });
   footer.append(el('span', { className: 'student-mutual-count', text: summary }), actions);
   info.append(footer);
-  header.append(avatar, info);
+  header.append(avatarLink, info);
   card.append(header);
   return card;
 }
@@ -76,6 +91,9 @@ export function connectionsPage(context?: RouteContext): PageView {
   let friends: AcceptedFriend[] = [];
   let requests: FriendRequests = { incoming: [], outgoing: [] };
   let suggested: FriendUser[] = [];
+  let friendsCount: number | null = null;
+  let incomingCount: number | null = null;
+  let outgoingCount: number | null = null;
   let loading = true;
   let error = '';
   let disposed = false;
@@ -129,14 +147,24 @@ export function connectionsPage(context?: RouteContext): PageView {
   function renderTabs(): void {
     tabBar.replaceChildren();
     for (const item of tabs) {
+      let count: number | null = null;
+      if (item.id === 'friends') count = friendsCount;
+      else if (item.id === 'incoming') count = incomingCount;
+      else if (item.id === 'outgoing') count = outgoingCount;
+
       const button = el('button', {
         className: `subtab-btn${item.id === activeTab ? ' subtab-btn--active' : ''}`,
-        text: item.label,
         attrs: { type: 'button', role: 'tab', 'aria-selected': String(item.id === activeTab) },
       });
+      button.append(el('span', { text: item.label }));
+      if (count !== null && count > 0) {
+        button.append(el('span', { className: 'subtab-count', text: String(count) }));
+      }
       button.addEventListener('click', () => {
         if (item.id === activeTab) return;
         activeTab = item.id;
+        searchInput.value = '';
+        university.value = 'All';
         if (context && window.location.origin === context.url.origin) {
           const url = new URL(window.location.href);
           if (activeTab === 'friends') url.searchParams.delete('tab');
@@ -147,7 +175,9 @@ export function connectionsPage(context?: RouteContext): PageView {
       });
       tabBar.append(button);
     }
-    searchControls.hidden = activeTab !== 'suggestions';
+    searchControls.hidden = activeTab !== 'friends' && activeTab !== 'suggestions';
+    searchInput.placeholder = activeTab === 'friends' ? 'ค้นหาชื่อเพื่อน' : 'ค้นหาผู้ใช้ที่สนใจ';
+    searchInput.setAttribute('aria-label', searchInput.placeholder);
     grid.setAttribute('aria-label', tabs.find((item) => item.id === activeTab)?.label || 'รายการเพื่อน');
   }
 
@@ -164,22 +194,35 @@ export function connectionsPage(context?: RouteContext): PageView {
       return;
     }
     if (activeTab === 'friends') {
-      if (!friends.length) grid.append(emptyState('ยังไม่มีเพื่อนที่ตอบรับแล้ว'));
-      for (const friend of friends) {
-        const actions = el('div', { className: 'connections-actions' }, messageAction(friend.id));
-        const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
-        remove.addEventListener('click', async () => {
-          const confirmed = await confirmAction({
-            title: 'เลิกเป็นเพื่อน',
-            message: `เลิกเป็นเพื่อนกับ ${friend.name}? คุณจะไม่เห็นสถานะออนไลน์ของผู้ใช้นี้ และ Direct Chat ใหม่อาจไม่สามารถเริ่มได้`,
-            confirmText: 'เลิกเป็นเพื่อน',
-            danger: true,
+      const term = searchInput.value.trim().toLowerCase();
+      const selectedUniversity = university.value;
+      const filteredFriends = friends.filter((friend) => {
+        const matchesTerm = !term || friend.name.toLowerCase().includes(term) || (friend.username && friend.username.toLowerCase().includes(term));
+        const matchesUni = selectedUniversity === 'All' || friend.university === selectedUniversity;
+        return matchesTerm && matchesUni;
+      });
+
+      if (!friends.length) {
+        grid.append(emptyState('ยังไม่มีเพื่อนที่ตอบรับแล้ว'));
+      } else if (!filteredFriends.length) {
+        grid.append(emptyState('ไม่พบเพื่อนที่ตรงกับการค้นหา'));
+      } else {
+        for (const friend of filteredFriends) {
+          const actions = el('div', { className: 'connections-actions' }, messageAction(friend.id));
+          const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
+          remove.addEventListener('click', async () => {
+            const confirmed = await confirmAction({
+              title: 'เลิกเป็นเพื่อน',
+              message: `เลิกเป็นเพื่อนกับ ${friend.name}? คุณจะไม่เห็นสถานะออนไลน์ของผู้ใช้นี้ และ Direct Chat ใหม่อาจไม่สามารถเริ่มได้`,
+              confirmText: 'เลิกเป็นเพื่อน',
+              danger: true,
+            });
+            if (!confirmed) return;
+            void act(remove, () => removeFriend(friend.friendshipId), 'เลิกเป็นเพื่อนแล้ว');
           });
-          if (!confirmed) return;
-          void act(remove, () => removeFriend(friend.friendshipId), 'เลิกเป็นเพื่อนแล้ว');
-        });
-        actions.append(remove);
-        grid.append(studentCard(friend, mutualText(friend), actions));
+          actions.append(remove);
+          grid.append(studentCard(friend, mutualText(friend), actions));
+        }
       }
     } else if (activeTab === 'incoming') {
       if (!requests.incoming.length) grid.append(emptyState('ยังไม่มีคำขอเป็นเพื่อน'));
@@ -218,10 +261,13 @@ export function connectionsPage(context?: RouteContext): PageView {
         const result = await listFriends();
         if (disposed || version !== loadVersion) return;
         friends = result;
+        friendsCount = result.length;
       } else if (tab === 'incoming' || tab === 'outgoing') {
         const result = await listFriendRequests();
         if (disposed || version !== loadVersion) return;
         requests = result;
+        incomingCount = result.incoming.length;
+        outgoingCount = result.outgoing.length;
       } else if (term) {
         const result = await searchFriends(term, selectedUniversity);
         if (disposed || version !== loadVersion) return;
@@ -241,8 +287,12 @@ export function connectionsPage(context?: RouteContext): PageView {
   }
 
   searchInput.addEventListener('input', () => {
-    window.clearTimeout(searchTimer);
+    if (activeTab === 'friends') {
+      render();
+      return;
+    }
     if (activeTab !== 'suggestions') return;
+    window.clearTimeout(searchTimer);
     // Invalidate an in-flight response immediately, before the debounced request starts.
     ++loadVersion;
     loading = true;
@@ -250,7 +300,13 @@ export function connectionsPage(context?: RouteContext): PageView {
     render();
     searchTimer = window.setTimeout(() => void load(), 300);
   });
-  university.addEventListener('change', () => { if (activeTab === 'suggestions') void load(); });
+  university.addEventListener('change', () => {
+    if (activeTab === 'friends') {
+      render();
+      return;
+    }
+    if (activeTab === 'suggestions') void load();
+  });
   const unsubscribe = realtime.onFriendUpdated(() => void load());
   void load();
   return {

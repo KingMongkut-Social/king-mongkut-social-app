@@ -134,3 +134,130 @@
   font-size: var(--font-xs);
   color: var(--text-muted);
 }
+
+.search-user-info,
+.search-group-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.search-user-meta,
+.search-group-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.search-group-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: linear-gradient(135deg, #e8dfd8 0%, #d5c8be 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.search-group-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Explore Hub Shortcuts (Mobile & Desktop) */
+.explore-hub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.explore-hub__title {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-heading);
+  margin: 0;
+}
+
+.explore-hub__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+}
+
+@media (min-width: 600px) {
+  .explore-hub__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .explore-hub__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.explore-shortcut-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.explore-shortcut-card:hover {
+  transform: translateY(-2px);
+  border-color: #dbc9bc;
+  box-shadow: var(--shadow-sm);
+  background: var(--surface-hover);
+}
+
+.explore-shortcut-card__icon {
+  font-size: 26px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--brand-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.explore-shortcut-card__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.explore-shortcut-card__text strong {
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-heading);
+}
+
+.explore-shortcut-card__text small {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.search-load-more-btn {
+  width: 100%;
+  margin-top: var(--space-3);
+  min-height: 44px;
+}

@@ -9,6 +9,7 @@ export interface AppNotification {
   id: string;
   actorName: string;
   actorInitial: string;
+  actorAvatarUrl?: string | null | undefined;
   type: NotificationType;
   postId: string;
   contentSnippet?: string | undefined;
@@ -33,6 +34,7 @@ function mapNotification(item: RealtimeNotification): AppNotification {
     id: item.id,
     actorName,
     actorInitial: actorName.charAt(0).toUpperCase() || 'ส',
+    actorAvatarUrl: item.actor?.avatarUrl ?? null,
     type: item.type,
     postId: item.entityId ?? '',
     ...(item.content ? { contentSnippet: item.content } : {}),

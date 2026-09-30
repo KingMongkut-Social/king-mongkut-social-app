@@ -1,8 +1,19 @@
 import type { PageView, RouteContext } from '../../core/router/router';
 import { clear, el } from '../../core/ui/dom';
 import { createEmptyState, createErrorState } from '../../core/ui/feedback';
+import { createAvatar, createUniversityBadge } from '../../core/ui/avatar';
+import { profileImageUrl } from '../profile/profile-api';
+import { toast } from '../../core/ui/toast';
+import { errorMessage } from '../../core/ui/error-message';
 import { postCard } from '../posts/post-components';
-import { searchApi, type SearchResult } from './search-api';
+import {
+  searchApi,
+  type SearchGroup,
+  type SearchResult,
+  type SearchUniversity,
+  type SearchUser,
+} from './search-api';
+import type { Post } from '../../types/api';
 
 type SearchCategory = 'all' | 'users' | 'posts' | 'groups' | 'universities';
 
@@ -12,6 +23,79 @@ function normalizeType(raw: string | null): SearchCategory {
   if (raw === 'groups') return 'groups';
   if (raw === 'universities') return 'universities';
   return 'all';
+}
+
+function renderUserRow(user: SearchUser): HTMLElement {
+  const row = el('a', { className: 'search-row', attrs: { href: `/profile/${user.id}` } });
+  const avatar = createAvatar({
+    url: user.avatarUrl,
+    name: user.name,
+    size: 'md',
+    className: 'search-user-avatar',
+  });
+  const info = el('span', { className: 'search-user-info' });
+  const meta = el('span', { className: 'search-user-meta' });
+  if (user.username) {
+    meta.append(el('span', { className: 'search-user-handle', text: `@${user.username} · ` }));
+  }
+  meta.append(createUniversityBadge(user.university));
+  if (user.faculty || user.department) {
+    meta.append(el('small', { text: ` · ${user.faculty || user.department}` }));
+  }
+  info.append(
+    el('strong', { className: 'search-user-name', text: user.name }),
+    meta,
+  );
+  row.append(avatar, info);
+  return row;
+}
+
+function renderGroupRow(group: SearchGroup): HTMLElement {
+  const row = el('a', { className: 'search-row', attrs: { href: `/groups/${group.id}` } });
+  const thumb = el('div', { className: 'search-group-thumb' });
+  if (group.coverUrl) {
+    const img = el('img', {
+      attrs: {
+        src: profileImageUrl(group.coverUrl),
+        alt: group.name,
+        loading: 'lazy',
+      },
+    });
+    img.addEventListener('error', () => {
+      thumb.replaceChildren(el('span', { className: 'community-person__avatar', text: '👥' }));
+    });
+    thumb.append(img);
+  } else {
+    thumb.append(el('span', { className: 'community-person__avatar', text: '👥' }));
+  }
+
+  const info = el('span', { className: 'search-group-info' });
+  const meta = el('span', { className: 'search-group-meta' });
+  if (group.university) {
+    meta.append(createUniversityBadge(group.university));
+  }
+  if (group.memberCount !== undefined) {
+    meta.append(el('small', { text: ` · ${group.memberCount} สมาชิก` }));
+  }
+  if (group.description) {
+    meta.append(el('small', { text: ` · ${group.description}` }));
+  }
+  info.append(
+    el('strong', { text: group.name }),
+    meta,
+  );
+  row.append(thumb, info);
+  return row;
+}
+
+function renderUniversityRow(university: SearchUniversity): HTMLElement {
+  return el('a', { className: 'search-row', attrs: { href: `/universities/${university.code}` } },
+    createUniversityBadge(university.code),
+    el('span', {},
+      el('strong', { text: university.code }),
+      el('small', { text: university.name }),
+    ),
+  );
 }
 
 export async function searchPage(context: RouteContext): Promise<PageView> {
@@ -48,6 +132,36 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
   root.append(form);
 
   if (!q) {
+    const hub = el('div', { className: 'explore-hub' });
+    const hubTitle = el('h2', { className: 'explore-hub__title', text: 'หมวดหมู่สำรวจลัด' });
+    const hubGrid = el('div', { className: 'explore-hub__grid' });
+
+    const shortcuts = [
+      { href: '/connections', icon: '👥', title: 'เพื่อน & การเชื่อมต่อ', desc: 'ค้นหาเพื่อนนักศึกษาและเครือข่าย' },
+      { href: '/groups', icon: '🌐', title: 'กลุ่มชุมชน', desc: 'กลุ่มกิจกรรม สโมสร และชมรมความสนใจ' },
+      { href: '/universities', icon: '🏛️', title: 'สถาบัน 3 พระจอมฯ', desc: 'ลาดกระบัง • ธนบุรี • พระนครเหนือ' },
+      { href: '/chat', icon: '💬', title: 'ข้อความ & แชท', desc: 'พูดคุยส่วนตัวและสนทนากลุ่ม' },
+      { href: '/?saved=1', icon: '🔖', title: 'โพสต์ที่บันทึกไว้', desc: 'โพสต์ที่คุณบุ๊กมาร์กไว้เพื่ออ่านต่อ' },
+      { href: '/notifications', icon: '🔔', title: 'การแจ้งเตือน', desc: 'ติดตามกิจกรรมและการโต้ตอบล่าสุด' },
+    ];
+
+    for (const item of shortcuts) {
+      const card = el('a', {
+        className: 'explore-shortcut-card',
+        attrs: { href: item.href },
+      });
+      card.append(
+        el('div', { className: 'explore-shortcut-card__icon', text: item.icon }),
+        el('div', { className: 'explore-shortcut-card__text' },
+          el('strong', { text: item.title }),
+          el('small', { text: item.desc }),
+        ),
+      );
+      hubGrid.append(card);
+    }
+    hub.append(hubTitle, hubGrid);
+    root.append(hub);
+
     root.append(createEmptyState({
       icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
       title: 'พิมพ์คำค้นหาเพื่อสำรวจ',
@@ -132,13 +246,7 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
       }
 
       for (const user of items) {
-        sec.append(el('a', { className: 'search-row', attrs: { href: `/profile/${user.id}` } },
-          el('span', { className: 'community-person__avatar', text: user.name.charAt(0).toUpperCase() }),
-          el('span', {},
-            el('strong', { text: user.name }),
-            el('small', { text: `${user.university} · ${user.faculty || user.department || ''}` }),
-          ),
-        ));
+        sec.append(renderUserRow(user));
       }
       return sec;
     };
@@ -163,13 +271,7 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
       }
 
       for (const university of items) {
-        sec.append(el('a', { className: 'search-row', attrs: { href: `/universities/${university.code}` } },
-          el('span', { className: 'community-person__avatar', text: university.code.slice(0, 1) }),
-          el('span', {},
-            el('strong', { text: university.code }),
-            el('small', { text: university.name }),
-          ),
-        ));
+        sec.append(renderUniversityRow(university));
       }
       return sec;
     };
@@ -194,13 +296,7 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
       }
 
       for (const group of items) {
-        sec.append(el('a', { className: 'search-row', attrs: { href: `/groups/${group.id}` } },
-          el('span', { className: 'community-person__avatar', text: '👥' }),
-          el('span', {},
-            el('strong', { text: group.name }),
-            el('small', { text: group.description || group.university || '' }),
-          ),
-        ));
+        sec.append(renderGroupRow(group));
       }
       return sec;
     };
@@ -228,6 +324,50 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
       return sec;
     };
 
+    const createLoadMoreButton = (
+      tabCategory: SearchCategory,
+      itemsListEl: HTMLElement,
+      appendFn: (item: SearchUser | Post | SearchGroup | SearchUniversity) => void,
+    ) => {
+      let pageNum = 1;
+      let isLoading = false;
+      const btn = el('button', {
+        className: 'button button--secondary search-load-more-btn',
+        attrs: { type: 'button' },
+        text: 'โหลดผลการค้นหาเพิ่มเติม',
+      });
+      btn.addEventListener('click', async () => {
+        if (isLoading) return;
+        isLoading = true;
+        btn.disabled = true;
+        btn.textContent = 'กำลังโหลด...';
+        try {
+          const res = await searchApi.search(q, { type: tabCategory, page: pageNum + 1, limit: 10 });
+          pageNum++;
+          const newItems = (tabCategory === 'users' ? res.users
+            : tabCategory === 'posts' ? res.posts
+            : tabCategory === 'groups' ? res.groups
+            : res.universities) || res.items || [];
+          for (const item of newItems) {
+            appendFn(item);
+          }
+          if (res.pages && pageNum >= res.pages) {
+            btn.remove();
+          } else {
+            btn.textContent = 'โหลดผลการค้นหาเพิ่มเติม';
+            btn.disabled = false;
+          }
+        } catch (err) {
+          toast.error(errorMessage(err));
+          btn.textContent = 'ลองใหม่อีกครั้ง';
+          btn.disabled = false;
+        } finally {
+          isLoading = false;
+        }
+      });
+      itemsListEl.append(btn);
+    };
+
     const renderContent = () => {
       clear(resultsContainer);
       if (totalCount === 0) {
@@ -244,13 +384,29 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
         if (result.groups.length) resultsContainer.append(renderGroups(result.groups.slice(0, 3), true));
         if (result.posts.length) resultsContainer.append(renderPosts(result.posts.slice(0, 3), true));
       } else if (activeTab === 'users') {
-        resultsContainer.append(renderUsers(result.users, false));
+        const sec = renderUsers(result.users, false);
+        resultsContainer.append(sec);
+        if (result.pages && result.pages > 1) {
+          createLoadMoreButton('users', sec, (user) => sec.append(renderUserRow(user as SearchUser)));
+        }
       } else if (activeTab === 'universities') {
-        resultsContainer.append(renderUniversities(result.universities, false));
+        const sec = renderUniversities(result.universities, false);
+        resultsContainer.append(sec);
+        if (result.pages && result.pages > 1) {
+          createLoadMoreButton('universities', sec, (uni) => sec.append(renderUniversityRow(uni as SearchUniversity)));
+        }
       } else if (activeTab === 'groups') {
-        resultsContainer.append(renderGroups(result.groups, false));
+        const sec = renderGroups(result.groups, false);
+        resultsContainer.append(sec);
+        if (result.pages && result.pages > 1) {
+          createLoadMoreButton('groups', sec, (grp) => sec.append(renderGroupRow(grp as SearchGroup)));
+        }
       } else if (activeTab === 'posts') {
-        resultsContainer.append(renderPosts(result.posts, false));
+        const sec = renderPosts(result.posts, false);
+        resultsContainer.append(sec);
+        if (result.pages && result.pages > 1) {
+          createLoadMoreButton('posts', sec, (p) => sec.append(postCard(p as Post)));
+        }
       }
     };
 

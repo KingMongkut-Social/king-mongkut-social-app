@@ -6,6 +6,7 @@ import { toast } from '../../core/ui/toast';
 import { confirmAction } from '../../core/ui/confirm-dialog';
 import { authorName, formatDate, formatRelativeTime } from '../../core/utils/format';
 import { paginationWindow } from '../../core/utils/pagination';
+import { createAvatar, createUniversityBadge } from '../../core/ui/avatar';
 import type { Post } from '../../types/api';
 import { getFriendUser, respondFriendRequest, sendFriendRequest, type FriendUser } from '../friends/friends-api';
 import { openProfilePreviewModal } from '../profile/profile-modal';
@@ -158,10 +159,12 @@ export function postCard(
 
   let finalAuthorName = authorDisplayName;
   let avatarLetter = 'ส';
+  let avatarUrl: string | undefined = typeof authorObj?.avatarUrl === 'string' ? authorObj.avatarUrl : undefined;
 
   if (isMine && currentUser) {
     finalAuthorName = currentUser.name || authorDisplayName;
     avatarLetter = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'ส';
+    if (currentUser.avatarUrl) avatarUrl = currentUser.avatarUrl;
   } else if (authorDisplayName) {
     avatarLetter = authorDisplayName.charAt(0).toUpperCase();
   }
@@ -182,15 +185,7 @@ export function postCard(
   // University Badge
   const authorUni = authorObj && typeof authorObj.university === 'string' ? authorObj.university : undefined;
   const uniTag = authorUni || (post.tags && post.tags[0]) || 'TECH UNIVERSITY';
-  let badgeClass = 'badge-tag--tech-uni';
-  if (uniTag.includes('KMITL') || uniTag.includes('สจล')) badgeClass = 'badge-tag--kmitl';
-  else if (uniTag.includes('KMUTT') || uniTag.includes('มจธ')) badgeClass = 'badge-tag--kmutt';
-  else if (uniTag.includes('KMUTNB') || uniTag.includes('มจพ')) badgeClass = 'badge-tag--kmutnb';
-
-  const badge = el('span', {
-    className: `badge-tag ${badgeClass}`,
-    text: uniTag,
-  });
+  const badge = createUniversityBadge(uniTag);
 
   let syncFriendButtonStatus: ((newStatus: FriendUser['relationshipStatus']) => void) | null = null;
 
@@ -211,24 +206,40 @@ export function postCard(
     });
   };
 
-  const avatar = el('div', {
+  const avatar = createAvatar({
+    url: avatarUrl,
+    name: finalAuthorName,
+    size: 'md',
     className: 'post-avatar',
-    attrs: { title: `ดูโปรไฟล์ของ ${finalAuthorName}`, style: 'cursor: pointer;' },
-    text: avatarLetter,
   });
+  avatar.style.cursor = 'pointer';
+  avatar.setAttribute('title', `ดูโปรไฟล์ของ ${finalAuthorName}`);
+  avatar.setAttribute('role', 'button');
+  avatar.setAttribute('tabindex', '0');
   avatar.addEventListener('click', (e) => {
     e.stopPropagation();
     openProfilePreview();
   });
+  avatar.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      openProfilePreview();
+    }
+  });
 
   const details = el('div', { className: 'post-author-details' });
   const nameLine = el('div', { className: 'post-author-name-line' });
-  const author = el('span', {
+  const author = el('a', {
     className: 'post-author-name',
-    attrs: { title: `ดูโปรไฟล์ของ ${finalAuthorName}`, style: 'cursor: pointer;' },
+    attrs: {
+      href: authorId ? `/profile/${encodeURIComponent(authorId)}` : '#',
+      title: `ดูโปรไฟล์ของ ${finalAuthorName}`,
+    },
     text: finalAuthorName,
   });
   author.addEventListener('click', (e) => {
+    e.preventDefault();
     e.stopPropagation();
     openProfilePreview();
   });
@@ -285,24 +296,29 @@ export function postCard(
     const menuWrap = el('div', { className: 'post-menu-wrap' });
     const menuBtn = el('button', {
       className: 'post-menu-btn',
-      attrs: { type: 'button', 'aria-label': 'ตัวเลือกจัดการโพสต์' },
+      attrs: {
+        type: 'button',
+        'aria-label': 'ตัวเลือกจัดการโพสต์',
+        'aria-haspopup': 'true',
+        'aria-expanded': 'false',
+      },
       text: '•••',
     });
 
     const dropdown = el('div', {
       className: 'post-actions-dropdown',
-      attrs: { style: 'display: none;' },
+      attrs: { style: 'display: none;', role: 'menu' },
     });
 
     const editItem = el('button', {
       className: 'post-dropdown-item',
-      attrs: { type: 'button' },
+      attrs: { type: 'button', role: 'menuitem' },
     });
     editItem.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> แก้ไขโพสต์`;
 
     const deleteItem = el('button', {
       className: 'post-dropdown-item post-dropdown-item--danger',
-      attrs: { type: 'button' },
+      attrs: { type: 'button', role: 'menuitem' },
     });
     deleteItem.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> ลบ`;
 
@@ -314,18 +330,39 @@ export function postCard(
 
     updateDropdownItems();
 
+    const closeDropdown = () => {
+      dropdown.style.display = 'none';
+      menuBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    const openDropdown = () => {
+      dropdown.style.display = 'block';
+      menuBtn.setAttribute('aria-expanded', 'true');
+    };
+
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isHidden = dropdown.style.display === 'none';
       document.querySelectorAll('.post-actions-dropdown').forEach((d) => {
         (d as HTMLElement).style.display = 'none';
       });
-      dropdown.style.display = isHidden ? 'block' : 'none';
+      document.querySelectorAll('.post-menu-btn').forEach((b) => {
+        b.setAttribute('aria-expanded', 'false');
+      });
+      if (isHidden) openDropdown();
+      else closeDropdown();
     });
 
     document.addEventListener('click', (e) => {
       if (!menuWrap.contains(e.target as Node)) {
-        dropdown.style.display = 'none';
+        closeDropdown();
+      }
+    });
+
+    menuWrap.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDropdown();
+        menuBtn.focus();
       }
     });
 

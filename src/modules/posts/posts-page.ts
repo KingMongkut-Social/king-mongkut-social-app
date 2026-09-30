@@ -9,7 +9,8 @@ import { toast } from '../../core/ui/toast';
 import type { Post } from '../../types/api';
 import { listFriends, type AcceptedFriend } from '../friends/friends-api';
 import { postsApi } from './posts-api';
-import { openLightbox, pagination, postCard } from './post-components';
+import { openLightbox, postCard } from './post-components';
+import { createAvatar } from '../../core/ui/avatar';
 import {
   createMentionPopover,
   FEELING_OPTIONS,
@@ -111,11 +112,11 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   const topRow = el('div', { className: 'create-post-top' });
 
   const currentUser = authStore.snapshot.user;
-  const avatarLetter = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'ส';
-  const avatar = el('div', {
+  const avatar = createAvatar({
+    url: currentUser?.avatarUrl,
+    name: currentUser?.name || 'โปรไฟล์ของคุณ',
+    size: 'md',
     className: 'post-avatar',
-    attrs: { title: currentUser?.name || 'โปรไฟล์ของคุณ' },
-    text: avatarLetter,
   });
 
 
@@ -471,7 +472,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
         const result = await postsApi.upload(file);
         return result.data.asset.url;
       }));
-      await postsApi.create({
+      const createResult = await postsApi.create({
         title: postTitle,
         content: postContent,
         status: 'published',
@@ -481,14 +482,21 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
         feeling: selectedFeeling ? `${selectedFeeling.emoji} ${selectedFeeling.label}` : null,
         taggedFriends: selectedTaggedFriends.map((friend) => friend.id),
       });
+      const newPost = createResult.data.post;
       clearSelectedImages();
       selectedFeeling = null;
       selectedTaggedFriends = [];
       renderExtrasBar();
       toast.success('เผยแพร่โพสต์เรียบร้อยแล้ว!');
       postInput.value = '';
-      window.history.pushState(null, '', '/');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      createBox.classList.remove('is-expanded');
+      updateComposerState();
+
+      if (emptyEl && emptyEl.parentElement) {
+        emptyEl.remove();
+        emptyEl = null;
+      }
+      postsContainer.prepend(postCard(newPost, { mine: true }));
     } catch (err: unknown) {
       toast.error(errorMessage(err));
     } finally {
@@ -503,8 +511,52 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
 
   if (!savedOnly) feedMain.append(createBox);
 
-  // 3. Posts List
-  // If there are real posts in DB, render them
+  // 3. Posts List & Load More
+  const postsContainer = el('div', { className: 'feed-posts-container' });
+  let emptyEl: HTMLElement | null = null;
+  let currentPage = page;
+  let totalPages = pages;
+  let isLoadingMore = false;
+
+  const loadMoreBtn = el('button', {
+    className: 'button button--secondary feed-load-more-btn',
+    attrs: { type: 'button' },
+    text: 'โหลดโพสต์เพิ่มเติม',
+  });
+  loadMoreBtn.style.width = '100%';
+  loadMoreBtn.style.margin = '16px 0';
+  loadMoreBtn.style.display = currentPage < totalPages ? 'block' : 'none';
+
+  async function loadMorePosts(): Promise<void> {
+    if (isLoadingMore || currentPage >= totalPages) return;
+    isLoadingMore = true;
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'กำลังโหลดโพสต์…';
+    try {
+      const nextPage = currentPage + 1;
+      const result = await (savedOnly
+        ? postsApi.listBookmarks({ page: nextPage, limit: 10, ...(search ? { search } : {}) })
+        : postsApi.listPublished({ page: nextPage, limit: 10, ...(search ? { search } : {}) }));
+      currentPage = result.data.page;
+      totalPages = result.data.pages;
+      for (const p of result.data.items) {
+        postsContainer.append(postCard(p));
+      }
+      loadMoreBtn.style.display = currentPage < totalPages ? 'block' : 'none';
+      loadMoreBtn.textContent = 'โหลดโพสต์เพิ่มเติม';
+    } catch (err: unknown) {
+      toast.error('ไม่สามารถโหลดโพสต์เพิ่มเติมได้: ' + errorMessage(err));
+      loadMoreBtn.textContent = 'ลองใหม่อีกครั้ง';
+    } finally {
+      isLoadingMore = false;
+      loadMoreBtn.disabled = false;
+    }
+  }
+
+  loadMoreBtn.addEventListener('click', () => {
+    void loadMorePosts();
+  });
+
   if (feedError) {
     const errorEl = createErrorState({
       message: `ไม่สามารถโหลดโพสต์ได้: ${feedError}`,
@@ -515,9 +567,10 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     errorEl.classList.add('feed-state');
     feedMain.append(errorEl);
   } else if (posts.length > 0) {
-    posts.forEach((p) => feedMain.append(postCard(p)));
+    posts.forEach((p) => postsContainer.append(postCard(p)));
+    feedMain.append(postsContainer, loadMoreBtn);
   } else {
-    const emptyEl = createEmptyState({
+    emptyEl = createEmptyState({
       title: savedOnly ? 'ยังไม่มีโพสต์ที่บันทึกไว้' : search ? 'ไม่พบโพสต์ที่ค้นหา' : 'ยังไม่มีโพสต์ในฟีด',
       description: savedOnly
         ? 'คุณสามารถกดบันทึกโพสต์ที่น่าสนใจเพื่ออ่านภายหลังได้'
@@ -528,11 +581,8 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       actionHref: savedOnly ? '/' : search ? '/' : undefined,
     });
     emptyEl.classList.add('feed-state');
-    feedMain.append(emptyEl);
+    feedMain.append(emptyEl, postsContainer, loadMoreBtn);
   }
-
-  const pager = pagination(page, pages, search, '/', savedOnly ? { saved: '1' } : {});
-  if (pager) feedMain.append(pager);
 
   // --- Right Column: Widgets ---
   const widgets = el('div', { className: 'feed-widgets' });
@@ -549,16 +599,17 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
         title: `แชทกับ ${user.name}`,
       },
     });
-    const avatarWrap = el('div', { className: 'online-user-avatar-wrap' });
-    const userAvatar = el('div', {
+    const avatar = createAvatar({
+      url: user.avatarUrl,
+      name: user.name,
+      size: 'sm',
+      isOnline: true,
       className: 'online-user-avatar',
-      text: user.name.charAt(0).toUpperCase(),
     });
-    avatarWrap.append(userAvatar);
     const infoWrap = el('div', { className: 'online-user-info' });
     const userName = el('span', { className: 'online-user-name', text: user.name });
     infoWrap.append(userName);
-    item.append(avatarWrap, infoWrap, el('span', { className: 'online-indicator-dot', attrs: { title: 'กำลังออนไลน์' } }));
+    item.append(avatar, infoWrap);
     return item;
   };
 

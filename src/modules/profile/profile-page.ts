@@ -8,8 +8,9 @@ import { confirmAction } from '../../core/ui/confirm-dialog';
 import type { PaginatedPosts, Post } from '../../types/api';
 import { removeFriend, respondFriendRequest, sendFriendRequest } from '../friends/friends-api';
 import { groupsApi, type CommunityGroup } from '../groups/groups-api';
-import { getPostImages, pagination, postCard } from '../posts/post-components';
 import { assetUrl } from '../posts/posts-api';
+import { getPostImages, pagination, postCard } from '../posts/post-components';
+import { createAvatar, createUniversityBadge } from '../../core/ui/avatar';
 import { profileApi, profileImageUrl, type PaginatedProfileFriends, type UserProfile } from './profile-api';
 import { openReportDialog } from '../reports/report-dialog';
 
@@ -31,15 +32,6 @@ function profileHref(basePath: string, tab: ProfileTab, page?: number): string {
 
 function profileState(message: string): HTMLElement {
   return el('div', { className: 'profile-state', text: message });
-}
-
-function badgeClass(university: string): string {
-  switch (university) {
-    case 'KMITL': return 'badge-tag--kmitl';
-    case 'KMUTT': return 'badge-tag--kmutt';
-    case 'KMUTNB': return 'badge-tag--kmutnb';
-    default: return 'badge-tag--tech-uni';
-  }
 }
 
 function academicText(person: { department?: string; faculty?: string }): string {
@@ -101,7 +93,7 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
   const basePath = context.url.pathname;
   const isSelf = profile.relationshipStatus === 'self' || authStore.snapshot.user?._id === profile.id;
   const root = el('section', { className: 'profile-page-shell' });
-  root.append(el('h1', { className: 'profile-page-title', text: 'โปรไฟล์' }));
+  root.append(el('h1', { className: 'sr-only', text: `โปรไฟล์ของ ${profile.name}` }));
 
   const header = el('div', { className: 'profile-header-card' });
   const banner = el('div', { className: 'profile-banner' });
@@ -111,24 +103,32 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
       attrs: { src: profileImageUrl(profile.coverUrl), alt: '' },
     }));
   } else {
-    banner.textContent = 'พื้นที่รูปหน้าปก';
+    const code = (profile.university || '').toUpperCase();
+    let grad = 'linear-gradient(135deg, #f2eae1 0%, #e2d5c7 100%)';
+    if (code.includes('KMITL') || code.includes('สจล')) {
+      grad = 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)';
+    } else if (code.includes('KMUTT') || code.includes('มจธ')) {
+      grad = 'linear-gradient(135deg, #fb923c 0%, #f97316 50%, #ea580c 100%)';
+    } else if (code.includes('KMUTNB') || code.includes('มจพ')) {
+      grad = 'linear-gradient(135deg, #ea580c 0%, #c2410c 50%, #9a3412 100%)';
+    }
+    banner.style.background = grad;
   }
   header.append(banner);
   const contentRow = el('div', { className: 'profile-content-row' });
-  const avatar = el('div', { className: 'profile-large-avatar', attrs: { 'aria-label': `รูปโปรไฟล์ของ ${profile.name}` } });
-  if (profile.avatarUrl) {
-    avatar.append(el('img', {
-      className: 'profile-avatar-image',
-      attrs: { src: profileImageUrl(profile.avatarUrl), alt: '' },
-    }));
-  }
+  const avatar = createAvatar({
+    url: profile.avatarUrl,
+    name: profile.name,
+    size: 'xl',
+    className: 'profile-large-avatar',
+  });
   contentRow.append(avatar);
 
   const mainInfo = el('div', { className: `profile-main-info${profile.username ? ' profile-main-info--has-username' : ''}` });
   mainInfo.append(el('h2', { className: 'profile-name-heading', text: profile.name }));
   if (profile.username) mainInfo.append(el('div', { className: 'profile-username', text: `@${profile.username}` }));
   const academic = el('div', { className: 'profile-academic-line' });
-  academic.append(el('span', { className: `badge-tag ${badgeClass(profile.university)}`, text: profile.university }));
+  academic.append(createUniversityBadge(profile.university));
   const details = [academicText(profile), profile.academicYear ? `ปี ${profile.academicYear}` : ''].filter(Boolean).join(' • ');
   if (details) academic.append(el('span', { text: details }));
   mainInfo.append(academic);
@@ -136,7 +136,12 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
 
   const counts = el('div', { className: 'profile-counts' });
   const updateCounts = (): void => {
-    counts.replaceChildren(el('span', { text: `เพื่อน ${profile.friendCount.toLocaleString('th-TH')} คน` }));
+    const friendLink = el('a', {
+      className: 'profile-counts__link',
+      attrs: { href: `${basePath}?tab=friends` },
+      text: `เพื่อน ${profile.friendCount.toLocaleString('th-TH')} คน`,
+    });
+    counts.replaceChildren(friendLink);
     if (!isSelf && authStore.snapshot.status === 'authenticated') {
       counts.append(el('span', { attrs: { 'aria-hidden': 'true' }, text: '•' }));
       counts.append(el('span', { text: `เพื่อนร่วมกัน ${profile.mutualFriendCount.toLocaleString('th-TH')} คน` }));

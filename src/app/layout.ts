@@ -6,8 +6,10 @@ import { mobileItemsForState, sidebarActionForState, sidebarItemsForState, type 
 import { clear, el } from '../core/ui/dom';
 import { errorMessage } from '../core/ui/error-message';
 import { toast } from '../core/ui/toast';
+import { createAvatar } from '../core/ui/avatar';
 import { formatRelativeTime } from '../core/utils/format';
 import { profileImageUrl } from '../modules/profile/profile-api';
+import { searchApi, type SearchResult, type SearchUser, type SearchGroup } from '../modules/search/search-api';
 
 const icons = {
   feed: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>`,
@@ -40,7 +42,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   const brand = el('a', { className: 'brand-title', text: 'KingMongkut Social', attrs: { href: '/' } });
 
-  // Search input in header
+  // Search input in header with autocomplete
   const searchWrap = el('div', { className: 'site-header__search' });
   const searchIcon = el('span', { className: 'site-header__search-icon' });
   searchIcon.innerHTML = icons.search;
@@ -50,19 +52,219 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       type: 'search',
       placeholder: 'ค้นหาเพื่อน, สถาบัน, โพสต์...',
       'aria-label': 'ค้นหา',
+      autocomplete: 'off',
     },
   });
 
+  const autocompleteDropdown = el('div', {
+    className: 'header-search-autocomplete',
+    attrs: { role: 'listbox', 'aria-label': 'ผลการค้นหาด่วน', style: 'display: none;' },
+  });
+
+  let searchDebounceTimer = 0;
+  let activeItemIndex = -1;
+  let currentResultsItems: HTMLAnchorElement[] = [];
+
+  const closeAutocomplete = (): void => {
+    autocompleteDropdown.style.display = 'none';
+    autocompleteDropdown.replaceChildren();
+    activeItemIndex = -1;
+    currentResultsItems = [];
+  };
+
+  const updateFocusedItem = (newIndex: number): void => {
+    if (!currentResultsItems.length) return;
+    if (activeItemIndex >= 0 && activeItemIndex < currentResultsItems.length) {
+      currentResultsItems[activeItemIndex]?.classList.remove(
+        'header-search-autocomplete__item--focused',
+        'header-search-autocomplete__footer--focused',
+      );
+    }
+    if (newIndex < 0) {
+      newIndex = currentResultsItems.length - 1;
+    } else if (newIndex >= currentResultsItems.length) {
+      newIndex = 0;
+    }
+    activeItemIndex = newIndex;
+    const item = currentResultsItems[activeItemIndex];
+    if (item) {
+      const isFooter = item.classList.contains('header-search-autocomplete__footer');
+      item.classList.add(isFooter ? 'header-search-autocomplete__footer--focused' : 'header-search-autocomplete__item--focused');
+      item.scrollIntoView?.({ block: 'nearest' });
+    }
+  };
+
+  const renderAutocompleteResults = (q: string, results: SearchResult): void => {
+    autocompleteDropdown.replaceChildren();
+    currentResultsItems = [];
+    activeItemIndex = -1;
+
+    const hasUsers = results.users && results.users.length > 0;
+    const hasGroups = results.groups && results.groups.length > 0;
+
+    if (!hasUsers && !hasGroups) {
+      autocompleteDropdown.append(el('div', {
+        className: 'header-search-autocomplete__empty',
+        text: `ไม่พบผลการค้นหาสำหรับ "${q}"`,
+      }));
+    } else {
+      if (hasUsers) {
+        autocompleteDropdown.append(el('div', {
+          className: 'header-search-autocomplete__section-title',
+          text: 'ผู้ใช้',
+        }));
+        results.users.slice(0, 3).forEach((user: SearchUser) => {
+          const item = el('a', {
+            className: 'header-search-autocomplete__item',
+            attrs: { href: `/profile/${user.id}`, role: 'option' },
+          });
+          const avatar = createAvatar({
+            url: user.avatarUrl,
+            name: user.name,
+            size: 'sm',
+          });
+          const info = el('div', { className: 'header-search-autocomplete__info' });
+          info.append(
+            el('div', { className: 'header-search-autocomplete__title', text: user.name }),
+            el('div', {
+              className: 'header-search-autocomplete__meta',
+              text: [user.username ? `@${user.username}` : '', user.university].filter(Boolean).join(' • '),
+            }),
+          );
+          item.append(avatar, info);
+          item.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeAutocomplete();
+            searchInput.value = '';
+            window.history.pushState(null, '', `/profile/${user.id}`);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          });
+          autocompleteDropdown.append(item);
+          currentResultsItems.push(item);
+        });
+      }
+
+      if (hasGroups) {
+        autocompleteDropdown.append(el('div', {
+          className: 'header-search-autocomplete__section-title',
+          text: 'กลุ่ม',
+        }));
+        results.groups.slice(0, 3).forEach((group: SearchGroup) => {
+          const item = el('a', {
+            className: 'header-search-autocomplete__item',
+            attrs: { href: `/groups/${group.id}`, role: 'option' },
+          });
+          const iconWrap = el('div', { className: 'header-search-autocomplete__group-icon' });
+          if (group.coverUrl) {
+            const img = el('img', {
+              className: 'header-search-autocomplete__group-thumb',
+              attrs: { src: group.coverUrl, alt: group.name, loading: 'lazy' },
+            });
+            iconWrap.append(img);
+          } else {
+            iconWrap.textContent = '👥';
+          }
+          const info = el('div', { className: 'header-search-autocomplete__info' });
+          info.append(
+            el('div', { className: 'header-search-autocomplete__title', text: group.name }),
+            el('div', {
+              className: 'header-search-autocomplete__meta',
+              text: `${group.university ? group.university + ' • ' : ''}${group.memberCount ?? 0} สมาชิก`,
+            }),
+          );
+          item.append(iconWrap, info);
+          item.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeAutocomplete();
+            searchInput.value = '';
+            window.history.pushState(null, '', `/groups/${group.id}`);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          });
+          autocompleteDropdown.append(item);
+          currentResultsItems.push(item);
+        });
+      }
+    }
+
+    const footerLink = el('a', {
+      className: 'header-search-autocomplete__footer',
+      attrs: { href: `/search?q=${encodeURIComponent(q)}` },
+      text: `ดูผลลัพธ์ทั้งหมดสำหรับ "${q}" →`,
+    });
+    footerLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeAutocomplete();
+      window.history.pushState(null, '', `/search?q=${encodeURIComponent(q)}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    autocompleteDropdown.append(footerLink);
+    currentResultsItems.push(footerLink);
+
+    autocompleteDropdown.style.display = 'flex';
+  };
+
+  searchInput.addEventListener('input', () => {
+    window.clearTimeout(searchDebounceTimer);
+    const q = searchInput.value.trim();
+    if (q.length < 2) {
+      closeAutocomplete();
+      return;
+    }
+    searchDebounceTimer = window.setTimeout(async () => {
+      try {
+        const results = await searchApi.search(q, { limit: 5 });
+        if (searchInput.value.trim() === q) {
+          renderAutocompleteResults(q, results);
+        }
+      } catch {
+        // Silently ignore autocomplete errors
+      }
+    }, 300);
+  });
+
   searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      if (autocompleteDropdown.style.display !== 'none' && currentResultsItems.length > 0) {
+        e.preventDefault();
+        updateFocusedItem(activeItemIndex + 1);
+      }
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      if (autocompleteDropdown.style.display !== 'none' && currentResultsItems.length > 0) {
+        e.preventDefault();
+        updateFocusedItem(activeItemIndex - 1);
+      }
+      return;
+    }
+    if (e.key === 'Escape') {
+      closeAutocomplete();
+      return;
+    }
     if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeItemIndex >= 0 && activeItemIndex < currentResultsItems.length) {
+        const item = currentResultsItems[activeItemIndex];
+        if (item) {
+          item.click();
+          return;
+        }
+      }
       const q = searchInput.value.trim();
+      closeAutocomplete();
       const target = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
       window.history.pushState(null, '', target);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }
   });
 
-  searchWrap.append(searchIcon, searchInput);
+  document.addEventListener('click', (e) => {
+    if (!searchWrap.contains(e.target as Node)) {
+      closeAutocomplete();
+    }
+  });
+
+  searchWrap.append(searchIcon, searchInput, autocompleteDropdown);
 
   // Right Header Actions
   const headerActions = el('div', { className: 'site-header__actions' });
@@ -128,7 +330,12 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
       // Avatar with type badge
       const avatarWrap = el('div', { className: 'notification-avatar-wrap' });
-      const avatar = el('div', { className: 'notification-avatar', text: n.actorInitial });
+      const avatar = createAvatar({
+        url: n.actorAvatarUrl,
+        name: n.actorName,
+        size: 'sm',
+        className: 'notification-avatar',
+      });
       const typeBadge = el('span', { className: 'notification-type-badge' });
       if (n.type === 'post_reaction') typeBadge.textContent = '❤️';
       else if (n.type === 'post_comment') typeBadge.textContent = '💬';
@@ -231,6 +438,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    closeAutocomplete();
     notifDropdown.style.display = 'none';
     const menu = userActionSlot.querySelector<HTMLElement>('.account-menu');
     const trigger = userActionSlot.querySelector<HTMLButtonElement>('.account-menu-trigger');

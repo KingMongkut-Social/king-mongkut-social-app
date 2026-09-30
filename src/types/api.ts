@@ -23,11 +23,14 @@ export interface User {
 export interface PostAuthor {
   _id: string;
   name: string;
+  username?: string | null | undefined;
+  avatarUrl?: string | null | undefined;
   email?: string | undefined;
   university?: string | undefined;
   faculty?: string | undefined;
   department?: string | undefined;
 }
+
 
 export interface Post {
   _id: string;

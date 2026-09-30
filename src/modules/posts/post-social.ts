@@ -4,6 +4,7 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { confirmAction } from '../../core/ui/confirm-dialog';
+import { createAvatar, createUniversityBadge } from '../../core/ui/avatar';
 import { formatRelativeTime } from '../../core/utils/format';
 import type { Post, PostComment, PostReaction } from '../../types/api';
 import { postsApi } from './posts-api';
@@ -159,11 +160,24 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     const item = el('div', { className: `comment-item ${comment.parentId ? 'comment-item--reply' : ''}` });
     const currentUserId = authStore.snapshot.user?._id;
     const author = comment.author;
-    const avatar = el('div', { className: 'comment-avatar', text: author.name.charAt(0).toUpperCase() || 'ส' });
+    const avatar = createAvatar({
+      url: author.avatarUrl,
+      name: author.name,
+      size: 'sm',
+      className: 'comment-avatar',
+      linkHref: author._id ? `/profile/${encodeURIComponent(author._id)}` : undefined,
+    });
     const bubble = el('div', { className: 'comment-bubble' });
     const header = el('div', { className: 'comment-header' });
-    header.append(el('span', { className: 'comment-author-name', text: author.name }));
-    if (author.university) header.append(el('span', { className: 'badge-tag badge-tag--tech-uni', text: author.university }));
+    const authorLink = el('a', {
+      className: 'comment-author-name',
+      attrs: {
+        href: author._id ? `/profile/${encodeURIComponent(author._id)}` : '#',
+      },
+      text: author.name,
+    });
+    header.append(authorLink);
+    if (author.university) header.append(createUniversityBadge(author.university));
     bubble.append(header, el('div', { className: 'comment-text', text: comment.content }));
     const footer = el('div', { className: 'comment-footer-actions' });
     footer.append(el('span', { className: 'comment-footer', text: formatRelativeTime(comment.createdAt) }));
@@ -257,7 +271,12 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   function commentForm(parentId?: string, onSent?: () => void): HTMLFormElement {
     const form = el('form', { className: parentId ? 'comment-reply-form' : 'comment-input-form' });
     const user = authStore.snapshot.user;
-    form.append(el('div', { className: 'comment-avatar', text: user?.name.charAt(0).toUpperCase() || 'ส' }));
+    form.append(createAvatar({
+      url: user?.avatarUrl,
+      name: user?.name || 'ส',
+      size: 'sm',
+      className: 'comment-avatar',
+    }));
     const wrap = el('div', { className: 'comment-input-wrap' });
     const input = el('input', {
       className: 'comment-input-field',

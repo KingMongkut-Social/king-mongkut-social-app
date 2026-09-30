@@ -33,7 +33,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  min-height: 44px;
   padding: 8px 16px;
   border-radius: var(--radius-md);
   border: none;
@@ -55,6 +55,26 @@
   color: var(--brand-rust);
   background: var(--brand-subtle);
   font-weight: var(--font-weight-bold);
+}
+
+.subtab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-bold);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  margin-left: 6px;
+}
+
+.subtab-btn--active .subtab-count {
+  background: var(--brand-primary);
+  color: #ffffff;
 }
 
 .connections-search-controls {
@@ -113,6 +133,13 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
+}
+
+.student-avatar-link {
+  display: block;
+  text-decoration: none;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
 }
 
 .student-avatar {

@@ -2,6 +2,7 @@ import { notificationStore, type AppNotification } from '../../core/notification
 import type { PageView } from '../../core/router/router';
 import { clear, el } from '../../core/ui/dom';
 import { createEmptyState } from '../../core/ui/feedback';
+import { createAvatar } from '../../core/ui/avatar';
 import { formatRelativeTime } from '../../core/utils/format';
 
 export function notificationsPage(): PageView {
@@ -50,13 +51,32 @@ export function notificationsPage(): PageView {
     }
 
     filtered.forEach((n) => {
-      const item = el('div', {
+      let target = '/';
+      if (n.type === 'post_reaction' || n.type === 'post_comment' || n.type === 'comment_reply') {
+        target = n.postId ? `/posts/${encodeURIComponent(n.postId)}` : '/';
+      } else if (n.type === 'friend_request' || n.type === 'friend_accept') {
+        target = '/connections';
+      } else if (n.type === 'group_invite') {
+        target = '/groups';
+      } else if (n.type === 'group_join') {
+        target = n.postId ? `/groups/${encodeURIComponent(n.postId)}` : '/groups';
+      }
+
+      const item = el('a', {
         className: `notification-item ${!n.read ? 'notification-item--unread' : ''}`,
-        attrs: { style: 'border-radius: var(--radius-md); margin-bottom: 2px;' },
+        attrs: {
+          href: target,
+          style: 'border-radius: var(--radius-md); margin-bottom: 2px; text-decoration: none;',
+        },
       });
 
       const avatarWrap = el('div', { className: 'notification-avatar-wrap' });
-      const avatar = el('div', { className: 'notification-avatar', text: n.actorInitial });
+      const avatar = createAvatar({
+        url: n.actorAvatarUrl,
+        name: n.actorName,
+        size: 'md',
+        className: 'notification-avatar',
+      });
       const typeBadge = el('span', { className: 'notification-type-badge' });
       if (n.type === 'post_reaction') typeBadge.textContent = '❤️';
       else if (n.type === 'post_comment') typeBadge.textContent = '💬';
@@ -93,18 +113,9 @@ export function notificationsPage(): PageView {
         item.append(el('span', { className: 'notification-unread-dot' }));
       }
 
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
         notificationStore.markAsRead(n.id);
-        let target = '/';
-        if (n.type === 'post_reaction' || n.type === 'post_comment' || n.type === 'comment_reply') {
-          target = n.postId ? `/posts/${encodeURIComponent(n.postId)}` : '/';
-        } else if (n.type === 'friend_request' || n.type === 'friend_accept') {
-          target = '/connections';
-        } else if (n.type === 'group_invite') {
-          target = '/groups';
-        } else if (n.type === 'group_join') {
-          target = n.postId ? `/groups/${encodeURIComponent(n.postId)}` : '/groups';
-        }
         window.history.pushState(null, '', target);
         window.dispatchEvent(new PopStateEvent('popstate'));
       });

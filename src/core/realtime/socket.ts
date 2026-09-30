@@ -24,7 +24,10 @@ export interface RealtimeNotification {
 const notificationListeners = new Set<Listener<RealtimeNotification>>();
 export interface PresenceUpdate { userId: string; isOnline: boolean }
 const presenceListeners = new Set<Listener<PresenceUpdate>>();
+export interface TypingUpdate { chatId: string; userId: string; isTyping: boolean }
+const typingListeners = new Set<Listener<TypingUpdate>>();
 const connectionListeners = new Set<Listener<boolean>>();
+
 
 let socket: Socket | null = null;
 let activeToken: string | null = null;
@@ -88,6 +91,9 @@ function syncSocket(): void {
   next.on('presence:updated', (update: PresenceUpdate) => {
     for (const listener of presenceListeners) listener(update);
   });
+  next.on('chat:typing', (update: TypingUpdate) => {
+    for (const listener of typingListeners) listener(update);
+  });
   next.on('notification:new', (notification: RealtimeNotification) => {
     for (const listener of notificationListeners) listener(notification);
   });
@@ -115,6 +121,12 @@ export const realtime = {
     }
     return acknowledgement.data;
   },
+  sendTyping(chatId: string, isTyping: boolean): void {
+    if (socket && connected) {
+      socket.emit('chat:typing', { chatId, isTyping });
+    }
+  },
+  onTyping: (listener: Listener<TypingUpdate>): (() => void) => subscribe(typingListeners, listener),
   onMessage: (listener: Listener<ChatMessage>): (() => void) => subscribe(messageListeners, listener),
   onConversation: (listener: Listener<Chat>): (() => void) => subscribe(conversationListeners, listener),
   onConnection: (listener: Listener<boolean>): (() => void) => {
@@ -130,6 +142,7 @@ export const realtime = {
   onPresenceUpdated: (listener: Listener<PresenceUpdate>): (() => void) => subscribe(presenceListeners, listener),
   onNotification: (listener: Listener<RealtimeNotification>): (() => void) => subscribe(notificationListeners, listener),
 };
+
 
 authStore.subscribe(syncSocket);
 syncSocket();
