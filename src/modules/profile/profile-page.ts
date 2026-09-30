@@ -5,8 +5,8 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import type { PaginatedPosts, Post } from '../../types/api';
-import { respondFriendRequest, sendFriendRequest } from '../friends/friends-api';
-import { chatsApi, type Chat } from '../chats/chats-api';
+import { removeFriend, respondFriendRequest, sendFriendRequest } from '../friends/friends-api';
+import { groupsApi, type CommunityGroup } from '../groups/groups-api';
 import { getPostImages, pagination, postCard } from '../posts/post-components';
 import { assetUrl } from '../posts/posts-api';
 import { profileApi, profileImageUrl, type PaginatedProfileFriends, type UserProfile } from './profile-api';
@@ -195,6 +195,34 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
         text: 'แชท',
         attrs: { href: `/chat?userId=${encodeURIComponent(profile.id)}` },
       }));
+      if (profile.requestId) {
+        const unfriend = el('button', {
+          className: 'profile-friend-btn profile-friend-btn--report',
+          text: 'เลิกเป็นเพื่อน',
+          attrs: { type: 'button' },
+        });
+        unfriend.addEventListener('click', async () => {
+          if (!profile.requestId || !window.confirm(`เลิกเป็นเพื่อนกับ ${profile.name}?`)) return;
+          unfriend.disabled = true;
+          try {
+            await removeFriend(profile.requestId);
+            profile = {
+              ...profile,
+              relationshipStatus: 'none',
+              requestId: null,
+              friendCount: Math.max(0, profile.friendCount - 1),
+            };
+            updateCounts();
+            renderFriendAction();
+            toast.success('เลิกเป็นเพื่อนแล้ว');
+            await refreshProfile();
+          } catch (cause) {
+            toast.error(errorMessage(cause));
+            unfriend.disabled = false;
+          }
+        });
+        actionsSlot.append(unfriend);
+      }
       appendProfileReport();
       return;
     }
@@ -268,12 +296,12 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
     await renderPhotos(section, profile.id, () => disposed);
   } else if (isSelf) {
     try {
-      renderGroups(section, (await chatsApi.list()).filter((chat) => chat.type === 'group'));
+      renderGroups(section, (await groupsApi.mine(1, 50)).items);
     } catch (cause) {
       section.append(profileState(`ไม่สามารถโหลดกลุ่มได้: ${errorMessage(cause)}`));
     }
   } else {
-    section.append(profileState('ยังไม่มีข้อมูลกลุ่มของผู้ใช้นี้ให้แสดง'));
+    section.append(profileState('รายการ Community Group เป็นข้อมูลส่วนตัวของสมาชิก'));
   }
 
   const unsubscribeFriend = realtime.onFriendUpdated(() => { void refreshProfile(); });
@@ -374,17 +402,20 @@ async function renderPhotos(section: HTMLElement, userId: string, isDisposed: ()
   await load();
 }
 
-function renderGroups(section: HTMLElement, groups: Chat[]): void {
+function renderGroups(section: HTMLElement, groups: CommunityGroup[]): void {
   if (!groups.length) {
-    section.append(profileState('คุณยังไม่มีกลุ่มสนทนา'));
+    section.append(profileState('คุณยังไม่ได้เข้าร่วม Community Group'));
     return;
   }
   const grid = el('div', { className: 'profile-groups-grid' });
   for (const group of groups) {
-    const card = el('a', { className: 'profile-person-card', attrs: { href: `/chat?chatId=${encodeURIComponent(group.id)}` } });
+    const card = el('a', { className: 'profile-person-card', attrs: { href: `/groups/${encodeURIComponent(group.id)}` } });
     card.append(el('span', { className: 'profile-group-icon', text: '👥', attrs: { 'aria-hidden': 'true' } }));
     const info = el('span', { className: 'profile-person-info' });
-    info.append(el('strong', { text: group.name || 'กลุ่มสนทนา' }), el('small', { text: `${group.members.length} สมาชิก` }));
+    info.append(
+      el('strong', { text: group.name }),
+      el('small', { text: `${group.memberCount} สมาชิก · ${group.privacy === 'private' ? 'ส่วนตัว' : 'สาธารณะ'}` }),
+    );
     card.append(info);
     grid.append(card);
   }
