@@ -198,6 +198,11 @@ export function createAcademicCombobox(options: AcademicComboboxOptions): Academ
     if (index >= 0 && index < items.length) {
       activeIndex = index;
       const target = items[index];
+      if (!target) {
+        activeIndex = -1;
+        input.removeAttribute('aria-activedescendant');
+        return;
+      }
       target.classList.add('is-active');
       input.setAttribute('aria-activedescendant', target.id);
       if (scrollIntoView && typeof target.scrollIntoView === 'function') {
@@ -251,7 +256,8 @@ export function createAcademicCombobox(options: AcademicComboboxOptions): Academ
     } else if (e.key === 'Enter') {
       if (activeIndex >= 0 && activeIndex < currentSuggestions.length) {
         e.preventDefault();
-        selectSuggestion(currentSuggestions[activeIndex]);
+        const suggestion = currentSuggestions[activeIndex];
+        if (suggestion) selectSuggestion(suggestion);
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
