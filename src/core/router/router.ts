@@ -3,6 +3,7 @@ import { safeReturnTo } from '../auth/return-to';
 import { authStore } from '../auth/auth-store';
 import { el } from '../ui/dom';
 import { errorMessage } from '../ui/error-message';
+import { ApiError } from '../api/api-error';
 
 export interface RouteContext {
   params: Record<string, string>;
@@ -175,15 +176,50 @@ export class Router {
   }
 
   private errorView(error: unknown): HTMLElement {
-    const section = el('section', { className: 'empty-state page-shell' });
+    const section = el('section', { className: 'empty-state page-shell app-error-state' });
+    const retry = el('button', {
+      className: 'button button--primary',
+      text: 'ลองใหม่อีกครั้ง',
+      attrs: { type: 'button' },
+    });
+    retry.addEventListener('click', () => this.refresh());
+
+    if (error instanceof ApiError && error.code === 'ACCOUNT_INACTIVE') {
+      section.append(
+        el('p', { className: 'eyebrow', text: 'Account Suspended' }),
+        el('h1', { text: 'บัญชีนี้ถูกระงับชั่วคราว' }),
+        el('p', { text: 'บัญชีของคุณไม่สามารถใช้งาน KingMongkut Social ได้ในขณะนี้ หากมีข้อสงสัยกรุณาติดต่อผู้ดูแลระบบ' }),
+        el('a', { className: 'button button--secondary', text: 'กลับหน้าเข้าสู่ระบบ', attrs: { href: '/login' } }),
+      );
+      return section;
+    }
+
+    if (error instanceof ApiError && error.status === 401) {
+      section.append(
+        el('p', { className: 'eyebrow', text: 'Session Expired' }),
+        el('h1', { text: 'เซสชันหมดอายุ' }),
+        el('p', { text: 'กรุณาเข้าสู่ระบบอีกครั้งเพื่อดำเนินการต่อ' }),
+        el('a', { className: 'button button--primary', text: 'เข้าสู่ระบบ', attrs: { href: '/login' } }),
+      );
+      return section;
+    }
+
+    if (error instanceof ApiError && error.code === 'NETWORK_ERROR') {
+      section.append(
+        el('p', { className: 'eyebrow', text: 'Network Error' }),
+        el('h1', { text: 'ไม่สามารถเชื่อมต่อได้' }),
+        el('p', { text: 'ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือเซิร์ฟเวอร์ แล้วลองใหม่อีกครั้ง' }),
+        retry,
+      );
+      return section;
+    }
+
     section.append(
       el('p', { className: 'eyebrow', text: 'เกิดข้อผิดพลาด' }),
       el('h1', { text: 'ไม่สามารถโหลดหน้านี้ได้' }),
       el('p', { text: errorMessage(error) }),
+      retry,
     );
-    const retry = el('button', { className: 'button button--primary', text: 'ลองใหม่อีกครั้ง', attrs: { type: 'button' } });
-    retry.addEventListener('click', () => this.refresh());
-    section.append(retry);
     return section;
   }
 }

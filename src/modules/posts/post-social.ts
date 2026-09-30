@@ -1,36 +1,38 @@
 import { requireMember } from '../../core/auth/auth-navigation';
 import { authStore } from '../../core/auth/auth-store';
-import { notificationStore } from '../../core/notifications/notification-store';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
-import type { Post, PostComment } from '../../types/api';
+import type { Post, PostComment, PostReaction } from '../../types/api';
 import { postsApi } from './posts-api';
+import { openReportDialog } from '../reports/report-dialog';
 
 function action(label: string, className = ''): HTMLButtonElement {
   return el('button', { className: `reaction-btn ${className}`.trim(), attrs: { type: 'button' }, text: label });
 }
 
-function notifyPostAuthor(post: Post, authorId: string, authorName: string, type: 'like' | 'comment' | 'reply', contentSnippet?: string): void {
-  const actor = authStore.snapshot.user;
-  if (!actor || !authorId || actor._id === authorId) return;
-  notificationStore.addNotification({
-    recipientId: authorId,
-    recipientName: authorName,
-    actorName: actor.name,
-    actorInitial: actor.name.charAt(0).toUpperCase(),
-    type,
-    postId: post._id,
-    postSnippet: post.content.slice(0, 40),
-    ...(contentSnippet ? { contentSnippet } : {}),
-  });
+const REACTIONS: ReadonlyArray<{ value: PostReaction; emoji: string; label: string }> = [
+  { value: 'LIKE', emoji: '👍', label: 'ถูกใจ' },
+  { value: 'LOVE', emoji: '❤️', label: 'รักเลย' },
+  { value: 'HAHA', emoji: '😂', label: 'ฮ่าๆ' },
+  { value: 'WOW', emoji: '😮', label: 'ว้าว' },
+  { value: 'SAD', emoji: '😢', label: 'เศร้า' },
+  { value: 'ANGRY', emoji: '😡', label: 'โกรธ' },
+];
+
+function reactionMeta(value: PostReaction | null | undefined) {
+  return REACTIONS.find((item) => item.value === value) ?? null;
 }
 
 export function mountPostSocial(card: HTMLElement, post: Post, authorId: string, authorName: string): void {
+  void authorId;
+  void authorName;
   let likesCount = post.likeCount ?? post.likesCount ?? 0;
+  let currentReaction: PostReaction | null = post.myReaction ?? (post.likedByMe ? 'LIKE' : null);
+  let reactionCounts = post.reactionCounts ?? { LIKE: likesCount, LOVE: 0, HAHA: 0, WOW: 0, SAD: 0, ANGRY: 0 };
   let commentsCount = post.commentCount ?? post.commentsCount ?? 0;
-  let liked = Boolean(post.likedByMe);
+  let liked = currentReaction !== null;
   let saved = Boolean(post.savedByMe);
   let comments: PostComment[] = [];
   let commentsPage = 0;
@@ -41,13 +43,46 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   const summary = el('div', { className: 'post-social-summary' });
   const reactions = el('div', { className: 'post-reactions-footer' });
   const likeBtn = action('ถูกใจ');
+  const reactionWrap = el('div', { className: 'reaction-picker-wrap' });
+  const reactionPicker = el('div', { className: 'reaction-picker', attrs: { hidden: 'true' } });
   const commentBtn = action('แสดงความคิดเห็น');
   const shareBtn = action('แชร์');
   const saveBtn = action('บันทึก');
+  const reportBtn = action('รายงาน');
   const commentsSection = el('section', { className: 'post-comments-section', attrs: { hidden: 'true', 'aria-label': 'ความคิดเห็น' } });
   const commentsList = el('div', { className: 'comments-list' });
   const moreBtn = action('ดูความคิดเห็นเพิ่มเติม');
   moreBtn.classList.add('post-comments-more');
+
+  const applyReaction = async (next: PostReaction | null): Promise<void> => {
+    if (!requireMember()) return;
+    likeBtn.disabled = true;
+    try {
+      const result = next ? await postsApi.react(post._id, next) : await postsApi.unreact(post._id);
+      currentReaction = result.data.post.myReaction ?? null;
+      liked = currentReaction !== null;
+      reactionCounts = result.data.post.reactionCounts ?? reactionCounts;
+      likesCount = result.data.post.likeCount ?? result.data.post.likesCount
+        ?? Object.values(reactionCounts).reduce((sum, count) => sum + count, 0);
+      renderSummary();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      likeBtn.disabled = false;
+      reactionPicker.hidden = true;
+    }
+  };
+
+  for (const item of REACTIONS) {
+    const button = el('button', {
+      className: 'reaction-choice',
+      attrs: { type: 'button', title: item.label, 'aria-label': item.label },
+      text: item.emoji,
+    });
+    button.addEventListener('click', () => void applyReaction(item.value));
+    reactionPicker.append(button);
+  }
+  reactionWrap.append(likeBtn, reactionPicker);
 
   const renderSummary = (): void => {
     summary.replaceChildren();
@@ -55,7 +90,8 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
       el('span', { className: 'post-social-summary__likes', text: `❤️ ${likesCount}` }),
       el('span', { className: 'post-social-summary__comments', text: `ความคิดเห็น ${commentsCount}` }),
     );
-    likeBtn.textContent = liked ? '♥ ถูกใจแล้ว' : 'ถูกใจ';
+    const meta = reactionMeta(currentReaction);
+    likeBtn.textContent = meta ? `${meta.emoji} ${meta.label}` : 'ถูกใจ';
     likeBtn.classList.toggle('reaction-btn--liked', liked);
     likeBtn.setAttribute('aria-pressed', String(liked));
     saveBtn.textContent = saved ? 'บันทึกแล้ว' : 'บันทึก';
@@ -64,21 +100,24 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   };
   renderSummary();
 
-  likeBtn.addEventListener('click', async () => {
+  likeBtn.addEventListener('click', () => {
     if (!requireMember()) return;
-    likeBtn.disabled = true;
-    try {
-      const result = liked ? await postsApi.unlike(post._id) : await postsApi.like(post._id);
-      const wasLiked = liked;
-      liked = Boolean(result.data.post.likedByMe);
-      likesCount = result.data.post.likeCount ?? result.data.post.likesCount ?? Math.max(0, likesCount + (liked ? 1 : -1));
-      renderSummary();
-      if (!wasLiked && liked) notifyPostAuthor(post, authorId, authorName, 'like');
-    } catch (error) {
-      toast.error(errorMessage(error));
-    } finally {
-      likeBtn.disabled = false;
+    if (currentReaction) {
+      void applyReaction(null);
+      return;
     }
+    void applyReaction('LIKE');
+  });
+  likeBtn.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    if (!requireMember()) return;
+    reactionPicker.hidden = !reactionPicker.hidden;
+  });
+  likeBtn.addEventListener('mouseenter', () => {
+    if (authStore.snapshot.status === 'authenticated') reactionPicker.hidden = false;
+  });
+  reactionWrap.addEventListener('mouseleave', () => {
+    reactionPicker.hidden = true;
   });
 
   saveBtn.addEventListener('click', async () => {
@@ -95,6 +134,14 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     } finally {
       saveBtn.disabled = false;
     }
+  });
+
+  reportBtn.addEventListener('click', () => {
+    openReportDialog({
+      targetType: 'post',
+      targetId: post._id,
+      title: 'รายงานโพสต์',
+    });
   });
 
   shareBtn.addEventListener('click', async () => {
@@ -214,7 +261,6 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
         input.value = '';
         renderComments();
         renderSummary();
-        notifyPostAuthor(post, authorId, authorName, parentId ? 'reply' : 'comment', content);
         onSent?.();
       } catch (error) {
         toast.error(errorMessage(error));
@@ -257,6 +303,6 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   moreBtn.addEventListener('click', () => void loadComments());
   commentsSection.append(commentsList, moreBtn, commentForm());
   renderComments();
-  reactions.append(likeBtn, commentBtn, shareBtn, saveBtn);
+  reactions.append(reactionWrap, commentBtn, shareBtn, saveBtn, reportBtn);
   card.append(summary, reactions, commentsSection);
 }

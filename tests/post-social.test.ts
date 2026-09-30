@@ -5,11 +5,16 @@ import { mountPostSocial } from '../src/modules/posts/post-social';
 import type { Post, PostComment, User } from '../src/types/api';
 
 const mocks = vi.hoisted(() => ({
-  like: vi.fn(), unlike: vi.fn(), bookmark: vi.fn(), unbookmark: vi.fn(),
+  like: vi.fn(), unlike: vi.fn(), react: vi.fn(), unreact: vi.fn(),
+  bookmark: vi.fn(), unbookmark: vi.fn(),
   listComments: vi.fn(), addComment: vi.fn(), removeComment: vi.fn(),
+  report: vi.fn(),
 }));
 
 vi.mock('../src/modules/posts/posts-api', () => ({ postsApi: mocks }));
+vi.mock('../src/modules/reports/reports-api', () => ({
+  reportsApi: { create: mocks.report },
+}));
 
 const user: User = {
   _id: 'aaaaaaaaaaaaaaaaaaaaaaaa', name: 'Alice', email: 'alice@kmitl.ac.th', role: 'user',
@@ -29,7 +34,17 @@ const comment: PostComment = {
 beforeEach(() => {
   authStore.setAuthenticated(user, 'access-token');
   document.body.replaceChildren(Object.assign(document.createElement('div'), { id: 'toast-root' }));
-  mocks.like.mockResolvedValue({ data: { post: { ...post, likeCount: 3, likedByMe: true } } });
+  mocks.react.mockResolvedValue({
+    data: {
+      post: {
+        ...post,
+        likeCount: 3,
+        likedByMe: true,
+        myReaction: 'LIKE',
+        reactionCounts: { LIKE: 3, LOVE: 0, HAHA: 0, WOW: 0, SAD: 0, ANGRY: 0 },
+      },
+    },
+  });
   mocks.bookmark.mockResolvedValue({ data: { post: { ...post, savedByMe: true } } });
   mocks.listComments.mockResolvedValue({ data: { items: [comment], page: 1, limit: 50, total: 1, pages: 1 } });
   mocks.addComment.mockResolvedValue({ data: { comment: { ...comment, _id: 'dddddddddddddddddddddddd', content: 'Second comment' } } });
@@ -49,17 +64,20 @@ describe('post social controls', () => {
     expect(card.querySelector('.post-social-summary__likes')?.textContent).toContain('2');
     expect(card.querySelector('.post-social-summary__comments')?.textContent).toContain('1');
 
-    const buttons = [...card.querySelectorAll<HTMLButtonElement>('.post-reactions-footer button')];
-    buttons[0]?.click();
-    await vi.waitFor(() => expect(mocks.like).toHaveBeenCalledWith(post._id));
-    await vi.waitFor(() => expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true'));
+    const likeButton = card.querySelector<HTMLButtonElement>('.reaction-picker-wrap > .reaction-btn')!;
+    likeButton.click();
+    await vi.waitFor(() => expect(mocks.react).toHaveBeenCalledWith(post._id, 'LIKE'));
+    await vi.waitFor(() => expect(likeButton.getAttribute('aria-pressed')).toBe('true'));
     expect(card.querySelector('.post-social-summary__likes')?.textContent).toContain('3');
 
-    buttons[3]?.click();
+    const footerButtons = [...card.querySelectorAll<HTMLButtonElement>('.post-reactions-footer > .reaction-btn')];
+    const saveButton = footerButtons.find((button) => button.textContent === 'บันทึก')!;
+    saveButton.click();
     await vi.waitFor(() => expect(mocks.bookmark).toHaveBeenCalledWith(post._id));
-    await vi.waitFor(() => expect(buttons[3]?.getAttribute('aria-pressed')).toBe('true'));
+    await vi.waitFor(() => expect(saveButton.getAttribute('aria-pressed')).toBe('true'));
 
-    buttons[1]?.click();
+    const commentButton = footerButtons.find((button) => button.textContent === 'แสดงความคิดเห็น')!;
+    commentButton.click();
     await vi.waitFor(() => expect(mocks.listComments).toHaveBeenCalledWith(post._id, 1, 50));
     expect(card.querySelector('.comments-list')?.textContent).toContain('Great work');
     const input = card.querySelector<HTMLInputElement>('.comment-input-form input')!;
