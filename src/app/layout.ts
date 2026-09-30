@@ -14,6 +14,10 @@ const icons = {
   connections: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
   chats: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
   institutions: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>`,
+  groups: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>`,
+  bookmark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>`,
+  posts: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>`,
+  shield: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>`,
   search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   bell: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
   user: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
@@ -239,7 +243,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   const navTitle = el('div', { className: 'sidebar__section-title', text: 'เมนูหลัก' });
   const navSubtitle = el('div', { className: 'sidebar__subtitle', text: 'เครือข่ายนักศึกษา 3 พระจอมฯ' });
-  const navList = el('nav', { className: 'sidebar__nav' });
+  const navList = el('nav', { className: 'sidebar__nav', attrs: { 'aria-label': 'เมนูหลัก' } });
 
   sidebarTop.append(navTitle, navSubtitle, navList);
 
@@ -281,12 +285,14 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         className: `sidebar__link ${entry.active ? 'sidebar__link--active' : ''}`,
         attrs: {
           href: entry.href,
+          title: entry.label,
+          'data-nav-id': entry.id,
           ...(entry.active ? { 'aria-current': 'page' } : {}),
         },
       });
       const iconSpan = el('span', { className: 'sidebar__icon' });
       iconSpan.innerHTML = icons[entry.icon];
-      link.append(iconSpan, el('span', { text: entry.label }));
+      link.append(iconSpan, el('span', { className: 'sidebar__label', text: entry.label }));
       return link;
     };
 
@@ -304,21 +310,32 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       'complete-profile': 'โปรไฟล์',
     };
     for (const entry of mobileItemsForState(state, location)) {
-      mobileNav.append(el('a', {
+      const mobileLink = el('a', {
         className: `mobile-primary-nav__link ${entry.active ? 'mobile-primary-nav__link--active' : ''}`,
-        text: mobileLabels[entry.id] ?? entry.label,
         attrs: {
           href: entry.href,
+          'aria-label': entry.label,
+          'data-nav-id': entry.id,
           ...(entry.active ? { 'aria-current': 'page' } : {}),
         },
-      }));
+      });
+      const mobileIcon = el('span', { className: 'mobile-primary-nav__icon', attrs: { 'aria-hidden': 'true' } });
+      mobileIcon.innerHTML = icons[entry.icon];
+      mobileLink.append(
+        mobileIcon,
+        el('span', { className: 'mobile-primary-nav__label', text: mobileLabels[entry.id] ?? entry.label }),
+      );
+      mobileNav.append(mobileLink);
     }
 
     const sidebarAction = sidebarActionForState(state);
     if (sidebarAction) {
       sidebarFooter.append(el('a', {
         className: 'btn-create-project',
-        attrs: { href: sidebarAction.href },
+        attrs: {
+          href: sidebarAction.href,
+          'data-action-kind': sidebarAction.href === '/dashboard/posts/new' ? 'create' : 'continue',
+        },
         text: sidebarAction.label,
       }));
     }

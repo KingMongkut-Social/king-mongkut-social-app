@@ -1,0 +1,538 @@
+/* Sidebar UX/UI refresh ---------------------------------------------------- */
+/*
+ * Loaded after the legacy application styles so the shell can keep one
+ * consistent navigation treatment across feed, profile, connections and chat.
+ */
+
+.app-sidebar {
+  position: sticky;
+  top: 80px;
+  align-self: flex-start;
+  width: 232px;
+  height: calc(100dvh - 96px);
+  min-height: 500px;
+  margin: 16px 0 16px 16px;
+  padding: 18px 12px 14px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 216, 207, 0.9);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 34px rgba(64, 42, 29, 0.055);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.sidebar__top {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sidebar__section-title {
+  margin: 0;
+  padding: 0 10px;
+  color: #362f2a;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sidebar__subtitle {
+  margin: 3px 0 14px;
+  padding: 0 10px 13px;
+  border-bottom: 1px solid #f0e9e3;
+  color: #9b9188;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.sidebar__nav {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd2c9 transparent;
+}
+
+.sidebar__nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar__nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #ddd2c9;
+}
+
+.sidebar__link {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #5c534c;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.sidebar__link:hover:not(.sidebar__link--active) {
+  border-color: #eee5de;
+  background: #faf7f4;
+  color: #312b27;
+  transform: translateX(2px);
+}
+
+.sidebar__link:focus-visible {
+  outline: 2px solid rgba(158, 52, 7, 0.45);
+  outline-offset: 2px;
+}
+
+.sidebar__link--active {
+  border-color: #efcfc0;
+  background: linear-gradient(135deg, #fff2eb 0%, #fff9f6 100%);
+  color: var(--brand-rust) !important;
+  font-weight: 750;
+  box-shadow: 0 5px 18px rgba(137, 60, 25, 0.08);
+}
+
+.sidebar__link--active::after {
+  position: absolute;
+  top: 11px;
+  right: -1px;
+  width: 3px;
+  height: 22px;
+  border-radius: 999px 0 0 999px;
+  background: var(--brand-rust);
+  content: '';
+}
+
+.sidebar__icon {
+  display: grid !important;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f5f0eb;
+  color: #75685f;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.sidebar__icon svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+}
+
+.sidebar__link:hover:not(.sidebar__link--active) .sidebar__icon {
+  background: #eee6df;
+  color: #4d433c;
+}
+
+.sidebar__link--active .sidebar__icon {
+  background: linear-gradient(145deg, #ad4315 0%, #8f2f08 100%);
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(158, 52, 7, 0.18);
+}
+
+.sidebar__link--active svg {
+  stroke: currentColor;
+}
+
+.sidebar__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__link[data-nav-id='saved'] {
+  margin-top: 9px;
+}
+
+.sidebar__link[data-nav-id='saved']::before {
+  position: absolute;
+  top: -6px;
+  right: 9px;
+  left: 9px;
+  height: 1px;
+  background: #f0e9e3;
+  content: '';
+}
+
+.sidebar__link[data-nav-id='moderation'] {
+  color: #7c3141;
+}
+
+.sidebar__link[data-nav-id='moderation'] .sidebar__icon {
+  background: #faeef1;
+  color: #9f2941;
+}
+
+.sidebar__footer {
+  display: block !important;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0e9e3;
+}
+
+.btn-create-project {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(132, 40, 4, 0.12);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #a63b0c 0%, #8f2f08 100%);
+  box-shadow: 0 8px 20px rgba(139, 47, 8, 0.16);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-decoration: none;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    filter 0.16s ease;
+}
+
+.btn-create-project::before {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.14);
+  content: '→';
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.btn-create-project[data-action-kind='create']::before {
+  content: '+';
+  font-size: 1rem;
+}
+
+.btn-create-project:hover {
+  background: linear-gradient(135deg, #a63b0c 0%, #8f2f08 100%);
+  box-shadow: 0 11px 25px rgba(139, 47, 8, 0.22);
+  filter: saturate(1.05);
+  transform: translateY(-1px);
+}
+
+.btn-create-project:active {
+  transform: translateY(0);
+}
+
+.btn-create-project:focus-visible {
+  outline: 2px solid rgba(158, 52, 7, 0.4);
+  outline-offset: 3px;
+}
+
+/* Override page-specific legacy compact sidebar variants with one shell. */
+@media (min-width: 769px) {
+  .is-feed-page .app-sidebar,
+  .is-profile-page .app-sidebar,
+  .is-connections-page .app-sidebar,
+  .is-chat-page .app-sidebar {
+    position: sticky;
+    top: 72px;
+    width: 220px;
+    height: calc(100dvh - 88px);
+    min-height: 500px;
+    margin: 0;
+    padding: 18px 12px 14px;
+    border: 1px solid rgba(226, 216, 207, 0.9);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 12px 34px rgba(64, 42, 29, 0.055);
+  }
+
+  .is-feed-page .sidebar__section-title,
+  .is-profile-page .sidebar__section-title,
+  .is-connections-page .sidebar__section-title,
+  .is-chat-page .sidebar__section-title {
+    margin: 0;
+    padding: 0 10px;
+    color: #362f2a;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .is-feed-page .sidebar__subtitle,
+  .is-profile-page .sidebar__subtitle,
+  .is-connections-page .sidebar__subtitle,
+  .is-chat-page .sidebar__subtitle {
+    display: block;
+    margin: 3px 0 14px;
+    padding: 0 10px 13px;
+    font-size: 0.7rem;
+  }
+
+  .is-feed-page .sidebar__nav,
+  .is-profile-page .sidebar__nav,
+  .is-connections-page .sidebar__nav,
+  .is-chat-page .sidebar__nav {
+    gap: 4px;
+  }
+
+  .is-feed-page .sidebar__link,
+  .is-profile-page .sidebar__link,
+  .is-connections-page .sidebar__link,
+  .is-chat-page .sidebar__link {
+    min-height: 44px;
+    padding: 6px 9px;
+    border-radius: 12px;
+    color: #5c534c;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .is-feed-page .sidebar__link--active,
+  .is-profile-page .sidebar__link--active,
+  .is-connections-page .sidebar__link--active,
+  .is-chat-page .sidebar__link--active {
+    min-height: 44px;
+    margin-top: 0;
+    padding: 6px 9px;
+    color: var(--brand-rust) !important;
+    box-shadow: 0 5px 18px rgba(137, 60, 25, 0.08);
+  }
+
+  .is-feed-page .sidebar__icon,
+  .is-profile-page .sidebar__icon,
+  .is-connections-page .sidebar__icon,
+  .is-chat-page .sidebar__icon,
+  .is-feed-page .sidebar__footer,
+  .is-profile-page .sidebar__footer,
+  .is-connections-page .sidebar__footer,
+  .is-chat-page .sidebar__footer {
+    display: grid !important;
+  }
+
+  .is-feed-page .sidebar__footer,
+  .is-profile-page .sidebar__footer,
+  .is-connections-page .sidebar__footer,
+  .is-chat-page .sidebar__footer {
+    display: block !important;
+  }
+}
+
+/* Medium screens become an icon rail so content remains readable. */
+@media (min-width: 769px) and (max-width: 1120px) {
+  .app-sidebar,
+  .is-feed-page .app-sidebar,
+  .is-profile-page .app-sidebar,
+  .is-connections-page .app-sidebar,
+  .is-chat-page .app-sidebar {
+    width: 76px;
+    min-width: 76px;
+    padding: 12px 10px;
+  }
+
+  .sidebar__section-title,
+  .sidebar__subtitle,
+  .sidebar__label {
+    display: none !important;
+  }
+
+  .sidebar__nav {
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .sidebar__link,
+  .is-feed-page .sidebar__link,
+  .is-profile-page .sidebar__link,
+  .is-connections-page .sidebar__link,
+  .is-chat-page .sidebar__link {
+    min-height: 48px;
+    justify-content: center;
+    padding: 7px;
+  }
+
+  .sidebar__link:hover:not(.sidebar__link--active) {
+    transform: translateY(-1px);
+  }
+
+  .sidebar__link--active::after {
+    top: 14px;
+    height: 20px;
+  }
+
+  .sidebar__icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .sidebar__link[data-nav-id='saved'] {
+    margin-top: 10px;
+  }
+
+  .btn-create-project {
+    min-height: 46px;
+    padding: 7px;
+    font-size: 0;
+  }
+
+  .btn-create-project::before {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    border-radius: 9px;
+    font-size: 1.2rem;
+  }
+}
+
+/* Mobile: thumb-friendly bottom navigation. */
+@media (max-width: 768px) {
+  .app-sidebar {
+    display: none !important;
+  }
+
+  .mobile-primary-nav {
+    position: fixed;
+    z-index: 75;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    top: auto;
+    display: flex;
+    min-height: 64px;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 6px max(8px, env(safe-area-inset-right))
+      calc(6px + env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    border-top: 1px solid rgba(223, 214, 205, 0.92);
+    border-bottom: 0;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 -10px 28px rgba(48, 33, 23, 0.07);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .mobile-primary-nav__link {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 50px;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 3px;
+    border-radius: 12px;
+    color: #81776f;
+    font-size: 0.66rem;
+    font-weight: 650;
+    line-height: 1.1;
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease,
+      transform 0.16s ease;
+  }
+
+  .mobile-primary-nav__link:active {
+    transform: scale(0.96);
+  }
+
+  .mobile-primary-nav__link--active {
+    background: #fff4ee;
+    color: var(--brand-rust);
+  }
+
+  .mobile-primary-nav__link--active::before {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 26px;
+    height: 3px;
+    border-radius: 0 0 999px 999px;
+    background: var(--brand-rust);
+    content: '';
+    transform: translateX(-50%);
+  }
+
+  .mobile-primary-nav__icon {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+  }
+
+  .mobile-primary-nav__icon svg {
+    width: 19px;
+    height: 19px;
+    stroke: currentColor;
+  }
+
+  .mobile-primary-nav__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-content {
+    padding-bottom: calc(86px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .is-auth-page .mobile-primary-nav,
+  .is-edit-profile-page .mobile-primary-nav {
+    display: none !important;
+  }
+
+  .is-auth-page .app-content,
+  .is-edit-profile-page .app-content {
+    padding-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .mobile-primary-nav {
+    padding-inline: 4px;
+  }
+
+  .mobile-primary-nav__link {
+    font-size: 0.61rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar__link,
+  .sidebar__icon,
+  .btn-create-project,
+  .mobile-primary-nav__link {
+    transition: none;
+  }
+}

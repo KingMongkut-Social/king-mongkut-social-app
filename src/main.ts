@@ -1,5 +1,6 @@
 import './styles.css';
 import './app/navbar.css';
+import './app/sidebar.css';
 import { bindAuthNavigation, mountLayout } from './app/layout';
 import { apiClient } from './core/api/api-client';
 import { Router, type RouteDefinition } from './core/router/router';

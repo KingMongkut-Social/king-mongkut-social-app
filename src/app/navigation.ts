@@ -5,6 +5,10 @@ export type NavigationIcon =
   | 'connections'
   | 'chats'
   | 'institutions'
+  | 'groups'
+  | 'bookmark'
+  | 'posts'
+  | 'shield'
   | 'search'
   | 'user';
 
@@ -58,7 +62,7 @@ export function sidebarItemsForState(
 
   items.push(
     item('universities', 'สถาบัน', '/universities', 'institutions', path.startsWith('/universities')),
-    item('groups', 'กลุ่ม', '/groups', 'connections', path.startsWith('/groups')),
+    item('groups', 'กลุ่ม', '/groups', 'groups', path.startsWith('/groups')),
     item('search', 'สำรวจ', '/search', 'search', path === '/search'),
   );
 
@@ -75,8 +79,8 @@ export function sidebarItemsForState(
     }
 
     items.push(
-      item('saved', 'บันทึกไว้', '/?saved=1', 'feed', saved),
-      item('dashboard', 'โพสต์ของฉัน', '/dashboard', 'feed', path.startsWith('/dashboard')),
+      item('saved', 'บันทึกไว้', '/?saved=1', 'bookmark', saved),
+      item('dashboard', 'โพสต์ของฉัน', '/dashboard', 'posts', path.startsWith('/dashboard')),
       item('profile', 'โปรไฟล์', '/profile', 'user', path === '/profile' || path.startsWith('/profile/')),
     );
 
@@ -85,7 +89,7 @@ export function sidebarItemsForState(
         'moderation',
         'การดูแลระบบ',
         '/admin/moderation',
-        'user',
+        'shield',
         path === '/admin/moderation',
       ));
     }
