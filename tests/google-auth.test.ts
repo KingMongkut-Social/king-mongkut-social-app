@@ -67,14 +67,17 @@ describe('Google entry pages and callback', () => {
     expect(unknown.element.textContent).not.toContain('alert(1)');
   });
 
-  it('routes restored sessions through profile completion and preserves returnTo', () => {
+  it('routes restored sessions through profile completion and preserves returnTo', async () => {
     authStore.setAuthenticated(user, 'access');
-    expect(callbackPage(context('/auth/callback?returnTo=%2Fconnections')).redirectTo)
+    expect((await callbackPage(context('/auth/callback?returnTo=%2Fconnections'))).redirectTo)
       .toBe('/complete-profile?returnTo=%2Fconnections');
     authStore.setAuthenticated({ ...user, needsProfileCompletion: false }, 'access');
-    expect(callbackPage(context('/auth/callback?returnTo=%2Fconnections')).redirectTo).toBe('/connections');
+    expect((await callbackPage(context('/auth/callback?returnTo=%2Fconnections'))).redirectTo).toBe('/connections');
+
     authStore.setAnonymous();
-    expect(callbackPage(context('/auth/callback')).redirectTo).toContain('GOOGLE_SESSION_FAILED');
+    const restore = vi.spyOn(apiClient, 'restoreSession').mockResolvedValue(false);
+    expect((await callbackPage(context('/auth/callback'))).redirectTo).toContain('GOOGLE_SESSION_FAILED');
+    expect(restore).toHaveBeenCalledOnce();
   });
 });
 
