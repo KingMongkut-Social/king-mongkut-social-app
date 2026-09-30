@@ -6,7 +6,7 @@ import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
 import type { Post, PostComment, PostReaction } from '../../types/api';
 import { postsApi } from './posts-api';
-import { reportsApi, type ReportReason } from '../reports/reports-api';
+import { openReportDialog } from '../reports/report-dialog';
 
 function action(label: string, className = ''): HTMLButtonElement {
   return el('button', { className: `reaction-btn ${className}`.trim(), attrs: { type: 'button' }, text: label });
@@ -136,25 +136,12 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     }
   });
 
-  reportBtn.addEventListener('click', async () => {
-    if (!requireMember()) return;
-    const reasonInput = window.prompt(
-      'เหตุผลในการรายงาน: spam, harassment, inappropriate, fake_account, scam หรือ other',
-      'other',
-    );
-    if (!reasonInput) return;
-    const allowed: ReportReason[] = ['spam', 'harassment', 'inappropriate', 'fake_account', 'scam', 'other'];
-    const reason = allowed.includes(reasonInput as ReportReason) ? reasonInput as ReportReason : 'other';
-    const details = window.prompt('รายละเอียดเพิ่มเติม (ไม่บังคับ)', '') ?? '';
-    reportBtn.disabled = true;
-    try {
-      await reportsApi.create({ targetType: 'post', targetId: post._id, reason, details });
-      toast.success('ส่งรายงานแล้ว ขอบคุณที่ช่วยดูแลชุมชน');
-    } catch (error) {
-      toast.error(errorMessage(error));
-    } finally {
-      reportBtn.disabled = false;
-    }
+  reportBtn.addEventListener('click', () => {
+    openReportDialog({
+      targetType: 'post',
+      targetId: post._id,
+      title: 'รายงานโพสต์',
+    });
   });
 
   shareBtn.addEventListener('click', async () => {

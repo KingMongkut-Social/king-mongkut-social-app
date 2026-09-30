@@ -5,6 +5,7 @@ import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
 import { groupsApi } from './groups-api';
+import { openReportDialog } from '../reports/report-dialog';
 
 export async function groupPage(context: RouteContext): Promise<PageView> {
   const id = context.params.id ?? '';
@@ -42,6 +43,19 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
       }
     });
 
+    const heroActions = el('div', { className: 'group-hero__actions' }, action);
+    if (authStore.snapshot.status === 'authenticated') {
+      const reportGroup = el('button', {
+        className: 'button button--secondary',
+        text: 'รายงานกลุ่ม',
+        attrs: { type: 'button' },
+      });
+      reportGroup.addEventListener('click', () => {
+        openReportDialog({ targetType: 'group', targetId: id, title: `รายงานกลุ่ม ${group.name}` });
+      });
+      heroActions.append(reportGroup);
+    }
+
     hero.append(
       el('div', { className: 'group-hero__cover' }),
       el('div', { className: 'group-hero__content' },
@@ -49,7 +63,7 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
           el('h1', { text: group.name }),
           el('p', { text: `${group.privacy === 'public' ? 'กลุ่มสาธารณะ' : 'กลุ่มส่วนตัว'} · ${group.memberCount} สมาชิก` }),
         ),
-        action,
+        heroActions,
       ),
       el('nav', { className: 'community-tabs' },
         el('span', { className: 'community-tab community-tab--active', text: 'การสนทนา' }),

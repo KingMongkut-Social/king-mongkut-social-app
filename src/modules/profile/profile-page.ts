@@ -10,6 +10,7 @@ import { chatsApi, type Chat } from '../chats/chats-api';
 import { getPostImages, pagination, postCard } from '../posts/post-components';
 import { assetUrl } from '../posts/posts-api';
 import { profileApi, profileImageUrl, type PaginatedProfileFriends, type UserProfile } from './profile-api';
+import { openReportDialog } from '../reports/report-dialog';
 
 type ProfileTab = 'posts' | 'about' | 'friends' | 'photos' | 'groups';
 const profileTabs: ReadonlyArray<{ id: ProfileTab; label: string }> = [
@@ -157,6 +158,19 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
     }
   };
 
+  const appendProfileReport = (): void => {
+    if (isSelf || authStore.snapshot.status !== 'authenticated') return;
+    const reportButton = el('button', {
+      className: 'profile-friend-btn profile-friend-btn--report',
+      text: 'รายงาน',
+      attrs: { type: 'button' },
+    });
+    reportButton.addEventListener('click', () => {
+      openReportDialog({ targetType: 'user', targetId: profile.id, title: `รายงาน ${profile.name}` });
+    });
+    actionsSlot.append(reportButton);
+  };
+
   const renderFriendAction = (): void => {
     actionsSlot.replaceChildren();
     if (isSelf) {
@@ -181,10 +195,12 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
         text: 'แชท',
         attrs: { href: `/chat?userId=${encodeURIComponent(profile.id)}` },
       }));
+      appendProfileReport();
       return;
     }
     if (profile.relationshipStatus === 'pending_sent') {
       actionsSlot.append(el('span', { className: 'profile-friend-btn profile-friend-btn--pending', text: 'ส่งคำขอแล้ว' }));
+      appendProfileReport();
       return;
     }
     const pendingReceived = profile.relationshipStatus === 'pending_received';
@@ -215,6 +231,7 @@ export async function profilePage(context: RouteContext): Promise<PageView> {
       }
     });
     actionsSlot.append(button);
+    appendProfileReport();
   };
   renderFriendAction();
   contentRow.append(mainInfo, actionsSlot);
