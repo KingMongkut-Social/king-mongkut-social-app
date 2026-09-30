@@ -17,7 +17,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  max-width: 1440px;
+  max-width: var(--layout-shell-max);
   height: 100%;
   margin: 0 auto;
   padding: 0 var(--space-4);
@@ -451,7 +451,7 @@
   line-height: 1.2;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1280px) {
   .account-trigger__identity {
     display: flex;
   }
@@ -587,4 +587,23 @@
 .account-menu__item-hint {
   font-size: var(--font-xs);
   color: var(--text-muted);
+}
+
+
+.notification-type-badge {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface-card);
+  border-radius: var(--radius-full);
+  background: var(--brand-subtle);
+  color: var(--brand-rust);
+}
+
+.notification-type-badge svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.25;
 }
