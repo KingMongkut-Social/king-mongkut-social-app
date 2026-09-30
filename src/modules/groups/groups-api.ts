@@ -14,10 +14,27 @@ export interface CommunityGroup {
   createdAt: string;
 }
 
+export interface GroupUser {
+  _id: string;
+  name: string;
+  username?: string | null;
+  avatarUrl?: string | null;
+  university?: string;
+  faculty?: string;
+  department?: string;
+}
+
+export interface GroupMember {
+  id: string;
+  role: 'owner' | 'admin' | 'moderator' | 'member';
+  user: GroupUser;
+  joinedAt: string;
+}
+
 export interface GroupPost {
   id: string;
   content: string;
-  author: { _id: string; name: string; username?: string | null; avatarUrl?: string | null; university?: string };
+  author: GroupUser;
   createdAt: string;
 }
 
@@ -48,16 +65,14 @@ export const groupsApi = {
     await apiClient.request(`/groups/${encodeURIComponent(id)}/join`, { method: 'DELETE' });
   },
   async members(id: string) {
-    const response = await apiClient.request<ApiSuccess<{ items: Array<{ id: string; role: string; user: any; joinedAt: string }> }>>(
+    const response = await apiClient.request<ApiSuccess<{ items: GroupMember[] }>>(
       `/groups/${encodeURIComponent(id)}/members?limit=50`,
-      { auth: false },
     );
     return response.data.items;
   },
   async posts(id: string) {
     const response = await apiClient.request<ApiSuccess<{ items: GroupPost[] }>>(
       `/groups/${encodeURIComponent(id)}/posts?limit=50`,
-      { auth: false },
     );
     return response.data.items;
   },
