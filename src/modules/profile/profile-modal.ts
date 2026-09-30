@@ -1,5 +1,6 @@
 import { authStore } from '../../core/auth/auth-store';
 import { el } from '../../core/ui/dom';
+import { reactIcon } from '../../core/ui/react-icon';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { getFriendUser, respondFriendRequest, searchFriends, sendFriendRequest, type FriendUser } from '../friends/friends-api';
@@ -118,8 +119,7 @@ export function openProfilePreviewModal(options: OpenProfileModalOptions): void 
         style:
           'padding:6px 14px; background:#f5f0ea; color:#554c44; border-radius:20px; font-size:0.82rem; font-weight:700;',
       },
-      text: '👤 โปรไฟล์ของคุณ',
-    });
+    }, reactIcon('user'), document.createTextNode(' โปรไฟล์ของคุณ'));
     actionSlot.append(selfBadge);
   } else {
     const friendBtn = el('button', {
