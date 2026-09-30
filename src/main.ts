@@ -14,6 +14,12 @@ import { connectionsPage } from './modules/friends/connections-page';
 import { chatPage } from './modules/chats/chat-page';
 import { profilePage } from './modules/profile/profile-page';
 import { editProfilePage } from './modules/profile/edit-profile-page';
+import { universitiesPage } from './modules/universities/universities-page';
+import { universityPage } from './modules/universities/university-page';
+import { groupsPage } from './modules/groups/groups-page';
+import { groupPage } from './modules/groups/group-page';
+import { searchPage } from './modules/search/search-page';
+import { moderationPage } from './modules/reports/moderation-page';
 
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('App root not found');
@@ -35,6 +41,12 @@ const routes: RouteDefinition[] = [
   { path: '/dashboard/posts/:id/edit', handler: postEditorPage, auth: 'required' },
   { path: '/connections', handler: connectionsPage, auth: 'required' },
   { path: '/chat', handler: chatPage, auth: 'required' },
+  { path: '/universities', handler: universitiesPage },
+  { path: '/universities/:code', handler: universityPage },
+  { path: '/groups', handler: groupsPage },
+  { path: '/groups/:id', handler: groupPage },
+  { path: '/search', handler: searchPage },
+  { path: '/admin/moderation', handler: moderationPage, auth: 'required' },
 ];
 
 await apiClient.restoreSession();

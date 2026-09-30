@@ -310,6 +310,11 @@ export function mountLayout(root: HTMLElement): HTMLElement {
           createNavItem('โพสต์ของฉัน', '/dashboard', icons.feed, currentPath.startsWith('/dashboard')),
         );
       }
+      if (state.user.role === 'admin') {
+        navList.append(
+          createNavItem('การดูแลระบบ', '/admin/moderation', icons.user, currentPath === '/admin/moderation'),
+        );
+      }
 
       const initial = state.user.name ? state.user.name.charAt(0).toUpperCase() : 'ส';
       const userBtn = el('a', {
