@@ -13,7 +13,7 @@ export interface ReportItem {
   reason: ReportReason;
   details: string;
   status: ReportStatus;
-  action?: 'dismiss' | 'remove_content' | 'suspend_user' | 'restore_user' | null;
+  action?: 'dismiss' | 'remove_content' | 'suspend_user' | 'restore_user' | 'content_deleted' | null;
   note?: string | null;
   moderatedAt?: string | null;
   createdAt: string;

@@ -93,6 +93,9 @@ export async function moderationPage(context: RouteContext): Promise<PageView> {
         el('p', { text: report.details || 'ไม่มีรายละเอียดเพิ่มเติม' }),
         el('small', { text: `รายงานโดย ${report.reporter?.name ?? 'ผู้ใช้'} · ${statusLabels[report.status]}` }),
       );
+      if (report.action === 'content_deleted') {
+        card.append(el('p', { className: 'platform-meta', text: 'สถานะ: เนื้อหาต้นทางถูกลบแล้ว' }));
+      }
       if (report.note) card.append(el('p', { className: 'platform-meta', text: `บันทึกผู้ดูแล: ${report.note}` }));
       if (actions.childElementCount) card.append(actions);
       queue.append(card);
