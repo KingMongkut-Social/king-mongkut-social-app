@@ -61,7 +61,7 @@ function studentCard(person: FriendPerson, summary: string, actions: HTMLElement
 
 function messageAction(userId: string): HTMLElement {
   return el('a', {
-    className: 'btn-add-friend btn-message-friend', text: 'ข้อความ',
+    className: 'button button--secondary button--small btn-message-friend', text: 'ข้อความ',
     attrs: { href: `/chat?userId=${encodeURIComponent(userId)}` },
   });
 }
@@ -116,7 +116,7 @@ export function connectionsPage(context?: RouteContext): PageView {
     if (user.relationshipStatus === 'friends') {
       const actions = el('div', { className: 'connections-actions' }, messageAction(user.id));
       if (user.requestId) {
-        const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
+        const remove = el('button', { className: 'button button--danger button--small btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
         remove.addEventListener('click', async () => {
           const confirmed = await confirmAction({
             title: 'เลิกเป็นเพื่อน',
@@ -135,11 +135,11 @@ export function connectionsPage(context?: RouteContext): PageView {
       return el('span', { className: 'connections-pending-label', text: 'ส่งคำขอแล้ว' });
     }
     if (user.relationshipStatus === 'pending_received' && user.requestId) {
-      const accept = el('button', { className: 'btn-accept-request', text: 'ยอมรับ', attrs: { type: 'button' } });
+      const accept = el('button', { className: 'button button--primary button--small btn-accept-request', text: 'ยอมรับ', attrs: { type: 'button' } });
       accept.addEventListener('click', () => void act(accept, () => respondFriendRequest(user.requestId!, 'accept'), 'เป็นเพื่อนกันแล้ว'));
       return accept;
     }
-    const add = el('button', { className: 'btn-add-friend', text: '+ เพิ่มเพื่อน', attrs: { type: 'button' } });
+    const add = el('button', { className: 'button button--primary button--small btn-add-friend', text: '+ เพิ่มเพื่อน', attrs: { type: 'button' } });
     add.addEventListener('click', () => void act(add, () => sendFriendRequest(user.id), 'ส่งคำขอเป็นเพื่อนแล้ว'));
     return add;
   }
@@ -209,7 +209,7 @@ export function connectionsPage(context?: RouteContext): PageView {
       } else {
         for (const friend of filteredFriends) {
           const actions = el('div', { className: 'connections-actions' }, messageAction(friend.id));
-          const remove = el('button', { className: 'btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
+          const remove = el('button', { className: 'button button--danger button--small btn-reject-icon', text: 'เลิกเป็นเพื่อน', attrs: { type: 'button' } });
           remove.addEventListener('click', async () => {
             const confirmed = await confirmAction({
               title: 'เลิกเป็นเพื่อน',
@@ -228,8 +228,8 @@ export function connectionsPage(context?: RouteContext): PageView {
       if (!requests.incoming.length) grid.append(emptyState('ยังไม่มีคำขอเป็นเพื่อน'));
       for (const request of requests.incoming) {
         const actions = el('div', { className: 'connections-actions' });
-        const accept = el('button', { className: 'btn-accept-request', text: 'ยอมรับ', attrs: { type: 'button' } });
-        const reject = el('button', { className: 'btn-reject-icon', text: 'ปฏิเสธ', attrs: { type: 'button' } });
+        const accept = el('button', { className: 'button button--primary button--small btn-accept-request', text: 'ยอมรับ', attrs: { type: 'button' } });
+        const reject = el('button', { className: 'button button--danger button--small btn-reject-icon', text: 'ปฏิเสธ', attrs: { type: 'button' } });
         accept.addEventListener('click', () => void act(accept, () => respondFriendRequest(request.id, 'accept'), 'เป็นเพื่อนกันแล้ว'));
         reject.addEventListener('click', () => void act(reject, () => respondFriendRequest(request.id, 'reject'), 'ปฏิเสธคำขอแล้ว'));
         actions.append(accept, reject);
@@ -238,7 +238,7 @@ export function connectionsPage(context?: RouteContext): PageView {
     } else if (activeTab === 'outgoing') {
       if (!requests.outgoing.length) grid.append(emptyState('ยังไม่มีคำขอที่ส่ง'));
       for (const request of requests.outgoing) {
-        const cancel = el('button', { className: 'btn-reject-icon', text: 'ยกเลิกคำขอ', attrs: { type: 'button' } });
+        const cancel = el('button', { className: 'button button--danger button--small btn-reject-icon', text: 'ยกเลิกคำขอ', attrs: { type: 'button' } });
         cancel.addEventListener('click', () => void act(cancel, () => cancelFriendRequest(request.id), 'ยกเลิกคำขอแล้ว'));
         grid.append(studentCard(request.recipient, 'รอการตอบรับ', cancel));
       }
