@@ -239,7 +239,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   const navTitle = el('div', { className: 'sidebar__section-title', text: 'เมนูหลัก' });
   const navSubtitle = el('div', { className: 'sidebar__subtitle', text: 'เครือข่ายนักศึกษา 3 พระจอมฯ' });
-  const navList = el('nav', { className: 'sidebar__nav' });
+  const navList = el('nav', { className: 'sidebar__nav', attrs: { 'aria-label': 'เมนูหลัก' } });
 
   sidebarTop.append(navTitle, navSubtitle, navList);
 
@@ -281,12 +281,14 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         className: `sidebar__link ${entry.active ? 'sidebar__link--active' : ''}`,
         attrs: {
           href: entry.href,
+          title: entry.label,
+          'data-nav-id': entry.id,
           ...(entry.active ? { 'aria-current': 'page' } : {}),
         },
       });
       const iconSpan = el('span', { className: 'sidebar__icon' });
       iconSpan.innerHTML = icons[entry.icon];
-      link.append(iconSpan, el('span', { text: entry.label }));
+      link.append(iconSpan, el('span', { className: 'sidebar__label', text: entry.label }));
       return link;
     };
 
@@ -304,14 +306,22 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       'complete-profile': 'โปรไฟล์',
     };
     for (const entry of mobileItemsForState(state, location)) {
-      mobileNav.append(el('a', {
+      const mobileLink = el('a', {
         className: `mobile-primary-nav__link ${entry.active ? 'mobile-primary-nav__link--active' : ''}`,
-        text: mobileLabels[entry.id] ?? entry.label,
         attrs: {
           href: entry.href,
+          'aria-label': entry.label,
+          'data-nav-id': entry.id,
           ...(entry.active ? { 'aria-current': 'page' } : {}),
         },
-      }));
+      });
+      const mobileIcon = el('span', { className: 'mobile-primary-nav__icon', attrs: { 'aria-hidden': 'true' } });
+      mobileIcon.innerHTML = icons[entry.icon];
+      mobileLink.append(
+        mobileIcon,
+        el('span', { className: 'mobile-primary-nav__label', text: mobileLabels[entry.id] ?? entry.label }),
+      );
+      mobileNav.append(mobileLink);
     }
 
     const sidebarAction = sidebarActionForState(state);
