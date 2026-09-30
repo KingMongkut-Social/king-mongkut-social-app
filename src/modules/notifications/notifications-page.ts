@@ -3,7 +3,7 @@ import type { PageView } from '../../core/router/router';
 import { clear, el } from '../../core/ui/dom';
 import { createEmptyState } from '../../core/ui/feedback';
 import { createAvatar } from '../../core/ui/avatar';
-import { createNotificationTypeBadge } from '../core/ui/notification-icon';
+import { createNotificationTypeBadge } from '../../core/ui/notification-icon';
 import { formatRelativeTime } from '../../core/utils/format';
 
 export function notificationsPage(): PageView {
