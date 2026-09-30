@@ -223,3 +223,10 @@
   padding: 4px 10px;
   border-radius: var(--radius-full);
 }
+
+
+.connections-retry {
+  align-self: center;
+  justify-self: center;
+  margin: var(--space-2) auto 0;
+}
