@@ -615,16 +615,6 @@
 }
 
 /* Post Editor Standalone Page */
-.page-shell {
-  width: 100%;
-  max-width: var(--main-max-width);
-  margin: 0 auto;
-}
-
-.page-shell--narrow {
-  max-width: 680px;
-}
-
 .editor-heading {
   margin-bottom: var(--space-4);
 }
@@ -694,4 +684,17 @@
 
 .post-attachment-link:hover {
   text-decoration: underline;
+}
+
+
+@media (max-width: 639px) {
+  .is-feed-page .feed-post-card,
+  .is-feed-page .create-post-card {
+    margin-inline: calc(var(--layout-gutter-mobile) * -1);
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .post-reactions-footer { gap: var(--space-1); }
 }
