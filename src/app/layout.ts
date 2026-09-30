@@ -8,33 +8,23 @@ import { errorMessage } from '../core/ui/error-message';
 import { toast } from '../core/ui/toast';
 import { createAvatar } from '../core/ui/avatar';
 import { createNotificationTypeBadge } from '../core/ui/notification-icon';
-import { reactIcon } from '../core/ui/react-icon';
+import { reactIcon, type AppIconName } from '../core/ui/react-icon';
 import { formatRelativeTime } from '../core/utils/format';
 import { profileImageUrl } from '../modules/profile/profile-api';
 import { searchApi, type SearchResult, type SearchUser, type SearchGroup } from '../modules/search/search-api';
 
-const icons = {
-  feed: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>`,
-  connections: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-  chats: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-  institutions: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>`,
-  groups: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>`,
-  bookmark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>`,
-  posts: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>`,
-  shield: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>`,
-  search: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
-  bell: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
-  user: `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
-  plus: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
-};
-
-const accountIcons = {
-  profile: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
-  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
-  posts: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>`,
-  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>`,
-  logout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>`,
-  chevron: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`,
+const navigationIcons: Record<NavigationItem['icon'], AppIconName> = {
+  feed: 'feed',
+  connections: 'connections',
+  chats: 'comments',
+  institutions: 'university',
+  groups: 'users',
+  bookmark: 'bookmark',
+  posts: 'posts',
+  shield: 'shield',
+  search: 'search',
+  user: 'user',
+  plus: 'plus',
 };
 
 export function mountLayout(root: HTMLElement): HTMLElement {
@@ -47,7 +37,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   // Search input in header with autocomplete
   const searchWrap = el('div', { className: 'site-header__search' });
   const searchIcon = el('span', { className: 'site-header__search-icon' });
-  searchIcon.innerHTML = icons.search;
+  searchIcon.append(reactIcon('search', { size: 16 }));
   const searchInput = el('input', {
     className: 'search-pill-input',
     attrs: {
@@ -279,7 +269,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     className: 'icon-btn site-header__mobile-search-btn',
     attrs: { href: '/search', 'aria-label': 'ค้นหา', title: 'ค้นหา' },
   });
-  mobileSearchBtn.innerHTML = icons.search;
+  mobileSearchBtn.append(reactIcon('search', { size: 18 }));
   headerActions.append(mobileSearchBtn);
 
   // Notification Bell & Interactive Dropdown
@@ -288,7 +278,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     className: 'icon-btn',
     attrs: { type: 'button', 'aria-label': 'การแจ้งเตือน', title: 'การแจ้งเตือน' },
   });
-  bellBtn.innerHTML = icons.bell;
+  bellBtn.append(reactIcon('bell', { size: 19 }));
   bellBtn.append(el('span', { className: 'header-action-label', text: 'การแจ้งเตือน' }));
 
   const notifBadge = el('span', { className: 'notification-badge', attrs: { style: 'display: none;' } });
@@ -506,8 +496,8 @@ export function mountLayout(root: HTMLElement): HTMLElement {
           ...(entry.active ? { 'aria-current': 'page' } : {}),
         },
       });
-      const iconSpan = el('span', { className: 'sidebar__icon' });
-      iconSpan.innerHTML = icons[entry.icon];
+      const iconSpan = el('span', { className: 'sidebar__icon', attrs: { 'aria-hidden': 'true' } });
+      iconSpan.append(reactIcon(navigationIcons[entry.icon], { size: 18 }));
       link.append(iconSpan, el('span', { className: 'sidebar__label', text: entry.label }));
       return link;
     };
@@ -562,7 +552,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         },
       });
       const mobileIcon = el('span', { className: 'mobile-primary-nav__icon', attrs: { 'aria-hidden': 'true' } });
-      mobileIcon.innerHTML = icons[entry.icon];
+      mobileIcon.append(reactIcon(navigationIcons[entry.icon], { size: 18 }));
       mobileLink.append(
         mobileIcon,
         el('span', { className: 'mobile-primary-nav__label', text: mobileLabels[entry.id] ?? entry.label }),
@@ -639,7 +629,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         }),
       );
       const chevron = el('span', { className: 'account-trigger__chevron', attrs: { 'aria-hidden': 'true' } });
-      chevron.innerHTML = accountIcons.chevron;
+      chevron.append(reactIcon('chevron-down', { size: 14 }));
       trigger.append(createAvatar(), triggerIdentity, chevron);
 
       const menu = el('div', {
@@ -665,14 +655,14 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         href: string,
         label: string,
         hint: string,
-        iconSvg: string,
+        iconName: AppIconName,
       ): HTMLAnchorElement => {
         const link = el('a', {
           className: 'account-menu__item',
           attrs: { href, role: 'menuitem' },
         });
         const icon = el('span', { className: 'account-menu__item-icon', attrs: { 'aria-hidden': 'true' } });
-        icon.innerHTML = iconSvg;
+        icon.append(reactIcon(iconName, { size: 18 }));
         const copy = el('span', { className: 'account-menu__item-copy' });
         copy.append(
           el('span', { className: 'account-menu__item-label', text: label }),
@@ -685,14 +675,14 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
       const items = el('div', { className: 'account-menu__items' });
       items.append(
-        createMenuLink('/profile', 'ดูโปรไฟล์', 'ดูหน้าโปรไฟล์และกิจกรรมของคุณ', accountIcons.profile),
-        createMenuLink('/profile/edit', 'แก้ไขโปรไฟล์', 'เปลี่ยนข้อมูลและรูปโปรไฟล์', accountIcons.edit),
-        createMenuLink('/dashboard', 'โพสต์ของฉัน', 'จัดการโพสต์ที่คุณสร้างไว้', accountIcons.posts),
-        createMenuLink('/notifications', 'การแจ้งเตือน', 'ดูประวัติการแจ้งเตือนทั้งหมด', icons.bell),
-        createMenuLink('/connections', 'เพื่อน & การเชื่อมต่อ', 'ดูรายชื่อเพื่อนและคำขอ', icons.connections),
-        createMenuLink('/groups', 'กลุ่มชุมชน', 'ค้นพบและจัดการกลุ่มของคุณ', icons.groups),
-        createMenuLink('/universities', 'สถาบัน 3 พระจอมฯ', 'ดูชุมชนของแต่ละสถาบัน', icons.institutions),
-        createMenuLink('/?saved=1', 'โพสต์ที่บันทึกไว้', 'ดูโพสต์ที่คุณบันทึกเก็บไว้', icons.bookmark),
+        createMenuLink('/profile', 'ดูโปรไฟล์', 'ดูหน้าโปรไฟล์และกิจกรรมของคุณ', 'user'),
+        createMenuLink('/profile/edit', 'แก้ไขโปรไฟล์', 'เปลี่ยนข้อมูลและรูปโปรไฟล์', 'edit'),
+        createMenuLink('/dashboard', 'โพสต์ของฉัน', 'จัดการโพสต์ที่คุณสร้างไว้', 'posts'),
+        createMenuLink('/notifications', 'การแจ้งเตือน', 'ดูประวัติการแจ้งเตือนทั้งหมด', 'bell'),
+        createMenuLink('/connections', 'เพื่อน & การเชื่อมต่อ', 'ดูรายชื่อเพื่อนและคำขอ', 'connections'),
+        createMenuLink('/groups', 'กลุ่มชุมชน', 'ค้นพบและจัดการกลุ่มของคุณ', 'users'),
+        createMenuLink('/universities', 'สถาบัน 3 พระจอมฯ', 'ดูชุมชนของแต่ละสถาบัน', 'university'),
+        createMenuLink('/?saved=1', 'โพสต์ที่บันทึกไว้', 'ดูโพสต์ที่คุณบันทึกเก็บไว้', 'bookmark'),
       );
 
       if (user.role === 'admin') {
@@ -700,7 +690,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
           '/admin/moderation',
           'การดูแลระบบ',
           'ตรวจสอบรายงานและจัดการเนื้อหา',
-          accountIcons.shield,
+          'shield',
         ));
       }
 
@@ -710,7 +700,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         attrs: { type: 'button', role: 'menuitem' },
       });
       const logoutIcon = el('span', { className: 'account-menu__item-icon', attrs: { 'aria-hidden': 'true' } });
-      logoutIcon.innerHTML = accountIcons.logout;
+      logoutIcon.append(reactIcon('logout', { size: 18 }));
       const logoutCopy = el('span', { className: 'account-menu__item-copy' });
       const logoutLabel = el('span', { className: 'account-menu__item-label', text: 'ออกจากระบบ' });
       logoutCopy.append(
@@ -759,7 +749,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       className: 'icon-btn',
       attrs: { href: '/login', title: 'เข้าสู่ระบบ', 'aria-label': 'เข้าสู่ระบบ' },
     });
-    loginLink.innerHTML = icons.user;
+    loginLink.append(reactIcon('user', { size: 19 }));
     loginLink.append(el('span', { className: 'header-action-label', text: 'เข้าสู่ระบบ' }));
     userActionSlot.append(loginLink);
   };
