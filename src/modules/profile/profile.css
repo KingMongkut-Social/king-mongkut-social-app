@@ -201,16 +201,25 @@
 }
 
 .profile-friend-btn--edit,
-.profile-friend-btn--friend {
+.profile-friend-btn--friend,
+.profile-friend-btn--add {
   background: var(--brand-primary);
   color: #ffffff;
   border-color: transparent;
 }
 
 .profile-friend-btn--edit:hover,
-.profile-friend-btn--friend:hover {
+.profile-friend-btn--friend:hover,
+.profile-friend-btn--add:hover {
   background: var(--brand-hover);
   color: #ffffff;
+}
+
+.profile-friend-btn--pending {
+  cursor: default;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  border-color: var(--border);
 }
 
 .profile-friend-btn--report {
