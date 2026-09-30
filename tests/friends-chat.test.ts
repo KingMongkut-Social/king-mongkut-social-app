@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { connectionsPage } from '../src/modules/friends/connections-page';
 import {
-  cancelFriendRequest, listFriends, listFriendRequests, listSuggestedFriends,
+  cancelFriendRequest, listFriends, listFriendRequests, listSuggestedFriends, removeFriend,
   respondFriendRequest, searchFriends, sendFriendRequest,
 } from '../src/modules/friends/friends-api';
 
@@ -14,6 +14,7 @@ vi.mock('../src/modules/friends/friends-api', () => ({
   listFriendRequests: vi.fn(),
   listSuggestedFriends: vi.fn(),
   cancelFriendRequest: vi.fn(),
+  removeFriend: vi.fn(),
   respondFriendRequest: vi.fn(),
   searchFriends: vi.fn(),
   sendFriendRequest: vi.fn(),
@@ -28,6 +29,7 @@ beforeEach(() => {
   vi.mocked(listFriendRequests).mockResolvedValue({ incoming: [], outgoing: [] });
   vi.mocked(listSuggestedFriends).mockResolvedValue([]);
   vi.mocked(cancelFriendRequest).mockResolvedValue(undefined);
+  vi.mocked(removeFriend).mockResolvedValue(undefined);
   vi.mocked(respondFriendRequest).mockResolvedValue(undefined);
   vi.mocked(sendFriendRequest).mockResolvedValue(undefined);
 });
@@ -66,6 +68,12 @@ describe('connections page', () => {
     await vi.waitFor(() => expect(page.element.querySelector('.student-card')?.textContent).toContain('Bob'));
     expect(page.element.querySelector<HTMLAnchorElement>('.student-card a[href^="/chat"]')?.getAttribute('href'))
       .toBe('/chat?userId=bob');
+    const unfriend = [...page.element.querySelectorAll<HTMLButtonElement>('.btn-reject-icon')]
+      .find((button) => button.textContent === 'เลิกเป็นเพื่อน');
+    expect(unfriend).toBeTruthy();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    unfriend!.click();
+    await vi.waitFor(() => expect(removeFriend).toHaveBeenCalledWith('request-1'));
     page.dispose?.();
   });
 
