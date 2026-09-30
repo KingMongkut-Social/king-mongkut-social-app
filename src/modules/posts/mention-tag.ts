@@ -1,11 +1,11 @@
 import { el } from '../../core/ui/dom';
-import { searchFriends, type FriendUser } from '../friends/friends-api';
+import { listFriends } from '../friends/friends-api';
 
 export interface StudentTagItem {
   id: string;
   name: string;
   studentId: string;
-  university: 'KMITL' | 'KMUTT' | 'KMUTNB' | string;
+  university: string;
   faculty?: string;
   department?: string;
   avatarLetter: string;
@@ -29,105 +29,21 @@ export const FEELING_OPTIONS: FeelingItem[] = [
   { emoji: '😴', label: 'เหนื่อยล้า' },
 ];
 
-export const BASE_STUDENTS: StudentTagItem[] = [
-  {
-    id: 'kmutn-david',
-    name: 'David Chen',
-    studentId: '65070012',
-    university: 'KMUTT',
-    faculty: 'คณะเทคโนโลยีสารสนเทศ',
-    department: 'วิทยาการคอมพิวเตอร์',
-    avatarLetter: 'D',
-  },
-  {
-    id: 'kmitl-supinya',
-    name: 'Supinya P. (สุพิญญา)',
-    studentId: '65010482',
-    university: 'KMITL',
-    faculty: 'คณะวิศวกรรมศาสตร์',
-    department: 'วิศวกรรมซอฟต์แวร์',
-    avatarLetter: 'S',
-  },
-  {
-    id: 'kmutnb-emily',
-    name: 'Emily Rodriguez',
-    studentId: '65020194',
-    university: 'KMUTNB',
-    faculty: 'คณะวิศวกรรมศาสตร์',
-    department: 'วิศวกรรมการผลิต',
-    avatarLetter: 'E',
-  },
-  {
-    id: 'kmutt-nattawut',
-    name: 'Nattawut K. (ณัฐวุฒิ)',
-    studentId: '65070231',
-    university: 'KMUTT',
-    faculty: 'คณะวิศวกรรมศาสตร์',
-    department: 'หุ่นยนต์และระบบอัตโนมัติ',
-    avatarLetter: 'N',
-  },
-  {
-    id: 'kmutnb-chaiwat',
-    name: 'Chaiwat S. (ชัยวัฒน์)',
-    studentId: '65020355',
-    university: 'KMUTNB',
-    faculty: 'คณะวิศวกรรมศาสตร์',
-    department: 'วิศวกรรมไฟฟ้า',
-    avatarLetter: 'C',
-  },
-  {
-    id: 'kmutt-manee',
-    name: 'มานีมานะ',
-    studentId: '64070088',
-    university: 'KMUTT',
-    faculty: 'คณะครุศาสตร์อุตสาหกรรมและเทคโนโลยี',
-    department: 'เทคโนโลยีและสื่อสารการศึกษา',
-    avatarLetter: 'ม',
-  },
-  {
-    id: 'kmitl-iamaxm',
-    name: 'iamaxm',
-    studentId: '64010512',
-    university: 'KMITL',
-    faculty: 'คณะวิศวกรรมศาสตร์',
-    department: 'วิศวกรรมคอมพิวเตอร์',
-    avatarLetter: 'I',
-  },
-];
-
-// Generates a deterministic 8-digit student ID from user ID or name if not pre-assigned
-export function generateStudentId(userKey: string, uni = 'KMUTT'): string {
-  let hash = 0;
-  for (let i = 0; i < userKey.length; i++) {
-    hash = (hash * 31 + userKey.charCodeAt(i)) >>> 0;
-  }
-  const prefix = uni.includes('KMITL') ? '6501' : uni.includes('KMUTNB') ? '6502' : '6507';
-  const suffix = (hash % 9000 + 1000).toString();
-  return `${prefix}${suffix}`;
-}
-
 export async function getAllStudents(): Promise<StudentTagItem[]> {
-  const result: StudentTagItem[] = [...BASE_STUDENTS];
   try {
-    const friends = await searchFriends();
-    friends.forEach((f: FriendUser) => {
-      const existing = result.find(
-        (s) => s.id === f.id || s.name.toLowerCase() === f.name.toLowerCase()
-      );
-      if (!existing) {
-        result.push({
-          id: f.id,
-          name: f.name,
-          studentId: generateStudentId(f.id || f.name, f.university),
-          university: f.university,
-          avatarLetter: f.name.charAt(0).toUpperCase(),
-        });
-      }
-    });
+    const friends = await listFriends();
+    return friends.map((friend) => ({
+      id: friend.id,
+      name: friend.name,
+      studentId: '',
+      university: friend.university,
+      ...(friend.faculty ? { faculty: friend.faculty } : {}),
+      ...(friend.department ? { department: friend.department } : {}),
+      avatarLetter: friend.name.charAt(0).toUpperCase(),
+    }));
   } catch {
-    // ignore
+    return [];
   }
-  return result;
 }
 
 export function filterStudents(students: StudentTagItem[], query: string): StudentTagItem[] {
@@ -155,7 +71,7 @@ export function createMentionPopover(anchor: HTMLElement): MentionPopoverState {
   });
 
   const header = el('div', { className: 'mention-popover-header' });
-  const title = el('span', { text: 'แท็กเพื่อน (ค้นหาด้วยชื่อหรือรหัสนักศึกษา)' });
+  const title = el('span', { text: 'แท็กเพื่อน (ค้นหาด้วยชื่อ)' });
   header.append(title);
 
   const listWrap = el('div', { className: 'mention-popover-list' });
@@ -218,7 +134,7 @@ export function createMentionPopover(anchor: HTMLElement): MentionPopoverState {
       const subRow = el('div', { className: 'mention-item-sub' });
       const idEl = el('span', {
         className: 'mention-item-id',
-        text: `รหัส: ${student.studentId}`,
+        text: student.department || student.faculty || student.university,
       });
       subRow.append(idEl);
 

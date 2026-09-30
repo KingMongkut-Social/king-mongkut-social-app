@@ -1,7 +1,8 @@
 import { authStore } from '../../core/auth/auth-store';
 import { el } from '../../core/ui/dom';
+import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
-import { searchFriends, sendFriendRequest } from '../friends/friends-api';
+import { getFriendUser, respondFriendRequest, searchFriends, sendFriendRequest, type FriendUser } from '../friends/friends-api';
 
 export interface OpenProfileModalOptions {
   authorId?: string;
@@ -12,43 +13,28 @@ export interface OpenProfileModalOptions {
   avatarLetter?: string;
   isMine?: boolean;
   relationshipStatus?: 'none' | 'pending_sent' | 'pending_received' | 'friends';
-  onFriendStatusChange?: (newStatus: 'none' | 'pending_sent' | 'friends') => void;
+  onFriendStatusChange?: (newStatus: FriendUser['relationshipStatus']) => void;
+}
+
+function uniqueExactMatch(users: FriendUser[], name: string): FriendUser | undefined {
+  const matches = users.filter((user) => user.name.toLowerCase() === name.toLowerCase());
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 export function openProfilePreviewModal(options: OpenProfileModalOptions): void {
   const currentUser = authStore.snapshot.user;
   const isSelf = Boolean(
     options.isMine ||
-    (currentUser &&
-      (currentUser._id === options.authorId ||
-        (currentUser.name && currentUser.name.toLowerCase() === options.name.toLowerCase())))
+    (currentUser && options.authorId && currentUser._id === options.authorId)
   );
 
-  let userName = options.name || (currentUser?.name || 'ผู้ใช้');
+  const userName = options.name || (currentUser?.name || 'ผู้ใช้');
   let university = options.university || '3 พระจอมฯ';
-  let faculty = options.faculty || 'คณะวิศวกรรมศาสตร์';
-  let department = options.department || 'ภาควิชาวิศวกรรมคอมพิวเตอร์';
-  let targetUserId = options.authorId || '';
-
-  const targetKey = targetUserId || userName;
-  const localFriendState = localStorage.getItem(`friend_status_${targetKey}`);
-  let relationshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'friends' =
-    localFriendState === 'friends' || localFriendState === 'pending_sent'
-      ? localFriendState
-      : options.relationshipStatus || 'none';
-
-  // Check mock profile cache in localStorage
-  try {
-    const cached = localStorage.getItem(`mock_profile_${encodeURIComponent(targetKey)}`);
-    if (cached) {
-      const parsed = JSON.parse(cached) as { faculty?: string; department?: string; university?: string };
-      if (parsed.faculty) faculty = parsed.faculty;
-      if (parsed.department) department = parsed.department;
-      if (parsed.university) university = parsed.university;
-    }
-  } catch {
-    // ignore
-  }
+  let faculty = options.faculty || 'ยังไม่ระบุคณะ';
+  let department = options.department || 'ยังไม่ระบุภาควิชา';
+  let targetUserId = options.authorId && /^[a-f\d]{24}$/i.test(options.authorId) ? options.authorId : '';
+  let relationshipStatus: FriendUser['relationshipStatus'] = options.relationshipStatus || 'none';
+  let requestId: string | null = null;
 
   // Modal DOM Elements
   const overlay = el('div', { className: 'modal-overlay' });
@@ -70,10 +56,25 @@ export function openProfilePreviewModal(options: OpenProfileModalOptions): void 
   });
 
   const goToFullProfile = () => {
-    closeModal();
-    const profileParam = targetUserId || userName;
-    window.history.pushState(null, '', `/profile/${encodeURIComponent(profileParam)}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    void (async () => {
+      let profileId = isSelf ? currentUser?._id : targetUserId;
+      if (!profileId && authStore.snapshot.status === 'authenticated') {
+        try {
+          const matches = await searchFriends(userName);
+          profileId = uniqueExactMatch(matches, userName)?.id;
+        } catch (cause) {
+          toast.error(errorMessage(cause));
+          return;
+        }
+      }
+      if (!profileId) {
+        toast.error('ไม่พบโปรไฟล์ของผู้ใช้นี้');
+        return;
+      }
+      closeModal();
+      window.history.pushState(null, '', `/profile/${encodeURIComponent(profileId)}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    })();
   };
 
   // Close Button (✕)
@@ -109,6 +110,7 @@ export function openProfilePreviewModal(options: OpenProfileModalOptions): void 
   });
 
   const actionSlot = el('div', { className: 'profile-preview-modal__action-slot' });
+  let renderAction: (() => void) | undefined;
 
   if (isSelf) {
     const selfBadge = el('div', {
@@ -122,51 +124,73 @@ export function openProfilePreviewModal(options: OpenProfileModalOptions): void 
   } else {
     const friendBtn = el('button', {
       attrs: { type: 'button' },
-      className: `profile-friend-btn ${
+      className: 'profile-friend-btn',
+    });
+
+    const renderFriendButton = () => {
+      const status = authStore.snapshot.status;
+      friendBtn.className = `profile-friend-btn ${
         relationshipStatus === 'friends'
           ? 'profile-friend-btn--friend'
           : relationshipStatus === 'pending_sent'
           ? 'profile-friend-btn--pending'
           : 'profile-friend-btn--add'
-      }`,
-      text:
-        relationshipStatus === 'friends'
-          ? '✓ เพื่อน'
-          : relationshipStatus === 'pending_sent'
-          ? 'ส่งคำขอแล้ว'
-          : '+ เพิ่มเพื่อน',
-    });
+      }`;
+      friendBtn.textContent = status !== 'authenticated'
+        ? 'เข้าสู่ระบบเพื่อเพิ่มเพื่อน'
+        : !targetUserId
+        ? 'ไม่พบผู้ใช้สำหรับเพิ่มเพื่อน'
+        : relationshipStatus === 'friends'
+        ? 'แชท'
+        : relationshipStatus === 'pending_sent'
+        ? 'ส่งคำขอแล้ว'
+        : relationshipStatus === 'pending_received'
+        ? 'ยอมรับคำขอ'
+        : '+ เพิ่มเพื่อน';
+      friendBtn.disabled = status === 'authenticated' && (
+        !targetUserId || relationshipStatus === 'pending_sent'
+        || (relationshipStatus === 'pending_received' && !requestId)
+      );
+    };
+    renderAction = renderFriendButton;
 
     friendBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (relationshipStatus === 'none') {
-        friendBtn.disabled = true;
-        friendBtn.textContent = 'กำลังส่ง...';
-        try {
-          if (targetUserId) {
-            await sendFriendRequest(targetUserId);
-          }
-          localStorage.setItem(`friend_status_${targetKey}`, 'pending_sent');
+      if (authStore.snapshot.status !== 'authenticated') {
+        closeModal();
+        window.history.pushState(null, '', '/login');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        return;
+      }
+      if (!targetUserId) return;
+      if (relationshipStatus === 'friends') {
+        closeModal();
+        window.history.pushState(null, '', `/chat?userId=${encodeURIComponent(targetUserId)}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        return;
+      }
+      if (relationshipStatus === 'pending_sent') return;
+      friendBtn.disabled = true;
+      friendBtn.textContent = 'กำลังดำเนินการ...';
+      try {
+        if (relationshipStatus === 'pending_received' && requestId) {
+          await respondFriendRequest(requestId, 'accept');
+          relationshipStatus = 'friends';
+          toast.success('เป็นเพื่อนกันแล้ว');
+        } else {
+          await sendFriendRequest(targetUserId);
           relationshipStatus = 'pending_sent';
-          friendBtn.className = 'profile-friend-btn profile-friend-btn--pending';
-          friendBtn.textContent = 'ส่งคำขอแล้ว';
-          toast.success(`ส่งคำขอเป็นเพื่อนไปยัง ${userName} เรียบร้อยแล้ว`);
-          if (options.onFriendStatusChange) {
-            options.onFriendStatusChange('pending_sent');
-          }
-        } catch {
-          localStorage.setItem(`friend_status_${targetKey}`, 'pending_sent');
-          relationshipStatus = 'pending_sent';
-          friendBtn.className = 'profile-friend-btn profile-friend-btn--pending';
-          friendBtn.textContent = 'ส่งคำขอแล้ว';
-          toast.success(`ส่งคำขอเป็นเพื่อนเรียบร้อยแล้ว`);
-          if (options.onFriendStatusChange) {
-            options.onFriendStatusChange('pending_sent');
-          }
+          toast.success(`ส่งคำขอเป็นเพื่อนไปยัง ${userName} แล้ว`);
         }
+        options.onFriendStatusChange?.(relationshipStatus);
+      } catch (cause) {
+        toast.error(errorMessage(cause));
+      } finally {
+        renderFriendButton();
       }
     });
 
+    renderFriendButton();
     actionSlot.append(friendBtn);
   }
 
@@ -197,9 +221,7 @@ export function openProfilePreviewModal(options: OpenProfileModalOptions): void 
 
   const bio = el('p', {
     className: 'profile-bio-text',
-    text: isSelf
-      ? 'ยินดีต้อนรับสู่โปรไฟล์ของคุณ สามารถดูและจัดการผลงานรวมถึงโพสต์ทั้งหมดได้ที่นี่'
-      : 'นักศึกษาในเครือข่าย 3 พระจอมเกล้า ยินดีที่ได้รู้จักและแลกเปลี่ยนความรู้ครับ!',
+    text: isSelf ? 'โปรไฟล์ของคุณ' : `โปรไฟล์ของ ${userName}`,
   });
 
   infoSection.append(nameRow, academicLine, bio);
@@ -224,24 +246,29 @@ export function openProfilePreviewModal(options: OpenProfileModalOptions): void 
   document.body.style.overflow = 'hidden';
   document.body.append(overlay);
 
-  // Asynchronously query friends for updated info if needed
-  if (!isSelf && !options.authorId) {
-    searchFriends().then((users) => {
-      const matched = users.find(
-        (u) =>
-          u.id === userName ||
-          (u.name && u.name.toLowerCase() === userName.toLowerCase()) ||
-          userName.toLowerCase().includes(u.name.toLowerCase())
-      );
+  // Refresh the relationship from the API so a cached post cannot show a stale friend state.
+  if (!isSelf && authStore.snapshot.status === 'authenticated') {
+    const connection = targetUserId
+      ? getFriendUser(targetUserId)
+      : options.authorId
+      ? Promise.resolve(undefined)
+      : searchFriends(userName).then((users) => uniqueExactMatch(users, userName));
+    void connection.then((matched) => {
+      if (!overlay.isConnected) return;
       if (matched) {
         targetUserId = matched.id;
+        relationshipStatus = matched.relationshipStatus;
+        requestId = matched.requestId;
         if (matched.university && matched.university !== university) {
           university = matched.university;
           uniBadge.textContent = university;
         }
+        if (matched.faculty) faculty = matched.faculty;
+        if (matched.department) department = matched.department;
+        academicLine.textContent = `${faculty} • ${department}`;
+        renderAction?.();
+        options.onFriendStatusChange?.(relationshipStatus);
       }
-    }).catch(() => {
-      // ignore
-    });
+    }).catch(() => undefined);
   }
 }

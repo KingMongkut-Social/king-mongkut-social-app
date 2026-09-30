@@ -1,13 +1,12 @@
-import { requireMember } from '../../core/auth/auth-navigation';
 import { authStore } from '../../core/auth/auth-store';
-import { notificationStore } from '../../core/notifications/notification-store';
+import { env } from '../../config/env';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { authorName, formatDate, formatRelativeTime } from '../../core/utils/format';
 import { paginationWindow } from '../../core/utils/pagination';
 import type { Post } from '../../types/api';
-import { sendFriendRequest } from '../friends/friends-api';
+import { getFriendUser, respondFriendRequest, sendFriendRequest, type FriendUser } from '../friends/friends-api';
 import { openProfilePreviewModal } from '../profile/profile-modal';
 import {
   createMentionPopover,
@@ -16,6 +15,7 @@ import {
   type StudentTagItem,
 } from './mention-tag';
 import { postsApi } from './posts-api';
+import { mountPostSocial } from './post-social';
 
 const postIcons = {
   like: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`,
@@ -61,32 +61,12 @@ async function compressImageFile(file: File, maxDim = 2048, quality = 0.85): Pro
   });
 }
 
-export function getPostImages(post: Post, isSample?: boolean): string[] {
-  let imagesList: string[] = [];
-  try {
-    const localPostImages = JSON.parse(localStorage.getItem('local_post_images') || '{}') as Record<string, unknown>;
-    const saved = localPostImages[post._id] ?? localStorage.getItem(`post_cover_${post._id}`);
-    if (Array.isArray(saved)) {
-      imagesList = saved.map(String).filter(Boolean);
-    } else if (typeof saved === 'string' && saved) {
-      try {
-        const parsed = JSON.parse(saved) as unknown;
-        if (Array.isArray(parsed)) imagesList = parsed.map(String).filter(Boolean);
-        else imagesList = [saved];
-      } catch {
-        imagesList = [saved];
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  if (imagesList.length === 0 && post.coverImage) {
-    imagesList = [post.coverImage];
-  } else if (imagesList.length === 0 && isSample) {
-    imagesList = ['https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80'];
-  }
-  return imagesList;
+export function getPostImages(post: Post): string[] {
+  const media = (post.media ?? post.attachments ?? [])
+    .filter((item) => item.mimeType.startsWith('image/')).map((item) => item.url);
+  const images = post.images?.length ? post.images : media.length ? media : post.coverImage ? [post.coverImage] : [];
+  return [...new Set(images.filter(Boolean).map((path) =>
+    /^(https?:|data:|blob:)/i.test(path) ? path : new URL(path, env.apiBaseUrl).href))];
 }
 
 export function renderPostImagesGrid(imagesList: string[], postTitle = 'รูปภาพประกอบโปรเจกต์'): HTMLElement | null {
@@ -152,7 +132,7 @@ export function postCard(
   options: {
     mine?: boolean;
     isSample?: boolean;
-    friendshipStatus?: 'none' | 'pending_sent' | 'friends';
+    friendshipStatus?: FriendUser['relationshipStatus'];
   } = {}
 ): HTMLElement {
   const card = el('article', {
@@ -211,7 +191,7 @@ export function postCard(
     text: uniTag,
   });
 
-  let syncFriendButtonStatus: ((newStatus: 'none' | 'pending_sent' | 'friends') => void) | null = null;
+  let syncFriendButtonStatus: ((newStatus: FriendUser['relationshipStatus']) => void) | null = null;
 
   const openProfilePreview = () => {
     openProfilePreviewModal({
@@ -252,24 +232,11 @@ export function postCard(
     openProfilePreview();
   });
 
-  let postMeta: {
-    feeling?: { emoji: string; label: string };
-    taggedFriends?: Array<{ id: string; name: string; studentId: string; university: string }>;
-  } | null = null;
-  try {
-    const rawMeta = localStorage.getItem(`post_meta_${post._id}`);
-    if (rawMeta) {
-      postMeta = JSON.parse(rawMeta);
-    }
-  } catch {
-    // ignore
-  }
-
   nameLine.append(author);
-  if (postMeta?.feeling) {
+  if (post.feeling) {
     const feelingSpan = el('span', {
       className: 'post-feeling-text',
-      text: `— รู้สึก ${postMeta.feeling.emoji} ${postMeta.feeling.label}`,
+      text: `— รู้สึก ${post.feeling}`,
     });
     nameLine.append(feelingSpan);
   }
@@ -286,10 +253,8 @@ export function postCard(
   }
 
   // Check if edited
-  const isEdited = Boolean(
-    (post.updatedAt && post.createdAt && new Date(post.updatedAt).getTime() - new Date(post.createdAt).getTime() > 2000) ||
-    localStorage.getItem(`post_edit_history_${post._id}`)
-  );
+  const isEdited = Boolean(post.updatedAt && post.createdAt &&
+    new Date(post.updatedAt).getTime() - new Date(post.createdAt).getTime() > 2000);
 
   // Timestamp Line (เวลาที่โพสต์)
   const timestamp = el('div', { className: 'post-timestamp' });
@@ -299,26 +264,19 @@ export function postCard(
   });
   timestamp.append(timeSpan);
 
-  let editedTag: HTMLElement | null = null;
   const renderEditedTag = () => {
-    const tag = el('button', {
+    return el('span', {
       className: 'post-edited-tag',
-      attrs: { type: 'button', title: 'คลิกเพื่อดูประวัติการแก้ไข' },
       text: '• มีการแก้ไข',
     });
-    tag.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openEditHistoryModal(post, finalAuthorName);
-    });
-    return tag;
   };
 
   if (isEdited) {
-    editedTag = renderEditedTag();
-    timestamp.append(editedTag);
+    timestamp.append(renderEditedTag());
   }
 
-  details.append(nameLine, deptLine, timestamp);
+  deptLine.append(el('span', { className: 'post-dot-sep', text: '•' }), timestamp);
+  details.append(nameLine, deptLine);
   authorInfo.append(avatar, details);
 
   // Right Side of Post Header: Owner 3-dots Dropdown vs Non-Owner Friend Button
@@ -341,12 +299,6 @@ export function postCard(
     });
     editItem.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> แก้ไขโพสต์`;
 
-    const historyItem = el('button', {
-      className: 'post-dropdown-item',
-      attrs: { type: 'button' },
-    });
-    historyItem.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ดูการแก้ไขโพสต์`;
-
     const deleteItem = el('button', {
       className: 'post-dropdown-item post-dropdown-item--danger',
       attrs: { type: 'button' },
@@ -356,13 +308,6 @@ export function postCard(
     const updateDropdownItems = () => {
       dropdown.innerHTML = '';
       dropdown.append(editItem);
-      const hasHistory = Boolean(
-        (post.updatedAt && post.createdAt && new Date(post.updatedAt).getTime() - new Date(post.createdAt).getTime() > 2000) ||
-        localStorage.getItem(`post_edit_history_${post._id}`)
-      );
-      if (hasHistory) {
-        dropdown.append(historyItem);
-      }
       dropdown.append(deleteItem);
     };
 
@@ -383,22 +328,10 @@ export function postCard(
       }
     });
 
-    historyItem.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.style.display = 'none';
-      openEditHistoryModal(post, finalAuthorName);
-    });
-
     editItem.addEventListener('click', (e) => {
       e.stopPropagation();
       dropdown.style.display = 'none';
-      openEditPostModal(post, card, () => {
-        if (!editedTag) {
-          editedTag = renderEditedTag();
-          timeSpan.after(editedTag);
-        }
-        updateDropdownItems();
-      });
+      openEditPostModal(post, card);
     });
 
     deleteItem.addEventListener('click', async (e) => {
@@ -423,37 +356,13 @@ export function postCard(
     header.append(authorInfo, menuWrap);
   } else {
     // Non-owner post: show friend action button on the top right
-    const targetKey = authorId || finalAuthorName;
-    const localStatus = localStorage.getItem(`friend_status_${targetKey}`);
-
-    let currentFriendStatus: 'none' | 'pending_sent' | 'friends' =
-      localStatus === 'friends' || localStatus === 'pending_sent'
-        ? localStatus
-        : options.friendshipStatus || 'none';
+    let currentFriendStatus: FriendUser['relationshipStatus'] = options.friendshipStatus || 'none';
+    let requestId: string | null = null;
+    const canConnect = /^[a-f\d]{24}$/i.test(authorId);
 
     const friendBtn = el('button', {
-      className: `post-friend-btn ${
-        currentFriendStatus === 'friends'
-          ? 'post-friend-btn--friend'
-          : currentFriendStatus === 'pending_sent'
-          ? 'post-friend-btn--pending'
-          : 'post-friend-btn--add'
-      }`,
-      attrs: {
-        type: 'button',
-        title:
-          currentFriendStatus === 'friends'
-            ? 'คุณเป็นเพื่อนกับบุคคลนี้แล้ว'
-            : currentFriendStatus === 'pending_sent'
-            ? 'ส่งคำขอเป็นเพื่อนแล้ว'
-            : `เพิ่ม ${finalAuthorName} เป็นเพื่อน`,
-      },
-      text:
-        currentFriendStatus === 'friends'
-          ? 'เพื่อน'
-          : currentFriendStatus === 'pending_sent'
-          ? 'ส่งคำขอแล้ว'
-          : '+ เพิ่มเพื่อน',
+      className: 'post-friend-btn',
+      attrs: { type: 'button' },
     });
 
     syncFriendButtonStatus = (newStatus) => {
@@ -466,39 +375,65 @@ export function postCard(
           : 'post-friend-btn--add'
       }`;
       friendBtn.textContent =
-        newStatus === 'friends'
-          ? 'เพื่อน'
+        authStore.snapshot.status !== 'authenticated'
+          ? 'เข้าสู่ระบบ'
+          : newStatus === 'friends'
+          ? 'แชท'
           : newStatus === 'pending_sent'
           ? 'ส่งคำขอแล้ว'
+          : newStatus === 'pending_received'
+          ? 'ยอมรับคำขอ'
           : '+ เพิ่มเพื่อน';
+      friendBtn.disabled = newStatus === 'pending_sent' || !canConnect;
     };
+    syncFriendButtonStatus(currentFriendStatus);
 
-    if (currentFriendStatus === 'none') {
-      friendBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        friendBtn.disabled = true;
-        friendBtn.textContent = 'กำลังส่ง...';
-
-        try {
-          if (authorId) {
-            await sendFriendRequest(authorId);
-          }
-          localStorage.setItem(`friend_status_${targetKey}`, 'pending_sent');
+    friendBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (authStore.snapshot.status !== 'authenticated') {
+        window.history.pushState(null, '', '/login');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        return;
+      }
+      if (!canConnect || currentFriendStatus === 'pending_sent') return;
+      if (currentFriendStatus === 'friends') {
+        window.history.pushState(null, '', `/chat?userId=${encodeURIComponent(authorId)}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        return;
+      }
+      friendBtn.disabled = true;
+      friendBtn.textContent = 'กำลังดำเนินการ...';
+      try {
+        const latest = await getFriendUser(authorId);
+        requestId = latest.requestId;
+        currentFriendStatus = latest.relationshipStatus;
+        if (currentFriendStatus === 'pending_received' && requestId) {
+          await respondFriendRequest(requestId, 'accept');
+          currentFriendStatus = 'friends';
+          toast.success('เป็นเพื่อนกันแล้ว');
+        } else if (currentFriendStatus === 'none') {
+          await sendFriendRequest(authorId);
           currentFriendStatus = 'pending_sent';
-          friendBtn.className = 'post-friend-btn post-friend-btn--pending';
-          friendBtn.textContent = 'ส่งคำขอแล้ว';
-          toast.success(`ส่งคำขอเป็นเพื่อนไปยัง ${finalAuthorName} เรียบร้อยแล้ว`);
-        } catch {
-          localStorage.setItem(`friend_status_${targetKey}`, 'pending_sent');
-          currentFriendStatus = 'pending_sent';
-          friendBtn.className = 'post-friend-btn post-friend-btn--pending';
-          friendBtn.textContent = 'ส่งคำขอแล้ว';
-          toast.success(`ส่งคำขอเป็นเพื่อนเรียบร้อยแล้ว`);
+          toast.success(`ส่งคำขอเป็นเพื่อนไปยัง ${finalAuthorName} แล้ว`);
         }
-      });
-    }
+      } catch (cause) {
+        toast.error(errorMessage(cause));
+      } finally {
+        syncFriendButtonStatus?.(currentFriendStatus);
+      }
+    });
 
-    header.append(authorInfo, friendBtn);
+    if (canConnect) {
+      header.append(authorInfo, friendBtn);
+      if (authStore.snapshot.status === 'authenticated') {
+        void getFriendUser(authorId).then((friend) => {
+          requestId = friend.requestId;
+          syncFriendButtonStatus?.(friend.relationshipStatus);
+        }).catch(() => undefined);
+      }
+    } else {
+      header.append(authorInfo);
+    }
   }
 
   card.append(header);
@@ -532,527 +467,26 @@ export function postCard(
   }
 
   // 3. Post Media Images (supports 1 image natural ratio or multi-image grid with lightbox zoom)
-  const imagesList = getPostImages(post, options.isSample);
+  const imagesList = getPostImages(post);
   const mediaGrid = renderPostImagesGrid(imagesList, post.title);
   if (mediaGrid) {
     card.append(mediaGrid);
   }
-
-  // --- 4. Likes & Comments State from localStorage ---
-  interface PostLikeUser {
-    id?: string | undefined;
-    name: string;
+  if (post.attachments?.length) {
+    const attachmentList = el('div', { className: 'post-attachments-list' });
+    for (const attachment of post.attachments) {
+      const url = new URL(attachment.url, env.apiBaseUrl);
+      if (!['http:', 'https:'].includes(url.protocol)) continue;
+      attachmentList.append(el('a', {
+        className: 'post-attachment-link',
+        text: `📎 ${attachment.name}`,
+        attrs: { href: url.href, target: '_blank', rel: 'noopener noreferrer' },
+      }));
+    }
+    if (attachmentList.childElementCount) card.append(attachmentList);
   }
 
-  interface PostCommentReply {
-    id: string;
-    authorId?: string | undefined;
-    authorName: string;
-    university?: string | undefined;
-    department?: string | undefined;
-    content: string;
-    createdAt: string;
-  }
-
-  interface PostComment {
-    id: string;
-    authorId?: string | undefined;
-    authorName: string;
-    university?: string | undefined;
-    department?: string | undefined;
-    content: string;
-    createdAt: string;
-    replies?: PostCommentReply[] | undefined;
-  }
-
-  // Load likes
-  let likesList: PostLikeUser[] = options.isSample
-    ? [
-        { id: 'sample_u1', name: 'David Chen (KMUTT)' },
-        { id: 'sample_u2', name: 'Emily Rodriguez (KMUTNB)' },
-        { id: 'sample_u3', name: 'ภานุวัฒน์ (สจล.)' },
-      ]
-    : [];
-
-  try {
-    const storedLikes = localStorage.getItem(`post_likes_${post._id}`);
-    if (storedLikes) {
-      const parsed: unknown = JSON.parse(storedLikes);
-      if (Array.isArray(parsed)) {
-        likesList = parsed
-          .map((item: unknown): PostLikeUser | null => {
-            if (typeof item === 'string') return { name: item };
-            if (item && typeof item === 'object' && 'name' in item && typeof item.name === 'string') {
-              const obj = item as { id?: unknown };
-              return {
-                id: typeof obj.id === 'string' ? obj.id : undefined,
-                name: item.name,
-              };
-            }
-            return null;
-          })
-          .filter((item): item is PostLikeUser => item !== null);
-      } else if (parsed && typeof parsed === 'object' && 'users' in parsed && Array.isArray(parsed.users)) {
-        // Migration from old { users: string[], userLiked: boolean } format
-        const oldUsers = parsed.users as unknown[];
-        likesList = oldUsers
-          .filter((name): name is string => typeof name === 'string')
-          .map((name) => ({ name }));
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  const checkIfCurrentUserLiked = (): boolean => {
-    const user = authStore.snapshot.user;
-    if (!user) return false;
-    return likesList.some(
-      (u) => (Boolean(u.id) && Boolean(user._id) && u.id === user._id) || (Boolean(u.name) && Boolean(user.name) && u.name === user.name)
-    );
-  };
-
-  // Load comments
-  let commentsList: PostComment[] = options.isSample
-    ? [
-        {
-          id: 'c1',
-          authorName: 'David Chen',
-          university: 'KMUTT',
-          department: 'วิศวกรรมคอมพิวเตอร์',
-          content: 'สุดยอดมากครับ เซ็นเซอร์ตัวนี้ตอบสนองไวกว่ารุ่นก่อนหน้าเยอะเลย 👍',
-          createdAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-        },
-        {
-          id: 'c2',
-          authorName: 'Emily Rodriguez',
-          university: 'KMUTNB',
-          department: 'วิทยาการข้อมูล',
-          content: 'รอติดตามผลการทดสอบ Thermal testing นะคะ มีแพลนเปิดโอเพนซอร์สไหมคะ?',
-          createdAt: new Date(Date.now() - 1800 * 1000).toISOString(),
-        },
-      ]
-    : [];
-
-  try {
-    const storedComments = localStorage.getItem(`post_comments_${post._id}`);
-    if (storedComments) {
-      commentsList = JSON.parse(storedComments) as PostComment[];
-    }
-  } catch {
-    // ignore
-  }
-
-  const persistLikes = () => {
-    try {
-      localStorage.setItem(`post_likes_${post._id}`, JSON.stringify(likesList));
-    } catch {
-      // ignore
-    }
-  };
-
-  const persistComments = () => {
-    try {
-      localStorage.setItem(`post_comments_${post._id}`, JSON.stringify(commentsList));
-    } catch {
-      // ignore
-    }
-  };
-
-  // Likers summary line ("ขึ้นชื่อคนกดด้วย")
-  const likersLine = el('div', { className: 'post-likers-line', attrs: { style: 'display: none;' } });
-  const updateLikersUI = () => {
-    const total = likesList.length;
-    if (total === 0) {
-      likersLine.style.display = 'none';
-      likersLine.innerHTML = '';
-      return;
-    }
-
-    likersLine.style.display = 'flex';
-    likersLine.innerHTML = '';
-    const heartIcon = el('span', { className: 'post-likers-icon', text: '❤️' });
-
-    const currentUser = authStore.snapshot.user;
-    const isLiked = checkIfCurrentUserLiked();
-
-    let summaryText = '';
-    if (isLiked) {
-      if (total === 1) {
-        summaryText = 'คุณ ถูกใจสิ่งนี้';
-      } else if (total === 2) {
-        const other = likesList.find((u) => u.name !== currentUser?.name && u.id !== currentUser?._id)?.name || likesList[1]?.name || 'เพื่อน';
-        summaryText = `คุณ และ ${other} ถูกใจสิ่งนี้`;
-      } else {
-        const other = likesList.find((u) => u.name !== currentUser?.name && u.id !== currentUser?._id)?.name || likesList[1]?.name || 'เพื่อน';
-        summaryText = `คุณ, ${other} และอีก ${total - 2} คน ถูกใจสิ่งนี้`;
-      }
-    } else {
-      const first = likesList[0]?.name || 'ผู้ใช้';
-      const second = likesList[1]?.name || 'ผู้ใช้';
-      if (total === 1) {
-        summaryText = `${first} ถูกใจสิ่งนี้`;
-      } else if (total === 2) {
-        summaryText = `${first} และ ${second} ถูกใจสิ่งนี้`;
-      } else {
-        summaryText = `${first}, ${second} และอีก ${total - 2} คน ถูกใจสิ่งนี้`;
-      }
-    }
-
-    const textSpan = el('span', { className: 'post-likers-names', text: summaryText });
-    likersLine.append(heartIcon, textSpan);
-    likersLine.title = `รายชื่อคนกดถูกใจ: ${likesList.map((u) => u.name).join(', ')}`;
-  };
-
-  // 5. Reactions Footer
-  const footer = el('div', { className: 'post-reactions-footer' });
-  const leftGroup = el('div', { className: 'post-reaction-group' });
-
-  const likeBtn = el('button', { className: 'reaction-btn', attrs: { type: 'button' } });
-  const updateLikeBtnUI = () => {
-    const count = likesList.length;
-    const isLiked = checkIfCurrentUserLiked();
-    if (isLiked) {
-      likeBtn.className = 'reaction-btn reaction-btn--liked';
-    } else {
-      likeBtn.className = 'reaction-btn';
-    }
-    likeBtn.innerHTML = `${postIcons.like} <span>${count}</span>`;
-  };
-
-  updateLikeBtnUI();
-  updateLikersUI();
-
-  likeBtn.addEventListener('click', () => {
-    if (!requireMember()) return;
-    const currentUser = authStore.snapshot.user;
-    if (!currentUser) {
-      toast.info('กรุณาเข้าสู่ระบบก่อนกดถูกใจ');
-      return;
-    }
-
-    const isLiked = checkIfCurrentUserLiked();
-    if (isLiked) {
-      likesList = likesList.filter(
-        (u) => !(u.id && currentUser._id && u.id === currentUser._id) && u.name !== currentUser.name
-      );
-    } else {
-      likesList = [
-        { id: currentUser._id, name: currentUser.name || 'คุณ' },
-        ...likesList.filter(
-          (u) => !(u.id && currentUser._id && u.id === currentUser._id) && u.name !== currentUser.name
-        ),
-      ];
-
-      // Trigger notification for post author
-      if (authorId && authorId !== currentUser._id) {
-        notificationStore.addNotification({
-          recipientId: authorId,
-          recipientName: finalAuthorName,
-          actorName: currentUser.name || 'คุณ',
-          actorInitial: currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'ส',
-          type: 'like',
-          postId: post._id,
-          postSnippet: post.title || post.content.slice(0, 40),
-        });
-      }
-    }
-    persistLikes();
-    updateLikeBtnUI();
-    updateLikersUI();
-  });
-
-  const commentBtn = el('button', { className: 'reaction-btn', attrs: { type: 'button' } });
-  const updateCommentBtnUI = () => {
-    let total = commentsList.length;
-    commentsList.forEach((c) => {
-      if (c.replies) total += c.replies.length;
-    });
-    commentBtn.innerHTML = `${postIcons.comment} <span>${total}</span>`;
-  };
-  updateCommentBtnUI();
-
-  leftGroup.append(likeBtn, commentBtn);
-
-  const shareBtn = el('button', { className: 'reaction-btn', attrs: { type: 'button' } });
-  shareBtn.innerHTML = `${postIcons.share} <span>แชร์</span>`;
-  shareBtn.addEventListener('click', () => {
-    try {
-      void navigator.clipboard.writeText(window.location.origin + `/#post-${post._id}`);
-      toast.success('คัดลอกลิงก์โพสต์เรียบร้อยแล้ว');
-    } catch {
-      toast.info('แชร์โพสต์เรียบร้อยแล้ว');
-    }
-  });
-
-  footer.append(leftGroup, shareBtn);
-
-  // 6. Comments Section Dropdown
-  const commentsSection = el('div', {
-    className: 'post-comments-section',
-    attrs: { style: 'display: none;' },
-  });
-
-  const commentsListWrap = el('div', { className: 'comments-list' });
-
-  const renderComments = () => {
-    commentsListWrap.innerHTML = '';
-    if (commentsList.length === 0) {
-      const emptyMsg = el('p', {
-        attrs: { style: 'font-size: 0.82rem; color: #94a3b8; text-align: center; margin: 4px 0;' },
-        text: 'ยังไม่มีความคิดเห็น เป็นคนแรกที่แสดงความคิดเห็นเลย!',
-      });
-      commentsListWrap.append(emptyMsg);
-      return;
-    }
-
-    commentsList.forEach((c) => {
-      const threadBlock = el('div', { className: 'comment-thread-block' });
-      const item = el('div', { className: 'comment-item' });
-      const cLetter = c.authorName ? c.authorName.charAt(0).toUpperCase() : 'ส';
-      const avatarWrap = el('div', {
-        className: 'comment-avatar',
-        attrs: { title: c.authorName },
-        text: cLetter,
-      });
-
-      const bubble = el('div', { className: 'comment-bubble' });
-      const cHeader = el('div', { className: 'comment-header' });
-      const nameEl = el('span', { className: 'comment-author-name', text: c.authorName });
-      cHeader.append(nameEl);
-
-      if (c.university) {
-        const uBadge = el('span', { className: 'badge-tag badge-tag--tech-uni', text: c.university });
-        cHeader.append(uBadge);
-      }
-      if (c.department) {
-        const deptTag = el('span', { className: 'comment-dept-tag', text: c.department });
-        cHeader.append(deptTag);
-      }
-
-      const textEl = el('div', { className: 'comment-text', text: c.content });
-
-      const footerActions = el('div', { className: 'comment-footer-actions' });
-      const timeEl = el('span', { className: 'comment-footer', text: formatRelativeTime(c.createdAt) });
-      const replyBtn = el('button', {
-        className: 'btn-reply-comment',
-        attrs: { type: 'button' },
-        text: 'ตอบกลับ',
-      });
-      footerActions.append(timeEl, replyBtn);
-
-      bubble.append(cHeader, textEl, footerActions);
-      item.append(avatarWrap, bubble);
-      threadBlock.append(item);
-
-      // Render replies if any
-      if (c.replies && c.replies.length > 0) {
-        const repliesListEl = el('div', { className: 'comment-replies-list' });
-        c.replies.forEach((r) => {
-          const rItem = el('div', { className: 'comment-reply-item' });
-          const rLetter = r.authorName ? r.authorName.charAt(0).toUpperCase() : 'ส';
-          const rAvatar = el('div', {
-            className: 'comment-avatar',
-            attrs: { title: r.authorName },
-            text: rLetter,
-          });
-
-          const rBubble = el('div', { className: 'comment-bubble' });
-          const rHeader = el('div', { className: 'comment-header' });
-          const rName = el('span', { className: 'comment-author-name', text: r.authorName });
-          rHeader.append(rName);
-          if (r.university) {
-            rHeader.append(el('span', { className: 'badge-tag badge-tag--tech-uni', text: r.university }));
-          }
-          if (r.department) {
-            rHeader.append(el('span', { className: 'comment-dept-tag', text: r.department }));
-          }
-
-          const rText = el('div', { className: 'comment-text', text: r.content });
-          const rTime = el('div', { className: 'comment-footer', text: formatRelativeTime(r.createdAt) });
-          rBubble.append(rHeader, rText, rTime);
-
-          rItem.append(rAvatar, rBubble);
-          repliesListEl.append(rItem);
-        });
-        threadBlock.append(repliesListEl);
-      }
-
-      // Inline Reply Form (hidden by default)
-      const replyForm = el('form', {
-        className: 'comment-reply-form',
-        attrs: { style: 'display: none;', novalidate: 'true' },
-      });
-      const rMyLetter = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'ส';
-      const rMyAvatar = el('div', {
-        className: 'comment-avatar',
-        attrs: { title: currentUser?.name || 'โปรไฟล์ของคุณ' },
-        text: rMyLetter,
-      });
-      const rInputWrap = el('div', { className: 'comment-input-wrap' });
-      const rInput = el('input', {
-        className: 'comment-input-field',
-        attrs: {
-          type: 'text',
-          placeholder: `ตอบกลับ ${c.authorName}…`,
-          autocomplete: 'off',
-        },
-      });
-      const rSendBtn = el('button', {
-        className: 'btn-send-comment',
-        attrs: { type: 'submit' },
-        text: 'ตอบ',
-      });
-      const rCancelBtn = el('button', {
-        className: 'btn-cancel-reply',
-        attrs: { type: 'button' },
-        text: 'ยกเลิก',
-      });
-      rInputWrap.append(rInput, rSendBtn);
-      replyForm.append(rMyAvatar, rInputWrap, rCancelBtn);
-
-      replyBtn.addEventListener('click', () => {
-        const isHidden = replyForm.style.display === 'none';
-        replyForm.style.display = isHidden ? 'flex' : 'none';
-        if (isHidden) {
-          rInput.value = `@${c.authorName} `;
-          rInput.focus();
-        }
-      });
-
-      rCancelBtn.addEventListener('click', () => {
-        replyForm.style.display = 'none';
-        rInput.value = '';
-      });
-
-      replyForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (!requireMember()) return;
-        const replyContent = rInput.value.trim();
-        if (!replyContent) return;
-
-        const user = authStore.snapshot.user;
-        const newReply: PostCommentReply = {
-          id: `r_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          authorId: user?._id,
-          authorName: user?.name || 'คุณ',
-          university: user?.university || 'KMITL',
-          department: user?.department || 'ภาควิชาวิศวกรรมคอมพิวเตอร์',
-          content: replyContent,
-          createdAt: new Date().toISOString(),
-        };
-
-        if (!c.replies) c.replies = [];
-        c.replies.push(newReply);
-        persistComments();
-        renderComments();
-        updateCommentBtnUI();
-        toast.success('ตอบกลับความคิดเห็นเรียบร้อยแล้ว');
-
-        // Trigger Notification for comment author
-        if (c.authorId || authorId) {
-          notificationStore.addNotification({
-            recipientId: c.authorId || authorId,
-            recipientName: c.authorName,
-            actorName: user?.name || 'คุณ',
-            actorInitial: user?.name ? user.name.charAt(0).toUpperCase() : 'ส',
-            type: 'reply',
-            postId: post._id,
-            postSnippet: post.title || post.content.slice(0, 40),
-            contentSnippet: replyContent,
-          });
-        }
-      });
-
-      threadBlock.append(replyForm);
-      commentsListWrap.append(threadBlock);
-    });
-  };
-
-  renderComments();
-
-  // Comment Input Form
-  const inputForm = el('form', { className: 'comment-input-form', attrs: { novalidate: 'true' } });
-  const myLetter = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'ส';
-  const currentUserAvatar = el('div', {
-    className: 'comment-avatar',
-    attrs: { title: currentUser?.name || 'โปรไฟล์ของคุณ' },
-    text: myLetter,
-  });
-
-  const inputWrap = el('div', { className: 'comment-input-wrap' });
-  const commentInput = el('input', {
-    className: 'comment-input-field',
-    attrs: {
-      type: 'text',
-      placeholder: 'เขียนความคิดเห็น…',
-      autocomplete: 'off',
-    },
-  });
-  const sendBtn = el('button', {
-    className: 'btn-send-comment',
-    attrs: { type: 'submit' },
-    text: 'ส่ง',
-  });
-
-  inputWrap.append(commentInput, sendBtn);
-  inputForm.append(currentUserAvatar, inputWrap);
-
-  inputForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!requireMember()) return;
-    const content = commentInput.value.trim();
-    if (!content) return;
-
-    const user = authStore.snapshot.user;
-    const newComment: PostComment = {
-      id: `c_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      authorId: user?._id,
-      authorName: user?.name || 'คุณ (นักศึกษา)',
-      university: user?.university || 'KMITL',
-      department: user?.department || 'ภาควิชาวิศวกรรมคอมพิวเตอร์',
-      content,
-      createdAt: new Date().toISOString(),
-      replies: [],
-    };
-
-    commentsList.push(newComment);
-    persistComments();
-    renderComments();
-    updateCommentBtnUI();
-    commentInput.value = '';
-    toast.success('แสดงความคิดเห็นเรียบร้อยแล้ว');
-
-    // Trigger Notification for post author
-    if (authorId && authorId !== user?._id) {
-      notificationStore.addNotification({
-        recipientId: authorId,
-        recipientName: finalAuthorName,
-        actorName: user?.name || 'คุณ',
-        actorInitial: user?.name ? user.name.charAt(0).toUpperCase() : 'ส',
-        type: 'comment',
-        postId: post._id,
-        postSnippet: post.title || post.content.slice(0, 40),
-        contentSnippet: content,
-      });
-    }
-  });
-
-  commentsSection.append(commentsListWrap, inputForm);
-
-  // Toggle comments dropdown
-  commentBtn.addEventListener('click', () => {
-    const isClosed = commentsSection.style.display === 'none';
-    commentsSection.style.display = isClosed ? 'flex' : 'none';
-    if (isClosed) {
-      commentBtn.classList.add('reaction-btn--active-comment');
-      setTimeout(() => commentInput.focus(), 50);
-    } else {
-      commentBtn.classList.remove('reaction-btn--active-comment');
-    }
-  });
-
-  card.append(likersLine, footer, commentsSection);
+  if (post.status === 'published') mountPostSocial(card, post, authorId, finalAuthorName);
 
   return card;
 }
@@ -1062,6 +496,7 @@ export function pagination(
   total: number,
   search: string,
   basePath: string,
+  extraQuery: Record<string, string> = {},
 ): HTMLElement | null {
   if (total <= 1) return null;
 
@@ -1070,6 +505,7 @@ export function pagination(
     const query = new URLSearchParams();
     query.set('page', String(page));
     if (search) query.set('search', search);
+    for (const [key, value] of Object.entries(extraQuery)) query.set(key, value);
     return `${basePath}?${query.toString()}`;
   };
 
@@ -1251,27 +687,12 @@ export function openEditPostModal(
     attrs: { style: 'position: relative; padding: 18px 24px;' },
   });
 
-  // Load existing meta (feelings and tagged friends)
-  interface StoredPostMeta {
-    authorName?: string;
-    authorInitial?: string;
-    department?: string;
-    faculty?: string;
-    feeling?: FeelingItem | null;
-    taggedFriends?: StudentTagItem[];
-  }
-  let currentMeta: StoredPostMeta = {};
-  try {
-    const raw = localStorage.getItem(`post_meta_${post._id}`);
-    if (raw) currentMeta = JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-
-  let selectedFeeling: FeelingItem | null = currentMeta.feeling || null;
-  let selectedTaggedFriends: StudentTagItem[] = Array.isArray(currentMeta.taggedFriends)
-    ? [...currentMeta.taggedFriends]
-    : [];
+  let selectedFeeling: FeelingItem | null = FEELING_OPTIONS.find(
+    (item) => `${item.emoji} ${item.label}` === post.feeling,
+  ) ?? null;
+  const selectedTaggedFriends: StudentTagItem[] = (post.taggedFriends ?? []).map((id) => ({
+    id, name: id, studentId: '', university: '', avatarLetter: '@',
+  }));
 
   // 1. Content Textarea
   const textarea = el('textarea', {
@@ -1313,7 +734,7 @@ export function openEditPostModal(
 
     selectedTaggedFriends.forEach((friend, idx) => {
       const tagPill = el('div', { className: 'composer-extra-pill composer-extra-pill--tag' });
-      const friendText = el('span', { text: `แท็ก: @${friend.name} (${friend.studentId})` });
+      const friendText = el('span', { text: `แท็ก: @${friend.name}${friend.studentId ? ` (${friend.studentId})` : ''}` });
       const removeBtn = el('button', {
         className: 'composer-pill-remove',
         attrs: { type: 'button', title: 'ลบการแท็กนี้' },
@@ -1369,7 +790,8 @@ export function openEditPostModal(
   });
 
   // 4. Images Editor Section
-  let currentImages: string[] = [...getPostImages(post)];
+  const currentImages: string[] = [...getPostImages(post)];
+  const pendingFiles = new Map<string, File>();
   const imagesSection = el('div', {
     className: 'edit-post-images-section',
     attrs: { style: 'margin-top: 10px;' },
@@ -1397,6 +819,7 @@ export function openEditPostModal(
       });
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        pendingFiles.delete(src);
         currentImages.splice(idx, 1);
         renderPreviews();
       });
@@ -1418,7 +841,7 @@ export function openEditPostModal(
 
   // Photo
   const fileInput = el('input', {
-    attrs: { type: 'file', accept: 'image/*', multiple: 'true', style: 'display: none;' },
+    attrs: { type: 'file', accept: 'image/jpeg,image/png,image/webp,image/gif', multiple: 'true', style: 'display: none;' },
   });
   const photoBtn = el('button', { className: 'attachment-btn', attrs: { type: 'button' } });
   photoBtn.innerHTML = `${postIcons.photo} <span>รูปภาพ</span>`;
@@ -1427,12 +850,25 @@ export function openEditPostModal(
   fileInput.addEventListener('change', async (e) => {
     const files = (e.target as HTMLInputElement).files;
     if (!files || files.length === 0) return;
+    if (currentImages.length + files.length > 4) {
+      toast.error('แนบรูปภาพได้สูงสุด 4 รูป');
+      fileInput.value = '';
+      return;
+    }
 
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) continue;
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+        toast.error(`ไม่รองรับไฟล์ ${file.name}`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`รูป ${file.name} มีขนาดเกิน 10 MB`);
+        continue;
+      }
       try {
         const compressed = await compressImageFile(file);
         currentImages.push(compressed);
+        pendingFiles.set(compressed, file);
       } catch {
         // ignore
       }
@@ -1560,311 +996,39 @@ export function openEditPostModal(
       return;
     }
 
-    const finalContent = newText || (currentImages.length > 0 ? '[รูปภาพ]' : '');
-
     postBtn.disabled = true;
     postBtn.textContent = 'กำลังบันทึก...';
-
     try {
-      // 1. Save edit history in localStorage (content + images)
-      const historyKey = `post_edit_history_${post._id}`;
-      interface EditHistoryItem {
-        content: string;
-        images?: string[];
-        editedAt: string;
-        version: number;
-      }
-      let history: EditHistoryItem[] = [];
-      try {
-        const raw = localStorage.getItem(historyKey);
-        if (raw) history = JSON.parse(raw);
-      } catch {
-        // ignore
-      }
-
-      if (history.length === 0) {
-        const originalContent = (post.content || '').trim() === '[รูปภาพ]' ? '' : (post.content || '');
-        const originalImages = getPostImages(post);
-        history.push({
-          version: 1,
-          content: originalContent,
-          images: originalImages,
-          editedAt: post.createdAt || new Date().toISOString(),
-        });
-      }
-
-      const nowIso = new Date().toISOString();
-      history.push({
-        version: history.length + 1,
-        content: newText,
-        images: [...currentImages],
-        editedAt: nowIso,
-      });
-
-      localStorage.setItem(historyKey, JSON.stringify(history));
-
-      // 2. Update local post images
-      try {
-        const localPostImages = JSON.parse(localStorage.getItem('local_post_images') || '{}') as Record<string, string[]>;
-        localPostImages[post._id] = currentImages;
-        localStorage.setItem('local_post_images', JSON.stringify(localPostImages));
-        localStorage.setItem(`post_cover_${post._id}`, JSON.stringify(currentImages));
-      } catch {
-        // ignore
-      }
-
-      // 3. Update post meta (feeling & tagged friends)
-      try {
-        currentMeta.feeling = selectedFeeling;
-        currentMeta.taggedFriends = selectedTaggedFriends;
-        localStorage.setItem(`post_meta_${post._id}`, JSON.stringify(currentMeta));
-      } catch {
-        // ignore
-      }
-
-      // 4. Call API update
-      const cover = currentImages[0] || null;
-      await postsApi.update(post._id, {
-        title: post.title || 'อัปเดตโปรเจกต์',
-        content: finalContent,
-        coverImage: cover,
-        status: post.status || 'published',
+      const images = await Promise.all(currentImages.map(async (image) => {
+        const file = pendingFiles.get(image);
+        if (!file) return image;
+        const upload = await postsApi.upload(file);
+        return upload.data.asset.url;
+      }));
+      const content = newText;
+      const result = await postsApi.update(post._id, {
+        title: post.title || content.slice(0, 50),
+        content,
+        status: post.status,
         tags: post.tags,
+        coverImage: images[0] ?? null,
+        images,
+        feeling: selectedFeeling ? selectedFeeling.emoji + ' ' + selectedFeeling.label : null,
+        taggedFriends: selectedTaggedFriends.map((friend) => friend.id),
       });
-
-      // 5. Update local Post object
-      post.content = finalContent;
-      post.coverImage = cover;
-      post.updatedAt = nowIso;
-
-      // 6. Update DOM on the postCard
-      // A. Feeling in post header
-      let feelingEl = card.querySelector<HTMLElement>('.post-feeling-text');
-      if (selectedFeeling) {
-        if (feelingEl) {
-          feelingEl.textContent = `— รู้สึก ${selectedFeeling.emoji} ${selectedFeeling.label}`;
-        } else {
-          feelingEl = el('span', {
-            className: 'post-feeling-text',
-            text: `— รู้สึก ${selectedFeeling.emoji} ${selectedFeeling.label}`,
-          });
-          const authorEl = card.querySelector('.post-author-name');
-          if (authorEl) authorEl.after(feelingEl);
-        }
-      } else if (feelingEl) {
-        feelingEl.remove();
-      }
-
-      // B. Body Text with clickable mentions
-      let bodyEl = card.querySelector<HTMLElement>('.post-body-text');
-      if (newText) {
-        if (!bodyEl) {
-          bodyEl = el('div', { className: 'post-body-text' });
-          const mediaGrid = card.querySelector('.post-images-grid');
-          if (mediaGrid) mediaGrid.before(bodyEl);
-          else {
-            const headerEl = card.querySelector('.post-header');
-            if (headerEl) headerEl.after(bodyEl);
-          }
-        }
-        bodyEl.innerHTML = '';
-        const parts = newText.split(/(@[^\s@]+)/g);
-        parts.forEach((part) => {
-          if (part.startsWith('@') && part.length > 1) {
-            const mentionClean = part.slice(1);
-            const tagSpan = el('span', {
-              className: 'post-mention-tag',
-              attrs: { title: `ดูโปรไฟล์ของ ${mentionClean}` },
-              text: part,
-            });
-            tagSpan.addEventListener('click', (ev) => {
-              ev.stopPropagation();
-              openProfilePreviewModal({ name: mentionClean });
-            });
-            bodyEl!.append(tagSpan);
-          } else if (part) {
-            bodyEl!.append(document.createTextNode(part));
-          }
-        });
-      } else if (bodyEl) {
-        bodyEl.remove();
-      }
-
-      // C. Images
-      const oldGrid = card.querySelector('.post-images-grid');
-      if (oldGrid) oldGrid.remove();
-
-      const newGrid = renderPostImagesGrid(currentImages, post.title);
-      if (newGrid) {
-        const currentBody = card.querySelector('.post-body-text');
-        if (currentBody) {
-          currentBody.after(newGrid);
-        } else {
-          const headerEl = card.querySelector('.post-header');
-          if (headerEl) headerEl.after(newGrid);
-        }
-      }
-
+      Object.assign(post, result.data.post);
+      card.replaceWith(postCard(post, { mine: true }));
+      onEdited?.(content);
       toast.success('แก้ไขโพสต์เรียบร้อยแล้ว');
-      if (onEdited) onEdited(finalContent);
       closeModal();
     } catch (error) {
       toast.error(errorMessage(error));
       postBtn.disabled = false;
-      postBtn.textContent = 'โพสต์';
+      postBtn.textContent = 'บันทึก';
     }
   });
 
   document.body.style.overflow = 'hidden';
   document.body.append(overlay);
   setTimeout(() => textarea.focus(), 100);
-}
-
-export function openEditHistoryModal(post: Post, authorName: string): void {
-  const overlay = el('div', { className: 'modal-overlay' });
-  const modal = el('div', { className: 'edit-post-modal' });
-
-  const modalHeader = el('div', { className: 'edit-post-modal__header' });
-  const titleBox = el('div', {});
-  const modalTitle = el('h3', { className: 'edit-post-modal__title', text: 'ประวัติการแก้ไขโพสต์' });
-  const modalSubtitle = el('p', {
-    attrs: { style: 'font-size: 0.8rem; color: #8c827a; margin: 4px 0 0 0;' },
-    text: `โพสต์โดย ${authorName}`,
-  });
-  titleBox.append(modalTitle, modalSubtitle);
-
-  const closeBtn = el('button', {
-    className: 'edit-post-modal__close-btn',
-    attrs: { type: 'button', 'aria-label': 'ปิด' },
-    text: '✕',
-  });
-  modalHeader.append(titleBox, closeBtn);
-
-  const modalBody = el('div', {
-    className: 'edit-post-modal__body',
-    attrs: { style: 'max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;' },
-  });
-
-  // Read history
-  const historyKey = `post_edit_history_${post._id}`;
-  interface HistoryEntry {
-    content: string;
-    images?: string[];
-    editedAt: string;
-    version: number;
-  }
-  let history: HistoryEntry[] = [];
-  try {
-    const raw = localStorage.getItem(historyKey);
-    if (raw) history = JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-
-  const renderVersionCard = (item: {
-    badgeText: string;
-    badgeClass: string;
-    timeText: string;
-    content: string;
-    images?: string[] | undefined;
-  }) => {
-    const card = el('div', {
-      className: `history-version-card ${item.badgeClass.includes('current') ? 'history-version-card--current' : ''}`,
-    });
-    const meta = el('div', { className: 'history-version-meta' });
-    meta.innerHTML = `<span class="${item.badgeClass}">${item.badgeText}</span> • ${item.timeText}`;
-
-    const cleanText = item.content.trim() === '[รูปภาพ]' ? '' : item.content.trim();
-    const text = el('div', {
-      className: 'history-version-content',
-      text: cleanText || (item.images && item.images.length > 0 ? '(ไม่มีข้อความ มีเฉพาะรูปภาพ)' : '(ว่าง)'),
-    });
-    card.append(meta, text);
-
-    if (item.images && item.images.length > 0) {
-      const imagesRow = el('div', { className: 'history-version-images' });
-      item.images.forEach((imgSrc, imgIdx) => {
-        const thumb = el('img', {
-          className: 'history-version-thumb',
-          attrs: { src: imgSrc, alt: `รูปที่ ${imgIdx + 1}`, title: 'คลิกเพื่อดูรูปขยาย' },
-        });
-        thumb.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openLightbox(item.images!, imgIdx);
-        });
-        imagesRow.append(thumb);
-      });
-      card.append(imagesRow);
-    }
-    return card;
-  };
-
-  if (history.length === 0) {
-    const currentImages = getPostImages(post);
-    const currentClean = (post.content || '').trim() === '[รูปภาพ]' ? '' : (post.content || '');
-
-    const currentCard = renderVersionCard({
-      badgeText: 'เวอร์ชันปัจจุบัน',
-      badgeClass: 'history-badge history-badge--current',
-      timeText: `แก้ไขเมื่อ ${formatRelativeTime(post.updatedAt || new Date().toISOString())}`,
-      content: currentClean,
-      images: currentImages,
-    });
-
-    const origCard = renderVersionCard({
-      badgeText: 'ต้นฉบับ',
-      badgeClass: 'history-badge',
-      timeText: `โพสต์เมื่อ ${formatRelativeTime(post.createdAt)}`,
-      content: 'โพสต์แรกเริ่มก่อนการแก้ไข',
-      images: currentImages,
-    });
-
-    modalBody.append(currentCard, origCard);
-  } else {
-    const reversed = [...history].reverse();
-    reversed.forEach((item, index) => {
-      const isLatest = index === 0;
-      const badgeText = isLatest
-        ? 'เวอร์ชันปัจจุบัน'
-        : item.version === 1
-        ? 'ต้นฉบับ'
-        : `เวอร์ชันที่ ${item.version}`;
-      const badgeClass = isLatest ? 'history-badge history-badge--current' : 'history-badge';
-      const timeText = `${formatDate(item.editedAt)} (${formatRelativeTime(item.editedAt)})`;
-
-      const card = renderVersionCard({
-        badgeText,
-        badgeClass,
-        timeText,
-        content: item.content,
-        images: item.images,
-      });
-      modalBody.append(card);
-    });
-  }
-
-  const modalFooter = el('div', { className: 'edit-post-modal__footer' });
-  const dismissBtn = el('button', {
-    className: 'edit-post-modal__save-btn',
-    attrs: { type: 'button' },
-    text: 'ปิด',
-  });
-  modalFooter.append(dismissBtn);
-
-  modal.append(modalHeader, modalBody, modalFooter);
-  overlay.append(modal);
-
-  const closeModal = () => {
-    overlay.remove();
-    document.body.style.overflow = '';
-  };
-
-  closeBtn.addEventListener('click', closeModal);
-  dismissBtn.addEventListener('click', closeModal);
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeModal();
-  });
-
-  document.body.style.overflow = 'hidden';
-  document.body.append(overlay);
 }

@@ -47,54 +47,14 @@ class NotificationStore {
     const key = this.getStorageKey();
     try {
       const raw = localStorage.getItem(key);
-      if (raw) {
-        this.notifications = JSON.parse(raw) as AppNotification[];
-      } else {
-        // Provide mock initial demo notifications for the current user
-        const currentUser = authStore.snapshot.user;
-        const currentName = currentUser?.name || 'คุณ';
-        this.notifications = [
-          {
-            id: 'notif_demo_1',
-            recipientId: currentUser?._id,
-            recipientName: currentName,
-            actorName: 'David Chen (KMUTT)',
-            actorInitial: 'D',
-            type: 'like',
-            postId: 'sample_1',
-            postSnippet: 'เปิดตัวโครงงานระบบมอนิเตอร์ IoT',
-            createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-            read: false,
-          },
-          {
-            id: 'notif_demo_2',
-            recipientId: currentUser?._id,
-            recipientName: currentName,
-            actorName: 'iamaxm',
-            actorInitial: 'I',
-            type: 'comment',
-            postId: 'sample_1',
-            postSnippet: 'เปิดตัวโครงงานระบบมอนิเตอร์ IoT',
-            contentSnippet: 'น่าสนใจมากครับ อยากนำไปทดลองใช้งานจริง',
-            createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-            read: false,
-          },
-          {
-            id: 'notif_demo_3',
-            recipientId: currentUser?._id,
-            recipientName: currentName,
-            actorName: 'Emily Rodriguez (KMUTNB)',
-            actorInitial: 'E',
-            type: 'reply',
-            postId: 'sample_1',
-            postSnippet: 'เปิดตัวโครงงานระบบมอนิเตอร์ IoT',
-            contentSnippet: 'เห็นด้วยเลยค่ะ ลองดูในแล็บสถาบันได้เลย',
-            createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-            read: true,
-          },
-        ];
-        this.persist();
-      }
+      const stored: unknown = raw ? JSON.parse(raw) : [];
+      const items: unknown[] = Array.isArray(stored) ? stored as unknown[] : [];
+      this.notifications = items.filter((item): item is AppNotification => item !== null
+        && typeof item === 'object'
+        && 'id' in item
+        && typeof item.id === 'string'
+        && !/^notif_demo_[123]$/.test(item.id));
+      if (this.notifications.length !== items.length) this.persist();
     } catch {
       this.notifications = [];
     }

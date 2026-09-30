@@ -14,6 +14,7 @@ export interface PageView {
   element: HTMLElement;
   title: string;
   redirectTo?: string;
+  dispose?: () => void;
 }
 
 export interface RouteDefinition {
@@ -47,6 +48,7 @@ function compileRoute(route: RouteDefinition): CompiledRoute {
 export class Router {
   private readonly routes: CompiledRoute[];
   private navigationId = 0;
+  private disposePage: (() => void) | null = null;
 
   constructor(
     private readonly outlet: HTMLElement,
@@ -84,6 +86,8 @@ export class Router {
 
   private async render(): Promise<void> {
     const currentNavigation = ++this.navigationId;
+    this.disposePage?.();
+    this.disposePage = null;
     const url = new URL(window.location.href);
     const match = this.match(url.pathname);
 
@@ -133,6 +137,7 @@ export class Router {
 
   private commit(navigationId: number, page: PageView): void {
     if (navigationId !== this.navigationId) return;
+    this.disposePage = page.dispose ?? null;
     document.title = `${page.title} · TechEdu Connect (3 พระจอมฯ)`;
     this.outlet.replaceChildren(page.element);
     window.scrollTo({ top: 0, behavior: 'auto' });

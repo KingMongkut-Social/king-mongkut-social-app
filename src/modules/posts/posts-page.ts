@@ -1,11 +1,12 @@
-import { requireMember } from '../../core/auth/auth-navigation';
+import { afterLoginPath, requireMember } from '../../core/auth/auth-navigation';
 import { authStore } from '../../core/auth/auth-store';
+import { realtime } from '../../core/realtime/socket';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import type { Post } from '../../types/api';
-import { searchFriends, type FriendUser } from '../friends/friends-api';
+import { listFriends, type AcceptedFriend } from '../friends/friends-api';
 import { postsApi } from './posts-api';
 import { openLightbox, pagination, postCard } from './post-components';
 import {
@@ -67,35 +68,42 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
 
   let posts: Post[] = [];
   let pages = 1;
-
-  try {
-    const result = await postsApi.listPublished({ page, limit: 10, ...(search ? { search } : {}) });
-    posts = result.data.items;
-    pages = result.data.pages;
-  } catch {
-    // If backend is idle or empty, graceful fallback
+  let feedError = '';
+  const savedOnly = context.query.get('saved') === '1';
+  if (savedOnly && authStore.snapshot.status !== 'authenticated') {
+    return {
+      title: 'บันทึกไว้', element: el('div'),
+      redirectTo: '/login?returnTo=' + encodeURIComponent('/?saved=1'),
+    };
+  }
+  if (savedOnly && authStore.snapshot.user?.needsProfileCompletion) {
+    return { title: 'บันทึกไว้', element: el('div'), redirectTo: afterLoginPath('/?saved=1') };
   }
 
-  let allFriends: FriendUser[] = [];
   try {
-    allFriends = await searchFriends();
-    allFriends.forEach((u) => {
-      if (u.relationshipStatus === 'friends') {
-        localStorage.setItem(`friend_status_${u.id}`, 'friends');
-        localStorage.setItem(`friend_status_${u.name}`, 'friends');
-      } else if (u.relationshipStatus === 'pending_sent') {
-        localStorage.setItem(`friend_status_${u.id}`, 'pending_sent');
-        localStorage.setItem(`friend_status_${u.name}`, 'pending_sent');
-      }
-    });
-  } catch {
-    // ignore
+    const result = await (savedOnly
+      ? postsApi.listBookmarks({ page, limit: 10, ...(search ? { search } : {}) })
+      : postsApi.listPublished({ page, limit: 10, ...(search ? { search } : {}) }));
+    posts = result.data.items;
+    pages = result.data.pages;
+  } catch (error) {
+    feedError = errorMessage(error);
+  }
+
+  let allFriends: AcceptedFriend[] = [];
+  if (authStore.snapshot.status === 'authenticated') {
+    try {
+      allFriends = await listFriends();
+    } catch {
+      // The feed remains usable when the friend list is unavailable.
+    }
   }
 
   const container = el('div', { className: 'feed-layout' });
 
   // --- Left Column: Main Feed ---
   const feedMain = el('div', { className: 'feed-main' });
+  feedMain.append(el('h1', { className: 'feed-title', text: savedOnly ? 'บันทึกไว้' : 'ฟีดข่าว' }));
 
   // 1. Create Post Box ("คุณกำลังคิดอะไรอยู่?")
   const createBox = el('div', { className: 'create-post-card' });
@@ -114,7 +122,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     className: 'create-post-input-box',
     attrs: {
       placeholder: 'คุณกำลังคิดอะไรอยู่?',
-      rows: '2',
+      rows: '1',
     },
   });
 
@@ -123,6 +131,10 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   // Extras Bar (Selected feelings & tagged friends)
   let selectedFeeling: FeelingItem | null = null;
   let selectedTaggedFriends: StudentTagItem[] = [];
+  let hasSelectedImages = false;
+  const updateComposerState = (): void => {
+    createBox.classList.toggle('is-expanded', Boolean(postInput.value.trim() || hasSelectedImages || selectedFeeling || selectedTaggedFriends.length));
+  };
 
   const extrasBar = el('div', {
     className: 'create-post-extras-bar',
@@ -133,6 +145,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     extrasBar.innerHTML = '';
     if (!selectedFeeling && selectedTaggedFriends.length === 0) {
       extrasBar.style.display = 'none';
+      updateComposerState();
       return;
     }
     extrasBar.style.display = 'flex';
@@ -168,6 +181,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       tagPill.append(friendText, removeBtn);
       extrasBar.append(tagPill);
     });
+    updateComposerState();
   };
 
   // Mention Autocomplete Popover
@@ -218,7 +232,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   const fileInput = el('input', {
     attrs: {
       type: 'file',
-      accept: 'image/*',
+      accept: 'image/jpeg,image/png,image/webp,image/gif',
       multiple: 'true',
       style: 'display: none;',
     },
@@ -230,30 +244,12 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   });
 
   let currentImages: string[] = [];
-
-  try {
-    const savedList = localStorage.getItem('draft_post_images');
-    if (savedList) {
-      const parsed = JSON.parse(savedList) as unknown;
-      if (Array.isArray(parsed)) currentImages = parsed.map(String).filter(Boolean);
-    } else {
-      const singleSaved = localStorage.getItem('draft_post_image');
-      if (singleSaved) currentImages = [singleSaved];
-    }
-  } catch {
-    // ignore
-  }
-
-  const saveDraftImages = (): void => {
-    try {
-      localStorage.setItem('draft_post_images', JSON.stringify(currentImages));
-    } catch {
-      // ignore
-    }
-  };
+  let selectedFiles: File[] = [];
 
   const renderPreview = (): void => {
     previewContainer.innerHTML = '';
+    hasSelectedImages = currentImages.length > 0;
+    updateComposerState();
     if (currentImages.length === 0) {
       previewContainer.style.display = 'none';
       return;
@@ -278,7 +274,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentImages.splice(index, 1);
-        saveDraftImages();
+        selectedFiles.splice(index, 1);
         renderPreview();
       });
 
@@ -300,14 +296,9 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
 
   const clearSelectedImages = (): void => {
     currentImages = [];
+    selectedFiles = [];
     renderPreview();
     fileInput.value = '';
-    try {
-      localStorage.removeItem('draft_post_images');
-      localStorage.removeItem('draft_post_image');
-    } catch {
-      // ignore
-    }
   };
 
   const actionRow = el('div', { className: 'create-post-actions' });
@@ -408,15 +399,28 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   fileInput.addEventListener('change', async () => {
     const files = fileInput.files;
     if (!files || files.length === 0) return;
+    if (selectedFiles.length + files.length > 4) {
+      toast.error('แนบรูปภาพได้สูงสุด 4 รูป');
+      fileInput.value = '';
+      return;
+    }
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file) {
+          if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+            toast.error(`ไม่รองรับไฟล์ ${file.name}`);
+            continue;
+          }
+          if (file.size > 10 * 1024 * 1024) {
+            toast.error(`รูป ${file.name} มีขนาดเกิน 10 MB`);
+            continue;
+          }
           const dataUrl = await compressImageFile(file);
           currentImages.push(dataUrl);
+          selectedFiles.push(file);
         }
       }
-      saveDraftImages();
       renderPreview();
     } catch (err: unknown) {
       toast.error('ไม่สามารถโหลดรูปภาพได้: ' + errorMessage(err));
@@ -432,6 +436,8 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
     text: 'โพสต์',
     attrs: { type: 'button' },
   });
+  postInput.addEventListener('focus', () => createBox.classList.add('is-expanded'));
+  postInput.addEventListener('input', updateComposerState);
 
   postBtn.addEventListener('click', async () => {
     const text = postInput.value.trim();
@@ -440,232 +446,123 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       return;
     }
     if (!requireMember()) return;
+    postBtn.disabled = true;
+    postBtn.textContent = 'กำลังโพสต์…';
     try {
       const postTitle = text ? text.slice(0, 50) : 'รูปภาพ';
-      const postContent = text || '[รูปภาพ]';
-      const result = await postsApi.create({
+      const postContent = text;
+      const images = await Promise.all(selectedFiles.map(async (file) => {
+        const result = await postsApi.upload(file);
+        return result.data.asset.url;
+      }));
+      await postsApi.create({
         title: postTitle,
         content: postContent,
         status: 'published',
         tags: [authStore.snapshot.user?.university || 'KMITL'],
+        coverImage: images[0] ?? null,
+        images,
+        feeling: selectedFeeling ? `${selectedFeeling.emoji} ${selectedFeeling.label}` : null,
+        taggedFriends: selectedTaggedFriends.map((friend) => friend.id),
       });
-      const newPostId = result.data?.post?._id;
-      const currentUser = authStore.snapshot.user;
-      if (newPostId) {
-        try {
-          const meta = {
-            authorName: currentUser?.name,
-            authorInitial: currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'ส',
-            department: currentUser?.department || 'ภาควิชาวิศวกรรมคอมพิวเตอร์',
-            faculty: currentUser?.faculty || 'คณะวิศวกรรมศาสตร์',
-            feeling: selectedFeeling,
-            taggedFriends: selectedTaggedFriends,
-          };
-          localStorage.setItem(`post_meta_${newPostId}`, JSON.stringify(meta));
-        } catch {
-          // ignore
-        }
-      }
-      if (newPostId && currentImages.length > 0) {
-        try {
-          const localPostImages = JSON.parse(localStorage.getItem('local_post_images') || '{}') as Record<string, string[]>;
-          localPostImages[newPostId] = currentImages;
-          localStorage.setItem('local_post_images', JSON.stringify(localPostImages));
-          localStorage.setItem(`post_cover_${newPostId}`, JSON.stringify(currentImages));
-        } catch {
-          // ignore
-        }
-      }
       clearSelectedImages();
       selectedFeeling = null;
       selectedTaggedFriends = [];
       renderExtrasBar();
       toast.success('เผยแพร่โพสต์เรียบร้อยแล้ว!');
       postInput.value = '';
-      window.location.reload();
+      window.history.pushState(null, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
     } catch (err: unknown) {
       toast.error(errorMessage(err));
+    } finally {
+      postBtn.disabled = false;
+      postBtn.textContent = 'โพสต์';
     }
   });
 
   actionRow.append(attachments, postBtn);
   createBox.append(topRow, extrasBar, previewContainer, actionRow);
 
-  // 2. Filter Bar (Faculty, Department, Burgundy Filter Button)
-  const filterBar = el('div', { className: 'feed-filter-bar' });
-
-  const facultyGroup = el('div', { className: 'filter-group' });
-  facultyGroup.append(
-    el('label', { className: 'filter-label', text: 'คณะ' }),
-    el('select', { className: 'filter-select' },
-      el('option', { text: 'ทุกคณะ' }),
-      el('option', { text: 'วิศวกรรมศาสตร์' }),
-      el('option', { text: 'เทคโนโลยีสารสนเทศ' }),
-      el('option', { text: 'วิทยาศาสตร์' }),
-      el('option', { text: 'ครุศาสตร์อุตสาหกรรม' }),
-    ),
-  );
-
-  const deptGroup = el('div', { className: 'filter-group' });
-  deptGroup.append(
-    el('label', { className: 'filter-label', text: 'ภาควิชา' }),
-    el('select', { className: 'filter-select' },
-      el('option', { text: 'ทุกภาควิชา' }),
-      el('option', { text: 'วิศวกรรมคอมพิวเตอร์' }),
-      el('option', { text: 'วิศวกรรมหุ่นยนต์และปัญญาประดิษฐ์ (AI)' }),
-      el('option', { text: 'วิศวกรรมไฟฟ้า' }),
-      el('option', { text: 'เทคโนโลยีสารสนเทศ' }),
-    ),
-  );
-
-  const filterButton = el('button', {
-    className: 'btn-burgundy-filter',
-    text: 'กรองข้อมูล',
-    attrs: { type: 'button' },
-  });
-  filterButton.addEventListener('click', () => {
-    toast.info('กรองข้อมูลฟีดเรียบร้อย');
-  });
-
-  filterBar.append(facultyGroup, deptGroup, filterButton);
-
-  feedMain.append(createBox, filterBar);
+  if (!savedOnly) feedMain.append(createBox);
 
   // 3. Posts List
   // If there are real posts in DB, render them
-  if (posts.length > 0) {
+  if (feedError) {
+    feedMain.append(el('div', { className: 'feed-state', text: `ไม่สามารถโหลดโพสต์ได้: ${feedError}` }));
+  } else if (posts.length > 0) {
     posts.forEach((p) => feedMain.append(postCard(p)));
   } else {
-    // If no posts or first load, show sample featured post in Thai!
-    const samplePost: Post = {
-      _id: 'sample-sarah-jenkins',
-      title: 'ตัวต้นแบบ Alpha Build',
-      content: 'เพิ่งทดสอบตัวต้นแบบโปรเจกต์จบชิ้นแรกเสร็จสมบูรณ์! การทำงานของเซ็นเซอร์ตัวใหม่เสถียรกว่าที่คาดไว้มาก ขั้นต่อไปเตรียมทดสอบด้านความร้อนและประสิทธิภาพ (Thermal testing) 🔬✨',
-      status: 'published',
-      tags: ['KMITL (สจล.)'],
-      coverImage: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80',
-      author: {
-        _id: 'user-sarah',
-        name: 'Sarah Jenkins',
-        email: 'sarah@kmitl.ac.th',
-        university: 'KMITL (สจล.)',
-      },
-      createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-      updatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    };
-    feedMain.append(postCard(samplePost, { isSample: true }));
+    feedMain.append(el('div', { className: 'feed-state', text: savedOnly ? 'ยังไม่มีโพสต์ที่บันทึกไว้' : search ? 'ไม่พบโพสต์ที่ค้นหา' : 'ยังไม่มีโพสต์ในฟีด เริ่มโพสต์เรื่องราวของคุณได้เลย' }));
   }
 
-  const pager = pagination(page, pages, search, '/');
+  const pager = pagination(page, pages, search, '/', savedOnly ? { saved: '1' } : {});
   if (pager) feedMain.append(pager);
 
   // --- Right Column: Widgets ---
   const widgets = el('div', { className: 'feed-widgets' });
 
-  // Widget 1: Friends List (รายชื่อเพื่อนทั้งหมด)
-  interface FriendDisplayItem {
-    name: string;
-    initial: string;
-    university?: string;
-    isOnline: boolean;
-  }
-
-  const defaultFriends: FriendDisplayItem[] = [
-    { name: 'David Chen (KMUTT)', initial: 'D', university: 'KMUTT', isOnline: true },
-    { name: 'Supinya P. (KMITL)', initial: 'S', university: 'KMITL', isOnline: true },
-    { name: 'Emily Rodriguez (KMUTNB)', initial: 'E', university: 'KMUTNB', isOnline: false },
-    { name: 'Nattawut K. (KMUTT)', initial: 'N', university: 'KMUTT', isOnline: false },
-    { name: 'Chaiwat S. (KMUTNB)', initial: 'C', university: 'KMUTNB', isOnline: false },
-  ];
-
-  let friendItems: FriendDisplayItem[] = [...defaultFriends];
-
-    const confirmedFriends = allFriends.filter((u) => u.relationshipStatus === 'friends');
-    if (confirmedFriends.length > 0) {
-      const realItems: FriendDisplayItem[] = confirmedFriends.map((u, index) => {
-        const uniSuffix = u.university ? ` (${u.university})` : '';
-        return {
-          name: `${u.name}${uniSuffix}`,
-          initial: u.name.charAt(0).toUpperCase(),
-          university: u.university,
-          isOnline: index % 2 === 0,
-        };
-      });
-
-      const existingNames = new Set(realItems.map((r) => r.name.toLowerCase()));
-      const remainingDefault = defaultFriends.filter(
-        (df) => !existingNames.has(df.name.toLowerCase())
-      );
-      friendItems = [...realItems, ...remainingDefault];
-    }
-
   const friendsCard = el('div', { className: 'widget-card' });
-  const friendsTitle = el('h3', { className: 'widget-title', text: 'รายชื่อเพื่อนทั้งหมด' });
+  const friendsTitle = el('h3', { className: 'widget-title', text: 'เพื่อนที่กำลังออนไลน์' });
   const friendsList = el('div', { className: 'online-users-list' });
 
-  const renderFriendItem = (user: FriendDisplayItem) => {
-    const item = el('div', {
+  const renderFriendItem = (user: AcceptedFriend) => {
+    const item = el('a', {
       className: 'online-user-item',
       attrs: {
-        style: 'cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: background-color 0.15s;',
-        title: `${user.name} - ${user.isOnline ? 'ออนไลน์' : 'ออฟไลน์'}`,
+        href: `/chat?userId=${encodeURIComponent(user.id)}`,
+        title: `แชทกับ ${user.name}`,
       },
     });
-
-    item.addEventListener('mouseenter', () => {
-      item.style.backgroundColor = '#f5f0ea';
-    });
-    item.addEventListener('mouseleave', () => {
-      item.style.backgroundColor = 'transparent';
-    });
-
     const avatarWrap = el('div', { className: 'online-user-avatar-wrap' });
     const userAvatar = el('div', {
       className: 'online-user-avatar',
-      attrs: {
-        style: 'display:grid; place-items:center; font-weight:700; color:#554c44; font-size:0.85rem;',
-      },
-      text: user.initial,
+      text: user.name.charAt(0).toUpperCase(),
     });
     avatarWrap.append(userAvatar);
-
-    // คนที่กำลังออนไลน์ ขึ้นจุดสีเขียว
-    if (user.isOnline) {
-      const greenDot = el('span', {
-        className: 'online-indicator-dot',
-        attrs: { title: 'กำลังออนไลน์' },
-      });
-      avatarWrap.append(greenDot);
-    }
-
-    const infoWrap = el('div', {
-      attrs: { style: 'display: flex; flex-direction: column; min-width: 0;' },
-    });
+    const infoWrap = el('div', { className: 'online-user-info' });
     const userName = el('span', { className: 'online-user-name', text: user.name });
-    const statusText = el('span', {
-      attrs: {
-        style: `font-size: 0.75rem; font-weight: 500; color: ${user.isOnline ? '#16a34a' : '#8c827a'};`,
-      },
-      text: user.isOnline ? 'ออนไลน์' : 'ออฟไลน์',
-    });
-
-    infoWrap.append(userName, statusText);
-    item.append(avatarWrap, infoWrap);
+    infoWrap.append(userName);
+    item.append(avatarWrap, infoWrap, el('span', { className: 'online-indicator-dot', attrs: { title: 'กำลังออนไลน์' } }));
     return item;
   };
 
-  friendItems.forEach((friend) => {
-    friendsList.append(renderFriendItem(friend));
+  const renderFriends = (): void => {
+    friendsList.replaceChildren();
+    const online = allFriends.filter((friend) => friend.isOnline);
+    online.forEach((friend) => friendsList.append(renderFriendItem(friend)));
+    if (online.length === 0) {
+      friendsList.append(el('p', { className: 'online-users-empty', text: allFriends.length ? 'ตอนนี้ไม่มีเพื่อนออนไลน์' : 'ยังไม่มีเพื่อนที่ตอบรับแล้ว' }));
+    }
+  };
+  renderFriends();
+
+  let disposed = false;
+  const refreshFriends = async (): Promise<void> => {
+    if (authStore.snapshot.status !== 'authenticated') return;
+    try {
+      const latest = await listFriends();
+      if (disposed) return;
+      allFriends = latest;
+      renderFriends();
+    } catch {
+      // Keep the latest successful list visible while the connection recovers.
+    }
+  };
+  const unsubPresence = realtime.onPresenceUpdated(({ userId, isOnline }) => {
+    const friend = allFriends.find((entry) => entry.id === userId);
+    if (!friend) return;
+    friend.isOnline = isOnline;
+    renderFriends();
+  });
+  const unsubFriends = realtime.onFriendUpdated(() => { void refreshFriends(); });
+  const unsubConnection = realtime.onConnection((connected) => {
+    if (connected) void refreshFriends();
   });
 
-  const viewAllWrap = el('div', {
-    attrs: { style: 'margin-top: 14px; padding-top: 10px; border-top: 1px solid #ede8e1; text-align: right;' },
-  });
+  const viewAllWrap = el('div', { className: 'online-users-footer' });
   const viewAllLink = el('a', {
-    attrs: {
-      href: '/connections',
-      style: 'font-size: 0.8rem; font-weight: 600; color: #ff5722; text-decoration: none;',
-    },
+    attrs: { href: '/connections' },
     text: 'จัดการเพื่อนทั้งหมด →',
   });
   viewAllWrap.append(viewAllLink);
@@ -675,5 +572,14 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
 
   container.append(feedMain, widgets);
 
-  return { title: 'ฟีดข่าว', element: container };
+  return {
+    title: savedOnly ? 'บันทึกไว้' : 'ฟีดข่าว',
+    element: container,
+    dispose: () => {
+      disposed = true;
+      unsubPresence();
+      unsubFriends();
+      unsubConnection();
+    },
+  };
 }

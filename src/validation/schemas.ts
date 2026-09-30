@@ -13,7 +13,7 @@ export type ProfileInput = z.infer<typeof profileSchema>;
 
 export const postSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(150),
-  content: z.string().trim().min(1, 'Content is required').max(20_000),
+  content: z.string().trim().max(20_000),
   status: z.enum(['draft', 'published']).default('draft'),
   coverImage: z.string().url().nullable().optional(),
   tags: z.array(z.string().trim()).default([]),

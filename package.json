@@ -17,6 +17,7 @@
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
+    "socket.io-client": "^4.8.4",
     "zod": "4.4.3"
   },
   "devDependencies": {

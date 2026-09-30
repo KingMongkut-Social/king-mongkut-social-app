@@ -63,7 +63,7 @@ class ApiClient {
     const headers = new Headers(customHeaders);
     headers.set('Accept', 'application/json');
 
-    if (body !== undefined) {
+    if (body !== undefined && !(body instanceof FormData)) {
       headers.set('Content-Type', 'application/json');
     }
 
@@ -77,7 +77,7 @@ class ApiClient {
       headers,
       credentials: 'include',
     };
-    if (body !== undefined) request.body = JSON.stringify(body);
+    if (body !== undefined) request.body = body instanceof FormData ? body : JSON.stringify(body);
 
     let response: Response;
     try {

@@ -22,7 +22,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   const header = el('header', { className: 'site-header' });
   const headerInner = el('div', { className: 'site-header__inner' });
 
-  const brand = el('a', { className: 'brand-title', text: 'King’s society', attrs: { href: '/' } });
+  const brand = el('a', { className: 'brand-title', text: 'KingMongkut Social', attrs: { href: '/' } });
 
   // Search input in header
   const searchWrap = el('div', { className: 'site-header__search' });
@@ -32,7 +32,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     className: 'search-pill-input',
     attrs: {
       type: 'search',
-      placeholder: 'ค้นหาเพื่อน, สกิล, โปรเจกต์...',
+      placeholder: 'ค้นหาเพื่อน, สถาบัน, โพสต์...',
       'aria-label': 'ค้นหา',
     },
   });
@@ -58,6 +58,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     attrs: { type: 'button', 'aria-label': 'การแจ้งเตือน', title: 'การแจ้งเตือน' },
   });
   bellBtn.innerHTML = icons.bell;
+  bellBtn.append(el('span', { className: 'header-action-label', text: 'การแจ้งเตือน' }));
 
   const notifBadge = el('span', { className: 'notification-badge', attrs: { style: 'display: none;' } });
 
@@ -229,19 +230,28 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   const main = el('main', { className: 'app-content', attrs: { id: 'main-content' } });
   appLayout.append(sidebar, main);
 
-  root.replaceChildren(header, appLayout);
+  const mobileNav = el('nav', { className: 'mobile-primary-nav', attrs: { 'aria-label': 'เมนูหลักบนมือถือ' } });
+  root.replaceChildren(header, mobileNav, appLayout);
 
   const updatePageLayoutState = (): void => {
     const path = window.location.pathname;
     const isAuth = ['/login', '/register', '/complete-profile', '/auth/callback'].includes(path);
+    const isEditProfile = path === '/profile/edit';
     document.body.classList.toggle('is-auth-page', isAuth);
+    document.body.classList.toggle('is-feed-page', path === '/');
+    document.body.classList.toggle('is-profile-page', !isEditProfile && (path === '/profile' || path.startsWith('/profile/')));
+    document.body.classList.toggle('is-edit-profile-page', isEditProfile);
+    document.body.classList.toggle('is-connections-page', path === '/connections');
+    document.body.classList.toggle('is-chat-page', path === '/chat');
   };
 
   const renderNav = (): void => {
     clear(navList);
+    clear(mobileNav);
     clear(userActionSlot);
 
     const currentPath = window.location.pathname;
+    const savedOnly = new URLSearchParams(window.location.search).get('saved') === '1';
     updatePageLayoutState();
 
     const createNavItem = (label: string, href: string, iconSvg: string, isActive: boolean): HTMLElement => {
@@ -256,25 +266,70 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       return link;
     };
 
-    navList.append(
-      createNavItem('ฟีดข่าว (Home Feed)', '/', icons.feed, currentPath === '/' || currentPath.startsWith('/posts')),
-      createNavItem('เพื่อน & การเชื่อมต่อ', '/connections', icons.connections, currentPath === '/connections'),
-      createNavItem('แชทกลุ่ม', '#', icons.chats, false),
-      createNavItem('สถาบัน', '#', icons.institutions, false),
-    );
+    const isProfilePage = currentPath === '/profile' || (currentPath.startsWith('/profile/') && currentPath !== '/profile/edit');
+    const isCompactSocialPage = isProfilePage || currentPath === '/connections' || currentPath === '/chat';
+    if (isCompactSocialPage) {
+      const unavailable = (label: string): HTMLElement => el('span', {
+        className: 'sidebar__link sidebar__link--unavailable',
+        text: label,
+        attrs: { 'aria-disabled': 'true' },
+      });
+      const notificationsLink = el('button', {
+        className: 'sidebar__link sidebar__link--button',
+        text: 'การแจ้งเตือน',
+        attrs: { type: 'button' },
+      });
+      notificationsLink.addEventListener('click', () => bellBtn.click());
+      navList.append(
+        createNavItem('ฟีดข่าว', '/', icons.feed, false),
+        createNavItem('เพื่อน & การเชื่อมต่อ', '/connections', icons.connections, currentPath === '/connections'),
+        createNavItem('ข้อความ', '/chat', icons.chats, currentPath === '/chat'),
+        notificationsLink,
+        unavailable('สถาบัน'),
+        createNavItem('สำรวจ', '/connections', icons.search, false),
+        unavailable('กลุ่ม'),
+        createNavItem('บันทึกไว้', '/?saved=1', icons.feed, false),
+        authStore.snapshot.status === 'authenticated'
+          ? createNavItem('ตั้งค่า', '/profile/edit', icons.user, false)
+          : unavailable('ตั้งค่า'),
+      );
+    } else {
+      navList.append(
+        createNavItem('ฟีดข่าว', '/', icons.feed, (currentPath === '/' && !savedOnly) || currentPath.startsWith('/posts')),
+        createNavItem('เพื่อน & การเชื่อมต่อ', '/connections', icons.connections, currentPath === '/connections'),
+        createNavItem('แชท', '/chat', icons.chats, currentPath === '/chat'),
+        createNavItem('สถาบัน', '#', icons.institutions, false),
+      );
+    }
+
+    for (const [label, href, active] of [
+      ['ฟีด', '/', currentPath === '/' || currentPath.startsWith('/posts')],
+      ['เพื่อน', '/connections', currentPath === '/connections'],
+      ['แชท', '/chat', currentPath === '/chat'],
+    ] as const) {
+      mobileNav.append(el('a', {
+        className: `mobile-primary-nav__link ${active ? 'mobile-primary-nav__link--active' : ''}`,
+        text: label,
+        attrs: { href, 'aria-current': active ? 'page' : 'false' },
+      }));
+    }
 
     const state = authStore.snapshot;
     if (state.status === 'authenticated' && state.user) {
-      navList.append(
-        createNavItem('โพสต์ของฉัน', '/dashboard', icons.feed, currentPath.startsWith('/dashboard')),
-      );
+      if (!isCompactSocialPage) {
+        navList.append(
+          createNavItem('บันทึกไว้', '/?saved=1', icons.feed, currentPath === '/' && savedOnly),
+          createNavItem('โพสต์ของฉัน', '/dashboard', icons.feed, currentPath.startsWith('/dashboard')),
+        );
+      }
 
       const initial = state.user.name ? state.user.name.charAt(0).toUpperCase() : 'ส';
       const userBtn = el('a', {
         className: 'user-avatar-btn',
-        attrs: { href: '/dashboard', title: `โปรไฟล์: ${state.user.name} (${state.user.email})` },
+        attrs: { href: '/profile', title: `โปรไฟล์: ${state.user.name} (${state.user.email})` },
         text: initial,
       });
+      userBtn.append(el('span', { className: 'header-user-label', text: state.user.name }));
 
 
       const logoutBtn = el('button', {

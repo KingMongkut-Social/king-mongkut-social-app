@@ -78,12 +78,17 @@ npm run check      # typecheck + lint + tests
 | --- | --- | --- |
 | `/` | Public | Published posts, search, pagination |
 | `/posts/:id` | Public / optional auth | Read a published post; owner/admin can also read drafts |
+| `/profile` | Authenticated | View your profile, posts, friends, photos, and group chats |
+| `/profile/edit` | Authenticated | Edit display name, username, bio, academic details, and profile images |
+| `/profile/:id` | Public / optional auth | View a user's public profile and published posts |
 | `/login`, `/register` | Guest | Google sign-in / automatic registration |
 | `/auth/callback` | Public | Route the restored session after Google |
 | `/complete-profile` | Authenticated | Save faculty and department before member access |
 | `/dashboard` | Authenticated | Current user's drafts + published posts |
 | `/dashboard/posts/new` | Authenticated | Create post |
 | `/dashboard/posts/:id/edit` | Authenticated owner/admin | Edit post |
+| `/connections` | Authenticated | Find people and manage friend requests |
+| `/chat` | Authenticated | Direct and group conversations |
 
 ## Production build
 
@@ -126,6 +131,9 @@ src/
   modules/
     auth/               login/register pages
     posts/              posts API + list/detail/dashboard/editor pages
+    profile/            public profile, tabs, and profile editing
+    friends/            connections and friend actions
+    chats/              direct and group conversations
     shared/             shared form helpers
   types/                API contracts
   validation/           Zod schemas mirroring backend constraints
@@ -144,6 +152,16 @@ This frontend was built against the backend contract bundled with the project:
 - `GET /posts`
 - `GET /posts/mine`
 - `GET /posts/:id`
+- `GET /users/:id/profile`
+- `PATCH /users/me/profile`
+- `POST /users/me/avatar` and `POST /users/me/cover` (multipart image uploads)
+- `DELETE /users/me/avatar` and `DELETE /users/me/cover`
+- `GET /users/uploads/:filename`
+- `GET /users/:id/posts` (supports `imagesOnly=1` for the photos tab)
+- `GET /users/:id/friends`
+- `GET /friends` and `GET /friends/requests`
+- `GET /friends/suggestions`
+- `DELETE /friends/requests/:requestId`
 - `POST /posts`
 - `PATCH /posts/:id`
 - `DELETE /posts/:id`

@@ -10,8 +10,10 @@ import { myPostsPage } from './modules/posts/my-posts-page';
 import { postDetailPage } from './modules/posts/post-detail-page';
 import { postEditorPage } from './modules/posts/post-editor-page';
 import { postsPage } from './modules/posts/posts-page';
-import { renderConnectionsPage } from './modules/friends/connections-page';
+import { connectionsPage } from './modules/friends/connections-page';
+import { chatPage } from './modules/chats/chat-page';
 import { profilePage } from './modules/profile/profile-page';
+import { editProfilePage } from './modules/profile/edit-profile-page';
 
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('App root not found');
@@ -25,20 +27,14 @@ const routes: RouteDefinition[] = [
   { path: '/auth/callback', handler: callbackPage },
   { path: '/complete-profile', handler: completeProfilePage, auth: 'required', incompleteProfileAllowed: true },
   { path: '/posts/:id', handler: postDetailPage },
+  { path: '/profile/edit', handler: editProfilePage, auth: 'required' },
   { path: '/profile/:id', handler: profilePage },
   { path: '/profile', handler: profilePage },
   { path: '/dashboard', handler: myPostsPage, auth: 'required' },
   { path: '/dashboard/posts/new', handler: postEditorPage, auth: 'required' },
   { path: '/dashboard/posts/:id/edit', handler: postEditorPage, auth: 'required' },
-  // แก้จุดที่ 2: เติม title ตามข้อกำหนดของ PageView
-  {
-    path: '/connections',
-    handler: () => ({
-      title: 'Connections',
-      element: renderConnectionsPage(),
-    }),
-    auth: 'required',
-  },
+  { path: '/connections', handler: connectionsPage, auth: 'required' },
+  { path: '/chat', handler: chatPage, auth: 'required' },
 ];
 
 await apiClient.restoreSession();
