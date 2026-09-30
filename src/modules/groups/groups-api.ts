@@ -32,8 +32,8 @@ export interface GroupMember {
 }
 
 export interface GroupPost {
-  _id: string;
-  group: string;
+  id: string;
+  groupId: string;
   content: string;
   author: GroupUser;
   createdAt: string;

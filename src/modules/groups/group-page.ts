@@ -201,7 +201,7 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
             if (!window.confirm('ลบโพสต์นี้?')) return;
             remove.disabled = true;
             try {
-              await groupsApi.deletePost(id, post._id);
+              await groupsApi.deletePost(id, post.id);
               card.remove();
             } catch (error) {
               toast.error(errorMessage(error));
@@ -214,7 +214,7 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
           const report = el('button', { className: 'button button--secondary button--small', text: 'รายงาน', attrs: { type: 'button' } });
           report.addEventListener('click', () => openReportDialog({
             targetType: 'group_post',
-            targetId: post._id,
+            targetId: post.id,
             title: 'รายงานโพสต์ในกลุ่ม',
           }));
           postActions.append(report);
