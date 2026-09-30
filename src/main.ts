@@ -46,7 +46,7 @@ const routes: RouteDefinition[] = [
   { path: '/groups', handler: groupsPage },
   { path: '/groups/:id', handler: groupPage },
   { path: '/search', handler: searchPage },
-  { path: '/admin/moderation', handler: moderationPage, auth: 'required' },
+  { path: '/admin/moderation', handler: moderationPage, auth: 'required', role: 'admin' },
 ];
 
 await apiClient.restoreSession();
