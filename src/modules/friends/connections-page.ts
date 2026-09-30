@@ -2,6 +2,7 @@ import { realtime } from '../../core/realtime/socket';
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
+import { createEmptyState, createErrorState } from '../../core/ui/feedback';
 import { toast } from '../../core/ui/toast';
 import { confirmAction } from '../../core/ui/confirm-dialog';
 import { createAvatar } from '../../core/ui/avatar';
@@ -20,8 +21,21 @@ const tabs: ReadonlyArray<{ id: Tab; label: string }> = [
   { id: 'suggestions', label: 'คนที่คุณอาจรู้จัก' },
 ];
 
-function emptyState(message: string): HTMLElement {
-  return el('div', { className: 'connections-empty-state', text: message });
+function connectionsEmptyState(
+  title: string,
+  description: string,
+  actionText?: string,
+  actionHref?: string,
+): HTMLElement {
+  const state = createEmptyState({
+    iconName: 'user-plus',
+    title,
+    description,
+    actionText,
+    actionHref,
+  });
+  state.classList.add('connections-empty-state');
+  return state;
 }
 
 function mutualText(person: FriendPerson): string {
@@ -187,10 +201,13 @@ export function connectionsPage(context?: RouteContext): PageView {
     status.textContent = '';
     if (loading) { status.textContent = 'กำลังโหลดรายชื่อ...'; return; }
     if (error) {
-      grid.append(emptyState(`ไม่สามารถโหลดรายชื่อได้: ${error}`));
-      const retry = el('button', { className: 'button button--secondary connections-retry', text: 'ลองอีกครั้ง', attrs: { type: 'button' } });
-      retry.addEventListener('click', () => void load());
-      grid.append(retry);
+      const failure = createErrorState({
+        title: 'โหลดข้อมูลเพื่อนไม่สำเร็จ',
+        message: error,
+        onRetry: () => void load(),
+      });
+      failure.classList.add('connections-empty-state');
+      grid.append(failure);
       return;
     }
     if (activeTab === 'friends') {
@@ -203,9 +220,17 @@ export function connectionsPage(context?: RouteContext): PageView {
       });
 
       if (!friends.length) {
-        grid.append(emptyState('ยังไม่มีเพื่อนที่ตอบรับแล้ว'));
+        grid.append(connectionsEmptyState(
+          'ยังไม่มีเพื่อนที่ตอบรับแล้ว',
+          'เริ่มจากค้นหานักศึกษาที่คุณรู้จัก หรือดูคำแนะนำจากชุมชนของมหาวิทยาลัย',
+          'ดูคนที่คุณอาจรู้จัก',
+          '/connections?tab=suggestions',
+        ));
       } else if (!filteredFriends.length) {
-        grid.append(emptyState('ไม่พบเพื่อนที่ตรงกับการค้นหา'));
+        grid.append(connectionsEmptyState(
+          'ไม่พบเพื่อนที่ตรงกับตัวกรอง',
+          'ลองเปลี่ยนคำค้นหาหรือเลือกทุกสถาบันเพื่อดูผลลัพธ์มากขึ้น',
+        ));
       } else {
         for (const friend of filteredFriends) {
           const actions = el('div', { className: 'connections-actions' }, messageAction(friend.id));
@@ -225,7 +250,7 @@ export function connectionsPage(context?: RouteContext): PageView {
         }
       }
     } else if (activeTab === 'incoming') {
-      if (!requests.incoming.length) grid.append(emptyState('ยังไม่มีคำขอเป็นเพื่อน'));
+      if (!requests.incoming.length) grid.append(connectionsEmptyState('ยังไม่มีคำขอเป็นเพื่อน', 'เมื่อมีคนส่งคำขอเข้ามา รายการจะปรากฏที่นี่', 'ค้นหาเพื่อน', '/connections?tab=suggestions'));
       for (const request of requests.incoming) {
         const actions = el('div', { className: 'connections-actions' });
         const accept = el('button', { className: 'button button--primary button--small btn-accept-request', text: 'ยอมรับ', attrs: { type: 'button' } });
@@ -236,14 +261,19 @@ export function connectionsPage(context?: RouteContext): PageView {
         grid.append(studentCard(request.requester, 'ส่งคำขอถึงคุณ', actions));
       }
     } else if (activeTab === 'outgoing') {
-      if (!requests.outgoing.length) grid.append(emptyState('ยังไม่มีคำขอที่ส่ง'));
+      if (!requests.outgoing.length) grid.append(connectionsEmptyState('ยังไม่มีคำขอที่ส่ง', 'ค้นหาคนที่คุณรู้จักแล้วส่งคำขอเพื่อเริ่มเชื่อมต่อกัน', 'ค้นหาเพื่อน', '/connections?tab=suggestions'));
       for (const request of requests.outgoing) {
         const cancel = el('button', { className: 'button button--danger button--small btn-reject-icon', text: 'ยกเลิกคำขอ', attrs: { type: 'button' } });
         cancel.addEventListener('click', () => void act(cancel, () => cancelFriendRequest(request.id), 'ยกเลิกคำขอแล้ว'));
         grid.append(studentCard(request.recipient, 'รอการตอบรับ', cancel));
       }
     } else {
-      if (!suggested.length) grid.append(emptyState(searchInput.value.trim() ? 'ไม่พบผู้ใช้ที่ตรงกับการค้นหา' : 'ยังไม่มีคนที่คุณอาจรู้จัก'));
+      if (!suggested.length) grid.append(connectionsEmptyState(
+        searchInput.value.trim() ? 'ไม่พบผู้ใช้ที่ตรงกับการค้นหา' : 'ยังไม่มีคำแนะนำในตอนนี้',
+        searchInput.value.trim()
+          ? 'ลองใช้ชื่อที่สั้นลงหรือเปลี่ยนตัวกรองสถาบัน'
+          : 'กลับมาดูใหม่เมื่อมีสมาชิกและเครือข่ายเพิ่มเติม',
+      ));
       for (const user of suggested) grid.append(studentCard(user, mutualText(user), requestActions(user)));
     }
   }

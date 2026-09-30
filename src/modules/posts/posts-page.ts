@@ -11,18 +11,13 @@ import { listFriends, type AcceptedFriend } from '../friends/friends-api';
 import { postsApi } from './posts-api';
 import { openLightbox, postCard } from './post-components';
 import { createAvatar } from '../../core/ui/avatar';
+import { reactIcon } from '../../core/ui/react-icon';
 import {
   createMentionPopover,
   FEELING_OPTIONS,
   type FeelingItem,
   type StudentTagItem,
 } from './mention-tag';
-
-const icons = {
-  photo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
-  tag: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
-  feeling: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-};
 
 async function compressImageFile(file: File, maxDim = 2048, quality = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -157,9 +152,9 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       const iconText = el('span', { text: `รู้สึก ${selectedFeeling.emoji} ${selectedFeeling.label}` });
       const removeBtn = el('button', {
         className: 'composer-pill-remove',
-        attrs: { type: 'button', title: 'ยกเลิกความรู้สึกนี้' },
-        text: '✕',
+        attrs: { type: 'button', title: 'ยกเลิกความรู้สึกนี้', 'aria-label': 'ยกเลิกความรู้สึกนี้' },
       });
+      removeBtn.append(reactIcon('close'));
       removeBtn.addEventListener('click', () => {
         selectedFeeling = null;
         renderExtrasBar();
@@ -173,9 +168,9 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       const friendText = el('span', { text: `แท็ก: @${friend.name} (${friend.studentId})` });
       const removeBtn = el('button', {
         className: 'composer-pill-remove',
-        attrs: { type: 'button', title: 'ลบการแท็กนี้' },
-        text: '✕',
+        attrs: { type: 'button', title: 'ลบการแท็กนี้', 'aria-label': 'ลบการแท็กนี้' },
       });
+      removeBtn.append(reactIcon('close'));
       removeBtn.addEventListener('click', () => {
         selectedTaggedFriends.splice(idx, 1);
         renderExtrasBar();
@@ -271,8 +266,8 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       const removeBtn = el('button', {
         className: 'preview-thumb-remove',
         attrs: { type: 'button', 'aria-label': 'ลบรูปภาพนี้', title: 'ลบรูปภาพ' },
-        text: '✕',
       });
+      removeBtn.append(reactIcon('close'));
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentImages.splice(index, 1);
@@ -289,7 +284,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
       className: 'preview-add-more-btn',
       attrs: { type: 'button' },
     });
-    addMoreBtn.innerHTML = `<span>+</span><span>เพิ่มรูป</span>`;
+    addMoreBtn.append(reactIcon('plus', { size: 20 }), el('span', { text: 'เพิ่มรูป' }));
     addMoreBtn.addEventListener('click', () => fileInput.click());
     previewContainer.append(addMoreBtn);
   };
@@ -308,14 +303,14 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
 
   // Photo Button
   const photoBtn = el('button', { className: 'attachment-btn', attrs: { type: 'button' } });
-  photoBtn.innerHTML = `${icons.photo} <span>รูปภาพ</span>`;
+  photoBtn.append(reactIcon('image'), el('span', { text: 'รูปภาพ' }));
   photoBtn.addEventListener('click', () => {
     fileInput.click();
   });
 
   // Tag Friends Button
   const tagFriendBtn = el('button', { className: 'attachment-btn', attrs: { type: 'button' } });
-  tagFriendBtn.innerHTML = `${icons.tag} <span>แท็กเพื่อน</span>`;
+  tagFriendBtn.append(reactIcon('tag'), el('span', { text: 'แท็กเพื่อน' }));
   tagFriendBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     postInput.focus();
@@ -359,7 +354,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
   // Feeling Picker Button & Dropdown
   const feelingWrap = el('div', { attrs: { style: 'position: relative;' } });
   const feelingBtn = el('button', { className: 'attachment-btn', attrs: { type: 'button' } });
-  feelingBtn.innerHTML = `${icons.feeling} <span>ความรู้สึก</span>`;
+  feelingBtn.append(reactIcon('smile'), el('span', { text: 'ความรู้สึก' }));
 
   const feelingPopover = el('div', {
     className: 'feeling-picker-popover',

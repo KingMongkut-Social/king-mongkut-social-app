@@ -54,8 +54,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--touch-target-mobile);
+  min-width: var(--touch-target-mobile);
+  height: var(--touch-target-mobile);
   border-radius: var(--radius-full);
   background: var(--brand-subtle);
   color: var(--brand-rust);
@@ -199,6 +200,8 @@
 
 .chat-back-button {
   display: none;
+  min-width: var(--touch-target-mobile);
+  min-height: var(--touch-target-mobile);
   align-items: center;
   gap: 4px;
   border: none;
@@ -283,14 +286,14 @@
 }
 
 .chat-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex: 1;
-  text-align: center;
-  padding: var(--space-6);
-  color: var(--text-muted);
-  font-size: var(--font-base);
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-8);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 /* Date Separator */
@@ -468,8 +471,26 @@
     display: flex;
   }
 
+  .chat-panel__header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+  }
+
   .chat-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
     padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .chat-composer__input,
+  .chat-composer__send {
+    min-height: var(--touch-target-mobile);
+  }
+
+  .chat-empty {
+    padding: var(--space-6) var(--space-4);
   }
 }
 

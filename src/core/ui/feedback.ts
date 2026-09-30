@@ -1,43 +1,66 @@
 import { el } from './dom';
+import { reactIcon, type AppIconName } from './react-icon';
 
 export interface EmptyStateOptions {
   icon?: string | undefined;
+  iconName?: AppIconName | undefined;
   title: string;
   description: string;
   actionText?: string | undefined;
   actionHref?: string | undefined;
   onAction?: (() => void) | undefined;
+  secondaryActionText?: string | undefined;
+  secondaryActionHref?: string | undefined;
+  onSecondaryAction?: (() => void) | undefined;
+}
+
+function emptyAction(
+  text: string,
+  variant: 'primary' | 'secondary',
+  href?: string,
+  onClick?: () => void,
+): HTMLElement {
+  if (href) {
+    return el('a', {
+      className: `button button--${variant} empty-state__action`,
+      attrs: { href },
+      text,
+    });
+  }
+  const button = el('button', {
+    className: `button button--${variant} empty-state__action`,
+    attrs: { type: 'button' },
+    text,
+  });
+  if (onClick) button.addEventListener('click', onClick);
+  return button;
 }
 
 export function createEmptyState(options: EmptyStateOptions): HTMLElement {
   const container = el('div', { className: 'empty-state', attrs: { role: 'status' } });
-
   const iconWrap = el('div', { className: 'empty-state__icon', attrs: { 'aria-hidden': 'true' } });
-  iconWrap.innerHTML = options.icon || `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+
+  if (options.iconName) iconWrap.append(reactIcon(options.iconName, { size: 32 }));
+  else if (options.icon) iconWrap.innerHTML = options.icon;
+  else iconWrap.append(reactIcon('info', { size: 32 }));
 
   const title = el('h3', { className: 'empty-state__title', text: options.title });
   const desc = el('p', { className: 'empty-state__description', text: options.description });
-
   container.append(iconWrap, title, desc);
 
+  const actions = el('div', { className: 'empty-state__actions' });
   if (options.actionText) {
-    if (options.actionHref) {
-      const link = el('a', {
-        className: 'button button--primary empty-state__action',
-        attrs: { href: options.actionHref },
-        text: options.actionText,
-      });
-      container.append(link);
-    } else if (options.onAction) {
-      const button = el('button', {
-        className: 'button button--primary empty-state__action',
-        attrs: { type: 'button' },
-        text: options.actionText,
-      });
-      button.addEventListener('click', options.onAction);
-      container.append(button);
-    }
+    actions.append(emptyAction(options.actionText, 'primary', options.actionHref, options.onAction));
   }
+  if (options.secondaryActionText) {
+    actions.append(emptyAction(
+      options.secondaryActionText,
+      'secondary',
+      options.secondaryActionHref,
+      options.onSecondaryAction,
+    ));
+  }
+  if (actions.childElementCount) container.append(actions);
 
   return container;
 }
@@ -50,23 +73,17 @@ export interface ErrorStateOptions {
 
 export function createErrorState(options: ErrorStateOptions): HTMLElement {
   const container = el('div', { className: 'empty-state error-state', attrs: { role: 'alert' } });
-
   const iconWrap = el('div', { className: 'empty-state__icon', attrs: { 'aria-hidden': 'true' } });
-  iconWrap.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  iconWrap.append(reactIcon('warning', { size: 32 }));
 
   const title = el('h3', { className: 'empty-state__title', text: options.title || 'เกิดข้อผิดพลาด' });
   const desc = el('p', { className: 'empty-state__description', text: options.message });
-
   container.append(iconWrap, title, desc);
 
   if (options.onRetry) {
-    const retryBtn = el('button', {
-      className: 'button button--secondary empty-state__action',
-      attrs: { type: 'button' },
-      text: 'ลองอีกครั้ง',
-    });
-    retryBtn.addEventListener('click', options.onRetry);
-    container.append(retryBtn);
+    const actions = el('div', { className: 'empty-state__actions' });
+    actions.append(emptyAction('ลองอีกครั้ง', 'secondary', undefined, options.onRetry));
+    container.append(actions);
   }
 
   return container;

@@ -20,15 +20,6 @@ import {
 import { postsApi } from './posts-api';
 import { mountPostSocial } from './post-social';
 
-const postIcons = {
-  like: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>`,
-  comment: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
-  share: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
-  photo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
-  tag: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
-  feeling: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-};
-
 async function compressImageFile(file: File, maxDim = 2048, quality = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -303,8 +294,8 @@ export function postCard(
         'aria-haspopup': 'true',
         'aria-expanded': 'false',
       },
-      text: '•••',
     });
+    menuBtn.append(reactIcon('ellipsis'));
 
     const dropdown = el('div', {
       className: 'post-actions-dropdown',
@@ -315,13 +306,13 @@ export function postCard(
       className: 'post-dropdown-item',
       attrs: { type: 'button', role: 'menuitem' },
     });
-    editItem.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> แก้ไขโพสต์`;
+    editItem.append(reactIcon('edit'), document.createTextNode(' แก้ไขโพสต์'));
 
     const deleteItem = el('button', {
       className: 'post-dropdown-item post-dropdown-item--danger',
       attrs: { type: 'button', role: 'menuitem' },
     });
-    deleteItem.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> ลบ`;
+    deleteItem.append(reactIcon('trash'), document.createTextNode(' ลบ'));
 
     const updateDropdownItems = () => {
       dropdown.innerHTML = '';
@@ -603,7 +594,8 @@ export function openLightbox(images: string[], initialIndex = 0): void {
   const zoomOutBtn = el('button', { className: 'lightbox-btn', attrs: { type: 'button', title: 'ซูมออก (-)' }, text: '−' });
   const zoomResetBtn = el('button', { className: 'lightbox-btn', attrs: { type: 'button', title: 'ขนาดจริง 100%' }, text: '1:1' });
   const zoomInBtn = el('button', { className: 'lightbox-btn', attrs: { type: 'button', title: 'ซูมเข้า (+)' }, text: '+' });
-  const closeBtn = el('button', { className: 'lightbox-btn lightbox-btn--close', attrs: { type: 'button', title: 'ปิด (Esc)' }, text: '✕' });
+  const closeBtn = el('button', { className: 'lightbox-btn lightbox-btn--close', attrs: { type: 'button', title: 'ปิด (Esc)', 'aria-label': 'ปิด' } });
+  closeBtn.append(reactIcon('close'));
 
   actions.append(zoomOutBtn, zoomResetBtn, zoomInBtn, closeBtn);
   toolbar.append(counter, actions);
@@ -620,8 +612,10 @@ export function openLightbox(images: string[], initialIndex = 0): void {
   stage.append(img);
 
   // Prev / Next arrows
-  const prevBtn = el('button', { className: 'lightbox-nav lightbox-nav--prev', attrs: { type: 'button', title: 'ก่อนหน้า' }, text: '‹' });
-  const nextBtn = el('button', { className: 'lightbox-nav lightbox-nav--next', attrs: { type: 'button', title: 'ถัดไป' }, text: '›' });
+  const prevBtn = el('button', { className: 'lightbox-nav lightbox-nav--prev', attrs: { type: 'button', title: 'ก่อนหน้า', 'aria-label': 'รูปก่อนหน้า' } });
+  prevBtn.append(reactIcon('arrow-left'));
+  const nextBtn = el('button', { className: 'lightbox-nav lightbox-nav--next', attrs: { type: 'button', title: 'ถัดไป', 'aria-label': 'รูปถัดไป' } });
+  nextBtn.append(reactIcon('arrow-right'));
   if (images.length > 1) {
     overlay.append(prevBtn, nextBtn);
   }
@@ -723,8 +717,8 @@ export function openEditPostModal(
   const closeBtn = el('button', {
     className: 'edit-post-modal__close-btn',
     attrs: { type: 'button', 'aria-label': 'ปิด' },
-    text: '✕',
   });
+  closeBtn.append(reactIcon('close'));
   modalHeader.append(modalTitle, closeBtn);
 
   const modalBody = el('div', {
@@ -766,9 +760,9 @@ export function openEditPostModal(
       const iconText = el('span', { text: `รู้สึก ${selectedFeeling.emoji} ${selectedFeeling.label}` });
       const removeBtn = el('button', {
         className: 'composer-pill-remove',
-        attrs: { type: 'button', title: 'ยกเลิกความรู้สึกนี้' },
-        text: '✕',
+        attrs: { type: 'button', title: 'ยกเลิกความรู้สึกนี้', 'aria-label': 'ยกเลิกความรู้สึกนี้' },
       });
+      removeBtn.append(reactIcon('close'));
       removeBtn.addEventListener('click', () => {
         selectedFeeling = null;
         renderExtrasBar();
@@ -782,9 +776,9 @@ export function openEditPostModal(
       const friendText = el('span', { text: `แท็ก: @${friend.name}${friend.studentId ? ` (${friend.studentId})` : ''}` });
       const removeBtn = el('button', {
         className: 'composer-pill-remove',
-        attrs: { type: 'button', title: 'ลบการแท็กนี้' },
-        text: '✕',
+        attrs: { type: 'button', title: 'ลบการแท็กนี้', 'aria-label': 'ลบการแท็กนี้' },
       });
+      removeBtn.append(reactIcon('close'));
       removeBtn.addEventListener('click', () => {
         selectedTaggedFriends.splice(idx, 1);
         renderExtrasBar();
@@ -859,9 +853,9 @@ export function openEditPostModal(
       });
       const removeBtn = el('button', {
         className: 'edit-post-image-remove',
-        attrs: { type: 'button', title: 'ลบรูปนี้' },
-        text: '✕',
+        attrs: { type: 'button', title: 'ลบรูปนี้', 'aria-label': 'ลบรูปนี้' },
       });
+      removeBtn.append(reactIcon('close'));
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         pendingFiles.delete(src);
@@ -889,7 +883,7 @@ export function openEditPostModal(
     attrs: { type: 'file', accept: 'image/jpeg,image/png,image/webp,image/gif', multiple: 'true', style: 'display: none;' },
   });
   const photoBtn = el('button', { className: 'attachment-btn', attrs: { type: 'button' } });
-  photoBtn.innerHTML = `${postIcons.photo} <span>รูปภาพ</span>`;
+  photoBtn.append(reactIcon('image'), el('span', { text: 'รูปภาพ' }));
   photoBtn.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async (e) => {
@@ -924,7 +918,7 @@ export function openEditPostModal(
 
   // Tag Friends
   const tagFriendBtn = el('button', { className: 'attachment-btn', attrs: { type: 'button' } });
-  tagFriendBtn.innerHTML = `${postIcons.tag} <span>แท็กเพื่อน</span>`;
+  tagFriendBtn.append(reactIcon('tag'), el('span', { text: 'แท็กเพื่อน' }));
   tagFriendBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     textarea.focus();
@@ -968,7 +962,7 @@ export function openEditPostModal(
   // Feeling
   const feelingWrap = el('div', { attrs: { style: 'position: relative;' } });
   const feelingBtn = el('button', { className: 'attachment-btn', attrs: { type: 'button' } });
-  feelingBtn.innerHTML = `${postIcons.feeling} <span>ความรู้สึก</span>`;
+  feelingBtn.append(reactIcon('smile'), el('span', { text: 'ความรู้สึก' }));
 
   const feelingPopover = el('div', {
     className: 'feeling-picker-popover',

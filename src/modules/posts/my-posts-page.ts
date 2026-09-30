@@ -1,8 +1,5 @@
 import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
-import { errorMessage } from '../../core/ui/error-message';
-import { toast } from '../../core/ui/toast';
-import { confirmAction } from '../../core/ui/confirm-dialog';
 import { pagination, postCard, searchForm } from './post-components';
 import { postsApi } from './posts-api';
 
@@ -37,32 +34,10 @@ export async function myPostsPage(context: RouteContext): Promise<PageView> {
     ));
   } else {
     for (const post of result.data.items) {
-      const wrapper = el('div', { className: 'dashboard-post' });
-      wrapper.append(postCard(post, { mine: true }));
-      const deleteButton = el('button', { className: 'button button--danger button--small danger-link', text: 'ลบโพสต์', attrs: { type: 'button' } });
-      deleteButton.addEventListener('click', async () => {
-        const confirmed = await confirmAction({
-          title: 'ยืนยันการลบโพสต์',
-          message: `ต้องการลบโพสต์ “${post.title}” ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`,
-          confirmText: 'ลบโพสต์',
-          danger: true,
-        });
-        if (!confirmed) return;
-        deleteButton.disabled = true;
-        try {
-          await postsApi.remove(post._id);
-          toast.success('ลบโพสต์เรียบร้อย');
-          wrapper.remove();
-          if (!grid.querySelector('.dashboard-post')) {
-            window.dispatchEvent(new PopStateEvent('popstate'));
-          }
-        } catch (error) {
-          toast.error(errorMessage(error));
-          deleteButton.disabled = false;
-        }
-      });
-      wrapper.append(el('div', { className: 'dashboard-post__danger' }, deleteButton));
-      grid.append(wrapper);
+      // Owner edit/delete actions already live inside PostCard's accessible overflow menu.
+      // Keep dashboard management actions attached to the card so destructive controls
+      // can never float outside the post surface.
+      grid.append(postCard(post, { mine: true }));
     }
   }
 

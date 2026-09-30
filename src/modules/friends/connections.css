@@ -230,3 +230,9 @@
   justify-self: center;
   margin: var(--space-2) auto 0;
 }
+
+
+.connections-cards-grid > .connections-empty-state {
+  grid-column: 1 / -1;
+  min-height: 260px;
+}
