@@ -4,6 +4,7 @@ import { authStore } from '../auth/auth-store';
 import { el } from '../ui/dom';
 import { errorMessage } from '../ui/error-message';
 import { ApiError } from '../api/api-error';
+import type { Role } from '../../types/api';
 
 export interface RouteContext {
   params: Record<string, string>;
@@ -22,6 +23,7 @@ export interface RouteDefinition {
   path: string;
   handler: (context: RouteContext) => PageView | Promise<PageView>;
   auth?: 'required' | 'guest';
+  role?: Role;
   incompleteProfileAllowed?: boolean;
 }
 
@@ -117,6 +119,14 @@ export class Router {
       return;
     }
 
+    if (match.route.role && auth.user?.role !== match.route.role) {
+      this.commit(currentNavigation, {
+        title: 'ไม่มีสิทธิ์เข้าถึง',
+        element: this.forbidden(),
+      });
+      return;
+    }
+
     this.outlet.replaceChildren(this.loading());
 
     try {
@@ -170,6 +180,17 @@ export class Router {
       el('p', { className: 'eyebrow', text: '404' }),
       el('h1', { text: 'ไม่พบหน้าที่ต้องการ' }),
       el('p', { text: 'หน้าที่คุณกำลังค้นหาไม่มีอยู่จริง หรืออาจถูกย้ายไปแล้ว' }),
+      el('a', { className: 'button button--primary', text: 'กลับสู่หน้าแรก', attrs: { href: '/' } }),
+    );
+    return section;
+  }
+
+  private forbidden(): HTMLElement {
+    const section = el('section', { className: 'empty-state page-shell' });
+    section.append(
+      el('p', { className: 'eyebrow', text: '403' }),
+      el('h1', { text: 'ไม่มีสิทธิ์เข้าถึงหน้านี้' }),
+      el('p', { text: 'หน้านี้เปิดให้เฉพาะผู้ดูแลระบบเท่านั้น' }),
       el('a', { className: 'button button--primary', text: 'กลับสู่หน้าแรก', attrs: { href: '/' } }),
     );
     return section;
