@@ -322,11 +322,7 @@ export function postCard(
       dropdown.style.display = isHidden ? 'block' : 'none';
     });
 
-    document.addEventListener('click', (e) => {
-      if (!menuWrap.contains(e.target as Node)) {
-        dropdown.style.display = 'none';
-      }
-    });
+    ensurePostMenuOutsideHandler();
 
     editItem.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -956,14 +952,15 @@ export function openEditPostModal(
     feelingPopover.style.display = isHidden ? 'block' : 'none';
   });
 
-  document.addEventListener('click', (e) => {
+  const onEditModalDocumentClick = (e: MouseEvent) => {
     if (!feelingWrap.contains(e.target as Node)) {
       feelingPopover.style.display = 'none';
     }
     if (!modal.contains(e.target as Node)) {
       mentionPopover.close();
     }
-  });
+  };
+  document.addEventListener('click', onEditModalDocumentClick);
 
   const postBtn = el('button', {
     className: 'btn-post',
@@ -980,6 +977,7 @@ export function openEditPostModal(
   overlay.append(modal);
 
   const closeModal = () => {
+    document.removeEventListener('click', onEditModalDocumentClick);
     overlay.remove();
     document.body.style.overflow = '';
   };
