@@ -256,7 +256,7 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
     const result = await groupsApi.list(q, page);
     if (!result.items.length) {
       const empty = createEmptyState({
-        icon: '<span aria-hidden="true">◌</span>',
+        iconName: 'users',
         title: q ? 'ไม่พบกลุ่มที่ตรงกับการค้นหา' : 'ยังไม่มีกลุ่มให้สำรวจ',
         description: q
           ? `ไม่พบกลุ่มที่ตรงกับ “${q}” ลองล้างคำค้นหาหรือใช้คำที่กว้างขึ้น`
