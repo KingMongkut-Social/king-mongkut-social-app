@@ -188,7 +188,7 @@ export function connectionsPage(context?: RouteContext): PageView {
     if (loading) { status.textContent = 'กำลังโหลดรายชื่อ...'; return; }
     if (error) {
       grid.append(emptyState(`ไม่สามารถโหลดรายชื่อได้: ${error}`));
-      const retry = el('button', { className: 'connections-retry', text: 'ลองอีกครั้ง', attrs: { type: 'button' } });
+      const retry = el('button', { className: 'button button--secondary connections-retry', text: 'ลองอีกครั้ง', attrs: { type: 'button' } });
       retry.addEventListener('click', () => void load());
       grid.append(retry);
       return;
