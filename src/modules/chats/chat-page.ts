@@ -5,6 +5,7 @@ import { createAvatar } from '../../core/ui/avatar';
 import { clear, el } from '../../core/ui/dom';
 import { reactIcon } from '../../core/ui/react-icon';
 import { errorMessage } from '../../core/ui/error-message';
+import { createEmptyState } from '../../core/ui/feedback';
 import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
 import { listFriends, type AcceptedFriend } from '../friends/friends-api';
@@ -40,7 +41,8 @@ export function chatPage(context: RouteContext): PageView {
   const sidebar = el('aside', { className: 'chat-sidebar' });
   const sidebarHeader = el('div', { className: 'chat-sidebar__header' });
   const heading = el('h2', { text: 'ข้อความ' });
-  const groupButton = el('button', { className: 'chat-create-group', text: '+', attrs: { type: 'button', 'aria-label': 'สร้างกลุ่มสนทนา', title: 'สร้างกลุ่มสนทนา' } });
+  const groupButton = el('button', { className: 'chat-create-group', attrs: { type: 'button', 'aria-label': 'สร้างกลุ่มสนทนา', title: 'สร้างกลุ่มสนทนา' } });
+  groupButton.append(reactIcon('plus'));
   const conversationSearch = el('input', {
     className: 'chat-conversation-search chat-search-input',
     attrs: { type: 'search', placeholder: 'ค้นหาการสนทนา', 'aria-label': 'ค้นหาการสนทนา' },
@@ -79,7 +81,16 @@ export function chatPage(context: RouteContext): PageView {
   panelHeader.append(backButton, panelAvatar, panelIdentity, connection);
   const messageArea = el('div', { className: 'chat-messages', attrs: { role: 'log', 'aria-live': 'polite', 'aria-label': 'ข้อความ' } });
   const loadOlderButton = el('button', { className: 'chat-load-older', text: 'โหลดข้อความก่อนหน้า', attrs: { type: 'button' } });
-  const emptyPanel = el('div', { className: 'chat-empty', text: 'เลือกแชทจากรายการ หรือไปที่หน้าเพื่อนเพื่อเริ่มพูดคุย' });
+  const emptyPanel = createEmptyState({
+    iconName: 'comments',
+    title: 'เริ่มบทสนทนา',
+    description: 'เลือกแชทจากรายการ ค้นหาเพื่อนที่คุณรู้จัก หรือสร้างกลุ่มสนทนาสำหรับทีมและชุมชนของคุณ',
+    actionText: 'ค้นหาเพื่อน',
+    actionHref: '/connections?tab=suggestions',
+    secondaryActionText: 'สร้างกลุ่มสนทนา',
+    onSecondaryAction: () => groupButton.click(),
+  });
+  emptyPanel.classList.add('chat-empty');
   const typingIndicator = el('div', { className: 'chat-typing-indicator', attrs: { 'aria-live': 'polite' } });
   typingIndicator.hidden = true;
   const composer = el('form', { className: 'chat-composer' });
