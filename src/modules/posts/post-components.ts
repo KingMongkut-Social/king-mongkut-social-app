@@ -1,6 +1,7 @@
 import { authStore } from '../../core/auth/auth-store';
 import { env } from '../../config/env';
 import { el } from '../../core/ui/dom';
+import { reactIcon } from '../../core/ui/react-icon';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { confirmAction } from '../../core/ui/confirm-dialog';
@@ -520,11 +521,12 @@ export function postCard(
     for (const attachment of post.attachments) {
       const url = new URL(attachment.url, env.apiBaseUrl);
       if (!['http:', 'https:'].includes(url.protocol)) continue;
-      attachmentList.append(el('a', {
+      const attachmentLink = el('a', {
         className: 'post-attachment-link',
-        text: `📎 ${attachment.name}`,
         attrs: { href: url.href, target: '_blank', rel: 'noopener noreferrer' },
-      }));
+      });
+      attachmentLink.append(reactIcon('paperclip'), document.createTextNode(` ${attachment.name}`));
+      attachmentList.append(attachmentLink);
     }
     if (attachmentList.childElementCount) card.append(attachmentList);
   }
