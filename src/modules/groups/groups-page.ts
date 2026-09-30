@@ -142,8 +142,11 @@ export function renderGroupCard(group: CommunityGroup): HTMLElement {
   }
   const privacyBadge = el('span', {
     className: 'badge-tag',
-    text: group.privacy === 'private' ? '🔒 ส่วนตัว' : '🌐 สาธารณะ',
   });
+  privacyBadge.append(
+    reactIcon(group.privacy === 'private' ? 'lock' : 'globe'),
+    document.createTextNode(group.privacy === 'private' ? ' ส่วนตัว' : ' สาธารณะ'),
+  );
   badges.append(privacyBadge);
   coverWrap.append(badges);
 
