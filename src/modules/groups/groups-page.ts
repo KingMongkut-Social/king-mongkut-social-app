@@ -4,9 +4,11 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { groupsApi } from './groups-api';
+import { pagination } from '../posts/post-components';
 
 export async function groupsPage(context: RouteContext): Promise<PageView> {
   const q = context.query.get('q')?.trim() ?? '';
+  const page = Math.max(1, Number(context.query.get('page') ?? 1) || 1);
   const root = el('section', { className: 'platform-page groups-page' });
   const header = el('div', { className: 'platform-heading-row' });
   header.append(
@@ -53,7 +55,7 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
   const grid = el('div', { className: 'platform-card-grid' });
   root.append(grid);
   try {
-    const result = await groupsApi.list(q);
+    const result = await groupsApi.list(q, page);
     if (!result.items.length) grid.append(el('div', { className: 'platform-state', text: 'ยังไม่มีกลุ่มที่ตรงกับการค้นหา' }));
     for (const group of result.items) {
       grid.append(el('a', { className: 'platform-card group-card', attrs: { href: `/groups/${group.id}` } },
@@ -63,6 +65,8 @@ export async function groupsPage(context: RouteContext): Promise<PageView> {
         el('div', { className: 'platform-meta', text: `${group.memberCount} สมาชิก${group.university ? ` · ${group.university}` : ''}` }),
       ));
     }
+    const pager = pagination(result.page, result.pages, '', '/groups', q ? { q } : {});
+    if (pager) root.append(pager);
   } catch (error) {
     grid.append(el('div', { className: 'platform-state platform-state--error', text: errorMessage(error) }));
   }

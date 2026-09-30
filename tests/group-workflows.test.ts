@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   posts: vi.fn(),
   members: vi.fn(),
+  postsPage: vi.fn(),
+  membersPage: vi.fn(),
   join: vi.fn(),
   leave: vi.fn(),
   createPost: vi.fn(),
@@ -29,6 +31,8 @@ vi.mock('../src/modules/groups/groups-api', () => ({
     get: mocks.get,
     posts: mocks.posts,
     members: mocks.members,
+    postsPage: mocks.postsPage,
+    membersPage: mocks.membersPage,
     join: mocks.join,
     leave: mocks.leave,
     createPost: mocks.createPost,
@@ -95,15 +99,17 @@ beforeEach(() => {
   authStore.setAuthenticated(owner, 'token');
   document.body.replaceChildren(Object.assign(document.createElement('div'), { id: 'toast-root' }));
   mocks.get.mockResolvedValue(group);
-  mocks.posts.mockResolvedValue([{
+  const postItems = [{
     id: 'dddddddddddddddddddddddd',
     groupId: group.id,
     content: 'Group post',
     author: bob.user,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
-  }]);
-  mocks.members.mockResolvedValue([
+  }];
+  mocks.posts.mockResolvedValue(postItems);
+  mocks.postsPage.mockResolvedValue({ items: postItems, page: 1, limit: 50, total: 1, pages: 1 });
+  const memberItems = [
     {
       id: 'owner-membership',
       role: 'owner',
@@ -111,7 +117,9 @@ beforeEach(() => {
       joinedAt: '2026-01-01T00:00:00.000Z',
     },
     bob,
-  ]);
+  ];
+  mocks.members.mockResolvedValue(memberItems);
+  mocks.membersPage.mockResolvedValue({ items: memberItems, page: 1, limit: 50, total: 2, pages: 1 });
   mocks.list.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0, pages: 1 });
   mocks.search.mockResolvedValue({
     users: [{

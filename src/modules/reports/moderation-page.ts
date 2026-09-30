@@ -4,6 +4,7 @@ import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
 import { reportsApi, type ReportStatus } from './reports-api';
+import { pagination } from '../posts/post-components';
 
 const reasonLabels: Record<string, string> = {
   spam: 'Spam',
@@ -31,6 +32,7 @@ export async function moderationPage(context: RouteContext): Promise<PageView> {
 
   const raw = context.query.get('status');
   const status: ReportStatus = raw === 'resolved' || raw === 'dismissed' ? raw : 'pending';
+  const page = Math.max(1, Number(context.query.get('page') ?? 1) || 1);
   const tabs = el('nav', { className: 'moderation-tabs' });
   for (const value of ['pending', 'resolved', 'dismissed'] as ReportStatus[]) {
     tabs.append(el('a', {
@@ -45,7 +47,8 @@ export async function moderationPage(context: RouteContext): Promise<PageView> {
   root.append(queue);
 
   try {
-    const reports = await reportsApi.list(status);
+    const result = await reportsApi.listPage(status, page, 50);
+    const reports = result.items;
     if (!reports.length) queue.append(el('div', { className: 'platform-state', text: `ไม่มีรายงานสถานะ “${statusLabels[status]}”` }));
     for (const report of reports) {
       const card = el('article', { className: 'moderation-card' });
@@ -94,6 +97,14 @@ export async function moderationPage(context: RouteContext): Promise<PageView> {
       if (actions.childElementCount) card.append(actions);
       queue.append(card);
     }
+    const pager = pagination(
+      result.page,
+      result.pages,
+      '',
+      '/admin/moderation',
+      status === 'pending' ? {} : { status },
+    );
+    if (pager) root.append(pager);
   } catch (error) {
     queue.append(el('div', { className: 'platform-state platform-state--error', text: errorMessage(error) }));
   }

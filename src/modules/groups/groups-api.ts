@@ -41,11 +41,12 @@ export interface GroupPost {
 }
 
 export const groupsApi = {
-  async list(q = '') {
-    const query = q ? `?q=${encodeURIComponent(q)}` : '';
+  async list(q = '', page = 1) {
+    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    if (q) params.set('q', q);
     const response = await apiClient.request<ApiSuccess<{
       items: CommunityGroup[]; page: number; limit: number; total: number; pages: number;
-    }>>(`/groups${query}`);
+    }>>(`/groups?${params.toString()}`);
     return response.data;
   },
 
@@ -87,11 +88,15 @@ export const groupsApi = {
     await apiClient.request(`/groups/${encodeURIComponent(id)}/join`, { method: 'DELETE' });
   },
 
+  async membersPage(id: string, page = 1) {
+    const response = await apiClient.request<ApiSuccess<{
+      items: GroupMember[]; page: number; limit: number; total: number; pages: number;
+    }>>(`/groups/${encodeURIComponent(id)}/members?page=${page}&limit=50`);
+    return response.data;
+  },
+
   async members(id: string) {
-    const response = await apiClient.request<ApiSuccess<{ items: GroupMember[] }>>(
-      `/groups/${encodeURIComponent(id)}/members?limit=50`,
-    );
-    return response.data.items;
+    return (await this.membersPage(id)).items;
   },
 
   async addMember(id: string, userId: string) {
@@ -117,11 +122,15 @@ export const groupsApi = {
     );
   },
 
+  async postsPage(id: string, page = 1) {
+    const response = await apiClient.request<ApiSuccess<{
+      items: GroupPost[]; page: number; limit: number; total: number; pages: number;
+    }>>(`/groups/${encodeURIComponent(id)}/posts?page=${page}&limit=50`);
+    return response.data;
+  },
+
   async posts(id: string) {
-    const response = await apiClient.request<ApiSuccess<{ items: GroupPost[] }>>(
-      `/groups/${encodeURIComponent(id)}/posts?limit=50`,
-    );
-    return response.data.items;
+    return (await this.postsPage(id)).items;
   },
 
   async createPost(id: string, content: string) {

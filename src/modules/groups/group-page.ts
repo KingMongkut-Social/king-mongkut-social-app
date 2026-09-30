@@ -7,6 +7,7 @@ import { formatRelativeTime } from '../../core/utils/format';
 import { openReportDialog } from '../reports/report-dialog';
 import { searchApi } from '../search/search-api';
 import { groupsApi, type GroupMember } from './groups-api';
+import { pagination } from '../posts/post-components';
 
 type GroupTab = 'discussion' | 'members' | 'about';
 
@@ -18,11 +19,17 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
   const id = context.params.id ?? '';
   const rawTab = context.query.get('tab');
   const tab: GroupTab = rawTab === 'members' || rawTab === 'about' ? rawTab : 'discussion';
+  const page = Math.max(1, Number(context.query.get('page') ?? 1) || 1);
   const root = el('section', { className: 'platform-page group-detail-page' });
 
   try {
     let group = await groupsApi.get(id);
-    const [posts, members] = await Promise.all([groupsApi.posts(id), groupsApi.members(id)]);
+    const [postPage, memberPage] = await Promise.all([
+      groupsApi.postsPage(id, tab === 'discussion' ? page : 1),
+      groupsApi.membersPage(id, tab === 'members' ? page : 1),
+    ]);
+    const posts = postPage.items;
+    const members = memberPage.items;
     const currentUserId = authStore.snapshot.user?._id ?? '';
     const canManageMembers = group.membershipRole === 'owner' || group.membershipRole === 'admin';
 
@@ -222,10 +229,12 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
         if (postActions.childElementCount) card.append(postActions);
         main.append(card);
       }
+      const pager = pagination(postPage.page, postPage.pages, '', `/groups/${id}`);
+      if (pager) main.append(pager);
 
       sidebar.append(el('h2', { text: 'เกี่ยวกับกลุ่ม' }), el('p', { text: group.description || 'ยังไม่มีคำอธิบายกลุ่ม' }));
     } else if (tab === 'members') {
-      main.append(el('h2', { text: `สมาชิก ${members.length} คน` }));
+      main.append(el('h2', { text: `สมาชิก ${memberPage.total} คน` }));
       const list = el('div', { className: 'group-member-list' });
 
       for (const member of members) {
@@ -290,6 +299,8 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
         list.append(row);
       }
       main.append(list);
+      const pager = pagination(memberPage.page, memberPage.pages, '', `/groups/${id}`, { tab: 'members' });
+      if (pager) main.append(pager);
       sidebar.append(el('h2', { text: 'สิทธิ์ในกลุ่ม' }), el('p', { text: 'Owner จัดการบทบาทได้, Admin เพิ่ม/นำสมาชิกทั่วไปออกได้, Moderator จัดการโพสต์ได้' }));
     } else {
       main.append(

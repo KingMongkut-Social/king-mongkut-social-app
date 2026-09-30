@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   universities: vi.fn(),
   groups: vi.fn(),
   reports: vi.fn(),
+  reportPage: vi.fn(),
   moderate: vi.fn(),
 }));
 
@@ -21,7 +22,7 @@ vi.mock('../src/modules/groups/groups-api', () => ({
   groupsApi: { list: mocks.groups, create: vi.fn() },
 }));
 vi.mock('../src/modules/reports/reports-api', () => ({
-  reportsApi: { list: mocks.reports, moderate: mocks.moderate },
+  reportsApi: { list: mocks.reports, listPage: mocks.reportPage, moderate: mocks.moderate },
 }));
 
 function context(path = '/groups'): RouteContext {
@@ -62,7 +63,7 @@ beforeEach(() => {
     }],
     page: 1, limit: 20, total: 1, pages: 1,
   });
-  mocks.reports.mockResolvedValue([{
+  const reportItems = [{
     _id: 'cccccccccccccccccccccccc',
     reporter: { _id: 'dddddddddddddddddddddddd', name: 'Reporter', university: 'KMUTT' },
     targetType: 'post',
@@ -71,7 +72,9 @@ beforeEach(() => {
     details: 'Repeated promotion',
     status: 'pending',
     createdAt: '2026-01-01T00:00:00.000Z',
-  }]);
+  }];
+  mocks.reports.mockResolvedValue(reportItems);
+  mocks.reportPage.mockResolvedValue({ items: reportItems, page: 1, limit: 50, total: 1, pages: 1 });
 });
 
 afterEach(() => {
@@ -90,7 +93,7 @@ describe('platform completion pages', () => {
 
   it('renders community groups from the API', async () => {
     const view = await groupsPage(context());
-    expect(mocks.groups).toHaveBeenCalledWith('');
+    expect(mocks.groups).toHaveBeenCalledWith('', 1);
     expect(view.element.querySelector('.group-card')?.textContent).toContain('AI & Machine Learning');
     expect(view.element.querySelector<HTMLAnchorElement>('.group-card')?.getAttribute('href'))
       .toBe('/groups/bbbbbbbbbbbbbbbbbbbbbbbb');
@@ -102,14 +105,14 @@ describe('platform completion pages', () => {
 
     authStore.setAuthenticated(admin, 'admin-token');
     const view = await moderationPage(context('/admin/moderation'));
-    expect(mocks.reports).toHaveBeenCalledOnce();
+    expect(mocks.reportPage).toHaveBeenCalledWith('pending', 1, 50);
     expect(view.element.querySelector('.moderation-card')?.textContent).toContain('Spam');
     expect(view.element.querySelector('.moderation-card')?.textContent).toContain('Repeated promotion');
   });
 
   it('shows a restore action for a resolved user suspension report', async () => {
     authStore.setAuthenticated(admin, 'admin-token');
-    mocks.reports.mockResolvedValue([{
+    const resolvedItems = [{
       _id: 'cccccccccccccccccccccccc',
       reporter: { _id: 'dddddddddddddddddddddddd', name: 'Reporter', university: 'KMUTT' },
       targetType: 'user',
@@ -119,9 +122,11 @@ describe('platform completion pages', () => {
       status: 'resolved',
       action: 'suspend_user',
       createdAt: '2026-01-01T00:00:00.000Z',
-    }]);
+    }];
+    mocks.reports.mockResolvedValue(resolvedItems);
+    mocks.reportPage.mockResolvedValue({ items: resolvedItems, page: 1, limit: 50, total: 1, pages: 1 });
     const view = await moderationPage(context('/admin/moderation?status=resolved'));
-    expect(mocks.reports).toHaveBeenCalledWith('resolved');
+    expect(mocks.reportPage).toHaveBeenCalledWith('resolved', 1, 50);
     expect(view.element.querySelector('.moderation-actions')?.textContent).toContain('คืนสถานะบัญชี');
   });
 

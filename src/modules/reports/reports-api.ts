@@ -23,11 +23,15 @@ export const reportsApi = {
   create(input: { targetType: ReportTarget; targetId: string; reason: ReportReason; details: string }) {
     return apiClient.request<ApiSuccess<{ report: ReportItem }>>('/reports', { method: 'POST', body: input });
   },
+  async listPage(status: ReportStatus = 'pending', page = 1, limit = 50) {
+    const response = await apiClient.request<ApiSuccess<{
+      items: ReportItem[]; page: number; limit: number; total: number; pages: number;
+    }>>(`/reports?status=${encodeURIComponent(status)}&page=${page}&limit=${limit}`);
+    return response.data;
+  },
+
   async list(status: ReportStatus = 'pending') {
-    const response = await apiClient.request<ApiSuccess<{ items: ReportItem[] }>>(
-      `/reports?status=${encodeURIComponent(status)}&limit=100`,
-    );
-    return response.data.items;
+    return (await this.listPage(status, 1, 100)).items;
   },
   moderate(id: string, action: 'dismiss' | 'remove_content' | 'suspend_user' | 'restore_user', note?: string) {
     return apiClient.request(`/reports/${encodeURIComponent(id)}`, {
