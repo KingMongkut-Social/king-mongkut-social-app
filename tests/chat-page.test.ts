@@ -71,6 +71,7 @@ function context(): RouteContext {
 }
 
 beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
   authStore.setAuthenticated(self, 'access-token');
   mocks.chatList.mockResolvedValue([chat]);
   mocks.chatMessages.mockResolvedValue([]);
@@ -163,6 +164,27 @@ describe('chat page', () => {
     await vi.waitFor(() => expect(page!.element.querySelectorAll('.chat-message__image')).toHaveLength(1));
     expect(page.element.querySelector<HTMLImageElement>('.chat-message__image')?.src).toContain(imageUrl);
     expect(page.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(0);
+  });
+
+  it('uses a full-screen mobile thread and restores the conversation list on back', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    page = chatPage(context());
+    document.body.append(page.element);
+
+    await vi.waitFor(() => expect(page!.element.querySelectorAll('.chat-list__item')).toHaveLength(1));
+    expect(document.body.classList.contains('is-chat-thread-open')).toBe(false);
+    expect(page.element.querySelector('.chat-workspace')?.classList.contains('chat-workspace--thread-open')).toBe(false);
+
+    page.element.querySelector<HTMLButtonElement>('.chat-list__item')!.click();
+    await vi.waitFor(() => expect(mocks.chatMessages).toHaveBeenCalledWith('chat-1'));
+    expect(document.body.classList.contains('is-chat-thread-open')).toBe(true);
+    expect(page.element.querySelector('.chat-workspace')?.classList.contains('chat-workspace--thread-open')).toBe(true);
+
+    page.element.querySelector<HTMLButtonElement>('.chat-back-button')!.click();
+    expect(document.body.classList.contains('is-chat-thread-open')).toBe(false);
+    expect(page.element.querySelector('.chat-workspace')?.classList.contains('chat-workspace--thread-open')).toBe(false);
+    expect(window.location.pathname).toBe('/chat');
+    expect(window.location.search).toBe('');
   });
 
   it('offers only accepted friends in the group member picker', async () => {
