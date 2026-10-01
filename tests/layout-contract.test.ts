@@ -30,6 +30,16 @@ describe('responsive application shell contract', () => {
     expect(chat).toContain('@media (max-width: 1023px)');
   });
 
+  it('turns an opened mobile chat thread into a true full-screen surface', () => {
+    const shell = source('src/app/shell.css');
+    const chat = source('src/modules/chats/chat.css');
+    expect(shell).toContain('body.is-chat-thread-open .site-header');
+    expect(shell).toContain('body.is-chat-thread-open .mobile-primary-nav');
+    expect(shell).toContain('height: 100dvh');
+    expect(chat).toContain('body.is-chat-thread-open .chat-page');
+    expect(chat).toContain('.chat-workspace.chat-workspace--thread-open');
+  });
+
   it('provides shared mobile-safe tab touch targets', () => {
     const tabs = source('src/styles/tabs.css');
     expect(tabs).toContain('var(--touch-target-mobile)');
