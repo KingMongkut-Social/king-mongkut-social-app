@@ -298,3 +298,135 @@
   font-size: var(--font-xs);
   color: var(--text-muted);
 }
+
+
+/* Refined mobile university cards */
+@media (max-width: 639px) {
+  .universities-page,
+  .university-detail-page {
+    gap: 12px;
+  }
+
+  .university-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .university-card {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    min-height: 92px;
+    border-radius: 14px;
+    box-shadow: none;
+  }
+
+  .university-card:hover,
+  .university-card:focus-visible {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .university-card__banner {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    min-height: 100%;
+    padding: 10px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    border-right: 1px solid var(--border-subtle);
+    border-bottom: 0;
+  }
+
+  .university-card__mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .university-card__code {
+    font-size: 10px;
+  }
+
+  .university-card__body {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 2px;
+    padding: 10px 12px 4px;
+  }
+
+  .university-card__body h2 {
+    font-size: 15.5px;
+  }
+
+  .university-card__name {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 12.5px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .university-card__stats {
+    display: none;
+  }
+
+  .university-card__footer {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 2px 12px 10px;
+    border-top: 0;
+  }
+
+  .university-card__status {
+    font-size: 11.5px;
+  }
+
+  .university-card__cta {
+    font-size: 12px;
+  }
+
+  .university-hero {
+    margin-inline: calc(var(--layout-gutter-mobile) * -1);
+    margin-bottom: 4px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .university-hero__cover {
+    height: 120px;
+  }
+
+  .university-hero__logo {
+    top: 84px;
+    left: var(--layout-gutter-mobile);
+    width: 64px;
+    height: 64px;
+  }
+
+  .university-hero__body {
+    padding: 32px var(--layout-gutter-mobile) 14px;
+  }
+
+  .university-hero__body h1 {
+    font-size: 22px;
+  }
+
+  .community-sidebar {
+    padding: 12px;
+    border-radius: 14px;
+    box-shadow: none;
+  }
+
+  .community-person {
+    min-height: 60px;
+    padding: 8px 2px;
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 0;
+  }
+}

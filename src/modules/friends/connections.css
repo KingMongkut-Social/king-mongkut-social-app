@@ -328,3 +328,110 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Refined mobile people list */
+@media (max-width: 639px) {
+  .connections-page-wrap {
+    gap: 12px;
+  }
+
+  .connections-page-title {
+    font-size: 24px;
+  }
+
+  .connections-cards-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .student-card {
+    gap: 8px;
+    padding: 10px 2px;
+    border: 0;
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .student-card:first-child {
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .student-card:hover,
+  .student-card:focus-within {
+    transform: none;
+    border-color: var(--border-subtle);
+    box-shadow: none;
+    background: var(--surface-hover);
+  }
+
+  .student-card-header {
+    gap: 10px;
+  }
+
+  .student-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .student-name {
+    font-size: 15.5px;
+  }
+
+  .student-card-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 0 54px;
+    border: 0;
+  }
+
+  .student-mutual-count {
+    margin: 0;
+    font-size: 12.5px;
+  }
+
+  .connections-actions {
+    display: flex;
+    width: auto;
+    gap: 6px;
+  }
+
+  .connections-actions .button,
+  .connections-actions .btn-message-friend,
+  .connections-actions .btn-accept-request,
+  .connections-actions .btn-reject-icon {
+    width: auto;
+    min-width: 0;
+    min-height: 36px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  .connections-pending-label {
+    min-height: 34px;
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 359px) {
+  .student-card-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .connections-actions {
+    width: 100%;
+  }
+
+  .connections-actions > * {
+    flex: 1 1 0;
+  }
+}

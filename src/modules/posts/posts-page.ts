@@ -100,7 +100,7 @@ export async function postsPage(context: RouteContext): Promise<PageView> {
 
   // --- Left Column: Main Feed ---
   const feedMain = el('div', { className: 'feed-main' });
-  feedMain.append(el('h1', { className: 'feed-title', text: savedOnly ? 'บันทึกไว้' : 'ฟีดข่าว' }));
+  feedMain.append(el('h1', { className: `feed-title${savedOnly ? ' feed-title--saved' : ''}`, text: savedOnly ? 'บันทึกไว้' : 'ฟีดข่าว' }));
 
   // 1. Create Post Box ("คุณกำลังคิดอะไรอยู่?")
   const createBox = el('div', { className: 'create-post-card' });

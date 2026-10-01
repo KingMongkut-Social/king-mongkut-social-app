@@ -16,6 +16,18 @@ describe('production UX regression contract', () => {
     expect(postCard).toContain("'aria-haspopup': 'true'");
   });
 
+  it('keeps secondary post actions in a mobile-safe overflow menu', () => {
+    const social = source('src/modules/posts/post-social.ts');
+    const css = source('src/modules/posts/posts.css');
+
+    expect(social).toContain('post-social-menu');
+    expect(social).toContain('ตัวเลือกเพิ่มเติม');
+    expect(social).toContain('รายงานโพสต์');
+    expect(social).toContain('reactions.append(reactionWrap, commentBtn, shareBtn, moreWrap)');
+    expect(css).toContain('.post-social-menu');
+    expect(css).toContain('grid-template-columns: repeat(3, minmax(0, 1fr)) 44px');
+  });
+
   it('uses explicit 3 / 2 / 1 university discovery columns', () => {
     const css = source('src/modules/universities/universities.css');
 

@@ -48,10 +48,53 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   const likeBtn = action('ถูกใจ');
   const reactionWrap = el('div', { className: 'reaction-picker-wrap' });
   const reactionPicker = el('div', { className: 'reaction-picker', attrs: { hidden: 'true' } });
-  const commentBtn = action('แสดงความคิดเห็น');
+  const commentBtn = action('ความคิดเห็น');
   const shareBtn = action('แชร์');
-  const saveBtn = action('บันทึก');
-  const reportBtn = action('รายงาน', 'reaction-btn--danger');
+  const moreWrap = el('div', { className: 'post-social-menu-wrap' });
+  const moreActionBtn = el('button', {
+    className: 'reaction-btn reaction-btn--more',
+    attrs: {
+      type: 'button',
+      'aria-label': 'ตัวเลือกเพิ่มเติม',
+      'aria-haspopup': 'menu',
+      'aria-expanded': 'false',
+    },
+  });
+  moreActionBtn.append(reactIcon('ellipsis'), el('span', { className: 'reaction-btn__label', text: 'เพิ่มเติม' }));
+  const moreMenu = el('div', {
+    className: 'post-social-menu',
+    attrs: { role: 'menu', hidden: 'true' },
+  });
+  const saveBtn = el('button', {
+    className: 'post-social-menu__item',
+    attrs: { type: 'button', role: 'menuitem' },
+  });
+  const reportBtn = el('button', {
+    className: 'post-social-menu__item post-social-menu__item--danger',
+    attrs: { type: 'button', role: 'menuitem' },
+  });
+  reportBtn.append(reactIcon('warning'), document.createTextNode(' รายงานโพสต์'));
+  moreMenu.append(saveBtn, reportBtn);
+  moreWrap.append(moreActionBtn, moreMenu);
+  const closeMoreMenu = (): void => {
+    moreMenu.hidden = true;
+    moreActionBtn.setAttribute('aria-expanded', 'false');
+  };
+  moreActionBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const opening = moreMenu.hidden;
+    moreMenu.hidden = !opening;
+    moreActionBtn.setAttribute('aria-expanded', String(opening));
+  });
+  moreWrap.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMoreMenu();
+      moreActionBtn.focus();
+    }
+  });
+  document.addEventListener('click', (event) => {
+    if (!moreWrap.contains(event.target as Node)) closeMoreMenu();
+  });
   const commentsSection = el('section', { className: 'post-comments-section', attrs: { hidden: 'true', 'aria-label': 'ความคิดเห็น' } });
   const commentsList = el('div', { className: 'comments-list' });
   const moreBtn = action('ดูความคิดเห็นเพิ่มเติม');
@@ -99,12 +142,17 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     if (meta) {
       likeBtn.append(reactIcon(meta.icon), document.createTextNode(` ${meta.label}`));
     } else {
-      likeBtn.textContent = 'ถูกใจ';
+      likeBtn.append(reactIcon('thumbs-up'), document.createTextNode(' ถูกใจ'));
     }
     likeBtn.classList.toggle('reaction-btn--liked', liked);
     likeBtn.setAttribute('aria-pressed', String(liked));
-    saveBtn.textContent = saved ? 'บันทึกแล้ว' : 'บันทึก';
-    saveBtn.classList.toggle('reaction-btn--saved', saved);
+    commentBtn.replaceChildren(reactIcon('comments'), document.createTextNode(' ความคิดเห็น'));
+    shareBtn.replaceChildren(reactIcon('arrow-right'), document.createTextNode(' แชร์'));
+    saveBtn.replaceChildren(
+      reactIcon('bookmark'),
+      document.createTextNode(saved ? ' บันทึกแล้ว' : ' บันทึกโพสต์'),
+    );
+    saveBtn.classList.toggle('post-social-menu__item--active', saved);
     saveBtn.setAttribute('aria-pressed', String(saved));
   };
   renderSummary();
@@ -130,6 +178,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   });
 
   saveBtn.addEventListener('click', async () => {
+    closeMoreMenu();
     if (!requireMember()) return;
     saveBtn.disabled = true;
     try {
@@ -146,6 +195,7 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   });
 
   reportBtn.addEventListener('click', () => {
+    closeMoreMenu();
     openReportDialog({
       targetType: 'post',
       targetId: post._id,
@@ -348,6 +398,6 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   moreBtn.addEventListener('click', () => void loadComments());
   commentsSection.append(commentsList, moreBtn, commentForm());
   renderComments();
-  reactions.append(reactionWrap, commentBtn, shareBtn, saveBtn, reportBtn);
+  reactions.append(reactionWrap, commentBtn, shareBtn, moreWrap);
   card.append(summary, reactions, commentsSection);
 }

@@ -47,7 +47,7 @@ function renderUserRow(user: SearchUser): HTMLElement {
     el('strong', { className: 'search-user-name', text: user.name }),
     meta,
   );
-  row.append(avatar, info);
+  row.append(avatar, info, el('span', { className: 'search-row__chevron', attrs: { 'aria-hidden': 'true' } }, reactIcon('chevron-right')));
   return row;
 }
 
@@ -85,17 +85,18 @@ function renderGroupRow(group: SearchGroup): HTMLElement {
     el('strong', { text: group.name }),
     meta,
   );
-  row.append(thumb, info);
+  row.append(thumb, info, el('span', { className: 'search-row__chevron', attrs: { 'aria-hidden': 'true' } }, reactIcon('chevron-right')));
   return row;
 }
 
 function renderUniversityRow(university: SearchUniversity): HTMLElement {
   return el('a', { className: 'search-row', attrs: { href: `/universities/${university.code}` } },
     createUniversityBadge(university.code),
-    el('span', {},
+    el('span', { className: 'search-university-info' },
       el('strong', { text: university.code }),
       el('small', { text: university.name }),
     ),
+    el('span', { className: 'search-row__chevron', attrs: { 'aria-hidden': 'true' } }, reactIcon('chevron-right')),
   );
 }
 
@@ -115,10 +116,12 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
       'aria-label': 'ค้นหา',
     },
   });
-  form.append(
-    input,
-    el('button', { className: 'button button--primary', text: 'ค้นหา', attrs: { type: 'submit' } }),
-  );
+  const submit = el('button', {
+    className: 'search-submit-button',
+    attrs: { type: 'submit', 'aria-label': 'ค้นหา' },
+  });
+  submit.append(reactIcon('search'));
+  form.append(input, submit);
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -156,6 +159,9 @@ export async function searchPage(context: RouteContext): Promise<PageView> {
         el('div', { className: 'explore-shortcut-card__text' },
           el('strong', { text: item.title }),
           el('small', { text: item.desc }),
+        ),
+        el('span', { className: 'explore-shortcut-card__chevron', attrs: { 'aria-hidden': 'true' } },
+          reactIcon('chevron-right'),
         ),
       );
       hubGrid.append(card);
