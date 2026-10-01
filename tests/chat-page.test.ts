@@ -129,8 +129,8 @@ describe('chat page', () => {
   it('previews, uploads, sends, and renders chat images', async () => {
     const NativeURL = URL;
     class TestURL extends NativeURL {
-      static createObjectURL = vi.fn(() => 'blob:preview');
-      static revokeObjectURL = vi.fn();
+      static override createObjectURL = vi.fn(() => 'blob:preview');
+      static override revokeObjectURL = vi.fn();
     }
     vi.stubGlobal('URL', TestURL);
     page = chatPage(context());
