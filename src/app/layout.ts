@@ -13,6 +13,55 @@ import { formatRelativeTime } from '../core/utils/format';
 import { profileImageUrl } from '../modules/profile/profile-api';
 import { searchApi, type SearchResult, type SearchUser, type SearchGroup } from '../modules/search/search-api';
 
+let mobileChromeAutoHideMounted = false;
+
+function mountMobileChromeAutoHide(): void {
+  if (mobileChromeAutoHideMounted) return;
+  mobileChromeAutoHideMounted = true;
+
+  let lastY = Math.max(0, window.scrollY);
+  let frame = 0;
+
+  const showChrome = (): void => {
+    document.body.classList.remove('mobile-chrome-hidden');
+  };
+
+  const update = (): void => {
+    frame = 0;
+    const y = Math.max(0, window.scrollY);
+    const delta = y - lastY;
+    const mobile = window.matchMedia('(max-width: 1023px)').matches;
+    const menuOpen = Boolean(
+      document.querySelector('.account-menu:not([hidden])')
+      || document.querySelector('.notifications-dropdown[style*="display: block"]'),
+    );
+    const shouldStayVisible = !mobile
+      || document.body.classList.contains('is-auth-page')
+      || document.body.classList.contains('is-chat-thread-open')
+      || menuOpen
+      || y < 72;
+
+    if (shouldStayVisible) {
+      showChrome();
+    } else if (delta > 8) {
+      document.body.classList.add('mobile-chrome-hidden');
+    } else if (delta < -6) {
+      showChrome();
+    }
+    lastY = y;
+  };
+
+  window.addEventListener('scroll', () => {
+    if (frame) return;
+    frame = window.requestAnimationFrame(update);
+  }, { passive: true });
+  window.addEventListener('resize', () => {
+    showChrome();
+    lastY = Math.max(0, window.scrollY);
+  }, { passive: true });
+  window.addEventListener('popstate', showChrome);
+}
+
 const navigationIcons: Record<NavigationItem['icon'], AppIconName> = {
   feed: 'feed',
   connections: 'connections',
@@ -482,6 +531,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   const mobileNav = el('nav', { className: 'mobile-primary-nav', attrs: { 'aria-label': 'เมนูหลักบนมือถือ' } });
   root.replaceChildren(header, mobileNav, appLayout);
+  mountMobileChromeAutoHide();
 
   const updatePageLayoutState = (): void => {
     const path = window.location.pathname;
@@ -505,6 +555,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     const state = authStore.snapshot;
     const location = { pathname: currentPath, search: window.location.search };
     updatePageLayoutState();
+    document.body.classList.remove('mobile-chrome-hidden');
 
     const createNavItem = (entry: NavigationItem): HTMLElement => {
       const link = el('a', {
