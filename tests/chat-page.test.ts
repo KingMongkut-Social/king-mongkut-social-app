@@ -9,11 +9,13 @@ import type { User } from '../src/types/api';
 
 const realtimeState = vi.hoisted(() => ({
   message: null as ((message: ChatMessage) => void) | null,
+  presence: null as ((update: { userId: string; isOnline: boolean }) => void) | null,
 }));
 const mocks = vi.hoisted(() => ({
   chatList: vi.fn<() => Promise<Chat[]>>(),
   chatMessages: vi.fn<(chatId: string, before?: string) => Promise<ChatMessage[]>>(),
-  sendMessage: vi.fn<(chatId: string, content: string) => Promise<ChatMessage>>(),
+  sendMessage: vi.fn<(chatId: string, content: string, images?: string[]) => Promise<ChatMessage>>(),
+  uploadImage: vi.fn<(file: File) => Promise<{ url: string; mimeType: string; size: number }>>(),
   listFriends: vi.fn<() => Promise<AcceptedFriend[]>>(),
 }));
 
@@ -24,7 +26,10 @@ vi.mock('../src/core/realtime/socket', () => ({
       return () => { realtimeState.message = null; };
     },
     onConversation: () => () => undefined,
-    onPresenceUpdated: () => () => undefined,
+    onPresenceUpdated: (listener: (update: { userId: string; isOnline: boolean }) => void) => {
+      realtimeState.presence = listener;
+      return () => { realtimeState.presence = null; };
+    },
     onConnection: (listener: (connected: boolean) => void) => {
       listener(true);
       return () => undefined;
@@ -36,7 +41,15 @@ vi.mock('../src/core/realtime/socket', () => ({
   },
 }));
 vi.mock('../src/modules/chats/chats-api', () => ({
-  chatsApi: { list: mocks.chatList, direct: vi.fn(), createGroup: vi.fn(), messages: mocks.chatMessages, send: vi.fn() },
+  chatImageUrl: (path: string) => path,
+  chatsApi: {
+    list: mocks.chatList,
+    direct: vi.fn(),
+    createGroup: vi.fn(),
+    messages: mocks.chatMessages,
+    send: vi.fn(),
+    uploadImage: mocks.uploadImage,
+  },
 }));
 vi.mock('../src/modules/friends/friends-api', () => ({ listFriends: mocks.listFriends }));
 
@@ -62,6 +75,11 @@ beforeEach(() => {
   mocks.chatList.mockResolvedValue([chat]);
   mocks.chatMessages.mockResolvedValue([]);
   mocks.listFriends.mockResolvedValue([]);
+  mocks.uploadImage.mockResolvedValue({
+    url: '/api/v1/chats/uploads/11111111-1111-4111-8111-111111111111.png',
+    mimeType: 'image/png',
+    size: 16,
+  });
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => callback(0));
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
     configurable: true,
@@ -77,6 +95,7 @@ afterEach(() => {
   page?.dispose?.();
   page = undefined;
   realtimeState.message = null;
+  realtimeState.presence = null;
   authStore.setAnonymous();
   document.body.replaceChildren();
   vi.clearAllMocks();
@@ -98,13 +117,51 @@ describe('chat page', () => {
     input.value = 'Hello Bob';
     page.element.querySelector<HTMLFormElement>('.chat-composer')!
       .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    expect(mocks.sendMessage).toHaveBeenCalledWith('chat-1', 'Hello Bob');
+    expect(mocks.sendMessage).toHaveBeenCalledWith('chat-1', 'Hello Bob', []);
 
     realtimeState.message?.(message);
     acknowledge(message);
     await vi.waitFor(() => expect(input.value).toBe(''));
     expect(page.element.querySelectorAll('.chat-message')).toHaveLength(1);
     expect(page.element.querySelector('.chat-message__content')?.textContent).toBe('Hello Bob');
+  });
+
+  it('previews, uploads, sends, and renders chat images', async () => {
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => 'blob:preview'),
+      revokeObjectURL: vi.fn(),
+    });
+    page = chatPage(context());
+    document.body.append(page.element);
+    await vi.waitFor(() => expect(mocks.chatMessages).toHaveBeenCalledWith('chat-1'));
+
+    const file = new File([
+      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    ], 'photo.png', { type: 'image/png' });
+    const fileInput = page.element.querySelector<HTMLInputElement>('.chat-composer__file-input')!;
+    Object.defineProperty(fileInput, 'files', { configurable: true, value: [file] });
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(page.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(1);
+
+    const imageUrl = '/api/v1/chats/uploads/11111111-1111-4111-8111-111111111111.png';
+    const sent: ChatMessage = {
+      id: 'image-message',
+      chatId: 'chat-1',
+      senderId: 'alice',
+      content: '',
+      images: [imageUrl],
+      createdAt: new Date().toISOString(),
+    };
+    mocks.sendMessage.mockResolvedValue(sent);
+    page.element.querySelector<HTMLFormElement>('.chat-composer')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await vi.waitFor(() => expect(mocks.uploadImage).toHaveBeenCalledWith(file));
+    await vi.waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledWith('chat-1', '', [imageUrl]));
+    await vi.waitFor(() => expect(page!.element.querySelectorAll('.chat-message__image')).toHaveLength(1));
+    expect(page.element.querySelector<HTMLImageElement>('.chat-message__image')?.src).toContain(imageUrl);
+    expect(page.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(0);
   });
 
   it('offers only accepted friends in the group member picker', async () => {
@@ -131,6 +188,9 @@ describe('chat page', () => {
     page = chatPage(context());
     document.body.append(page.element);
     await vi.waitFor(() => expect(page!.element.querySelector('.chat-panel__subtitle')?.textContent).toBe('ออนไลน์ · KMITL'));
+    expect(page.element.querySelectorAll('.chat-list__item .app-avatar__status-dot--online')).toHaveLength(1);
+    realtimeState.presence?.({ userId: 'bob', isOnline: true });
+    expect(page.element.querySelectorAll('.chat-list__item .app-avatar__status-dot--online')).toHaveLength(2);
     const search = page.element.querySelector<HTMLInputElement>('.chat-conversation-search')!;
     search.value = 'bob';
     search.dispatchEvent(new Event('input', { bubbles: true }));
