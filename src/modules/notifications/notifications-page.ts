@@ -54,13 +54,13 @@ export function notificationsPage(): PageView {
     filtered.forEach((n) => {
       let target = '/';
       if (n.type === 'post_reaction' || n.type === 'post_comment' || n.type === 'comment_reply') {
-        target = n.postId ? `/posts/${encodeURIComponent(n.postId)}` : '/';
+        target = n.entityId ? `/posts/${encodeURIComponent(n.entityId)}` : '/';
       } else if (n.type === 'friend_request' || n.type === 'friend_accept') {
         target = '/connections';
       } else if (n.type === 'group_invite') {
         target = '/groups';
-      } else if (n.type === 'group_join') {
-        target = n.postId ? `/groups/${encodeURIComponent(n.postId)}` : '/groups';
+      } else if (n.type === 'group_join' || n.type === 'group_mention') {
+        target = n.entityId ? `/groups/${encodeURIComponent(n.entityId)}` : '/groups';
       }
 
       const item = el('a', {
@@ -94,6 +94,7 @@ export function notificationsPage(): PageView {
       else if (n.type === 'friend_accept') actionDesc = ' ตอบรับคำขอเป็นเพื่อนของคุณ';
       else if (n.type === 'group_join') actionDesc = ' เข้าร่วมกลุ่มของคุณ';
       else if (n.type === 'group_invite') actionDesc = ' เชิญคุณเข้าร่วมกลุ่ม';
+      else if (n.type === 'group_mention') actionDesc = ' แท็กคุณในโพสต์ในกลุ่ม';
       else actionDesc = ' มีกิจกรรมใหม่';
       textLine.append(document.createTextNode(actionDesc));
 

@@ -11,7 +11,7 @@ export interface AppNotification {
   actorInitial: string;
   actorAvatarUrl?: string | null | undefined;
   type: NotificationType;
-  postId: string;
+  entityId: string;
   contentSnippet?: string | undefined;
   createdAt: string;
   read: boolean;
@@ -36,7 +36,7 @@ function mapNotification(item: RealtimeNotification): AppNotification {
     actorInitial: actorName.charAt(0).toUpperCase() || 'ส',
     actorAvatarUrl: item.actor?.avatarUrl ?? null,
     type: item.type,
-    postId: item.entityId ?? '',
+    entityId: item.entityId ?? '',
     ...(item.content ? { contentSnippet: item.content } : {}),
     createdAt: item.createdAt,
     read: item.read,

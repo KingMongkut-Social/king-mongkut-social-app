@@ -607,3 +607,120 @@
   height: 11px;
   stroke-width: 2.25;
 }
+
+
+/* Mobile header and viewport-safe overlays */
+.notification-text,
+.notification-actor,
+.notification-snippet {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .site-header__inner {
+    gap: 6px;
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+  }
+
+  .brand-title {
+    min-width: 0;
+    max-width: min(52vw, 220px);
+    overflow: hidden;
+    font-size: clamp(18px, 5.2vw, 22px);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .site-header__actions {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  .site-header__actions .icon-btn,
+  .account-menu-trigger {
+    min-width: var(--touch-target-mobile);
+    min-height: var(--touch-target-mobile);
+  }
+
+  .account-menu-trigger {
+    justify-content: center;
+    padding: 4px;
+  }
+
+  .account-trigger__chevron {
+    display: none;
+  }
+
+  .notification-bell-wrap {
+    position: static;
+  }
+
+  .notifications-dropdown {
+    position: fixed;
+    top: calc(var(--layout-header-height) + 8px);
+    right: max(12px, env(safe-area-inset-right, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    width: auto;
+    max-width: none;
+    max-height: calc(
+      100dvh - var(--layout-header-height) - var(--layout-mobile-nav-height) -
+      env(safe-area-inset-bottom, 0px) - 28px
+    );
+    border-radius: var(--radius-xl);
+  }
+
+  .notifications-dropdown__header {
+    flex: 0 0 auto;
+    padding: 12px 14px;
+  }
+
+  .notifications-dropdown__list {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .notification-item {
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .notification-body {
+    min-width: 0;
+  }
+
+  .notification-text {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .notification-snippet {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .account-menu {
+    position: fixed;
+    top: calc(var(--layout-header-height) + 8px);
+    right: max(12px, env(safe-area-inset-right, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .brand-title {
+    max-width: 46vw;
+    font-size: 17px;
+  }
+
+  .site-header__actions {
+    gap: 2px;
+  }
+}
