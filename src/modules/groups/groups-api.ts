@@ -51,6 +51,7 @@ export interface GroupPost {
   id: string;
   content: string;
   author: GroupUser;
+  mentions: GroupUser[];
   createdAt: string;
 }
 
@@ -110,6 +111,13 @@ export const groupsApi = {
     const response = await apiClient.request<ApiSuccess<{ group: CommunityGroup }>>('/groups', { method: 'POST', body: input });
     return response.data.group;
   },
+  async update(id: string, input: { name?: string; description?: string }) {
+    const response = await apiClient.request<ApiSuccess<{ group: CommunityGroup }>>(
+      `/groups/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: input },
+    );
+    return response.data.group;
+  },
   async join(id: string) {
     const response = await apiClient.request<ApiSuccess<{ group: CommunityGroup }>>(
       `/groups/${encodeURIComponent(id)}/join`,
@@ -126,9 +134,11 @@ export const groupsApi = {
       body: { userId },
     });
   },
-  async members(id: string, page = 1, limit = 20): Promise<PaginatedGroupMembers> {
+  async members(id: string, page = 1, limit = 20, q = ''): Promise<PaginatedGroupMembers> {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (q.trim()) query.set('q', q.trim());
     const response = await apiClient.request<ApiSuccess<PaginatedGroupMembers>>(
-      `/groups/${encodeURIComponent(id)}/members?${pageQuery(page, limit)}`,
+      `/groups/${encodeURIComponent(id)}/members?${query}`,
     );
     return response.data;
   },
@@ -138,10 +148,10 @@ export const groupsApi = {
     );
     return response.data;
   },
-  async createPost(id: string, content: string) {
+  async createPost(id: string, content: string, mentions: string[] = []) {
     const response = await apiClient.request<ApiSuccess<{ post: GroupPost }>>(
       `/groups/${encodeURIComponent(id)}/posts`,
-      { method: 'POST', body: { content } },
+      { method: 'POST', body: { content, mentions } },
     );
     return response.data.post;
   },
