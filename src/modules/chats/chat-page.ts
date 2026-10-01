@@ -9,7 +9,7 @@ import { createEmptyState } from '../../core/ui/feedback';
 import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
 import { listFriends, type AcceptedFriend } from '../friends/friends-api';
-import { chatsApi, type Chat, type ChatMessage } from './chats-api';
+import { chatImageUrl, chatsApi, type Chat, type ChatMessage } from './chats-api';
 
 
 function chatTitle(chat: Chat, selfId: string): string {
@@ -20,6 +20,10 @@ function chatTitle(chat: Chat, selfId: string): string {
 function messageTime(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+function sameImages(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function formatChatDate(value: string): string {
@@ -94,12 +98,29 @@ export function chatPage(context: RouteContext): PageView {
   const typingIndicator = el('div', { className: 'chat-typing-indicator', attrs: { 'aria-live': 'polite' } });
   typingIndicator.hidden = true;
   const composer = el('form', { className: 'chat-composer' });
+  const imagePreview = el('div', { className: 'chat-composer__image-preview', attrs: { 'aria-live': 'polite' } });
+  const imageInput = el('input', {
+    className: 'chat-composer__file-input',
+    attrs: {
+      type: 'file',
+      accept: 'image/jpeg,image/png,image/gif,image/webp,image/avif',
+      multiple: 'true',
+      'aria-label': 'เลือกรูปภาพเพื่อส่ง',
+    },
+  });
+  const composerRow = el('div', { className: 'chat-composer__row' });
+  const imageButton = el('button', {
+    className: 'chat-composer__media-button',
+    attrs: { type: 'button', 'aria-label': 'เพิ่มรูปภาพ', title: 'เพิ่มรูปภาพ' },
+  });
+  imageButton.append(reactIcon('image', { size: 20 }));
   const messageInput = el('textarea', {
     className: 'chat-composer__input',
     attrs: { rows: '1', maxlength: '4000', placeholder: 'พิมพ์ข้อความ...', 'aria-label': 'พิมพ์ข้อความ' },
   });
   const sendButton = el('button', { className: 'button button--primary chat-composer__send', text: 'ส่ง', attrs: { type: 'submit' } });
-  composer.append(messageInput, sendButton);
+  composerRow.append(imageButton, messageInput, sendButton);
+  composer.append(imagePreview, imageInput, composerRow);
   panel.append(panelHeader, loadOlderButton, messageArea, emptyPanel, typingIndicator, composer);
   workspace.append(sidebar, panel);
   root.append(workspace);
@@ -115,7 +136,8 @@ export function chatPage(context: RouteContext): PageView {
   let disposed = false;
   let messageVersion = 0;
   let wasConnected = false;
-  let pendingSubmission: { chatId: string; content: string; startedAt: number } | null = null;
+  let pendingSubmission: { chatId: string; content: string; images: string[]; startedAt: number } | null = null;
+  let pendingImages: Array<{ file: File; previewUrl: string }> = [];
   const onlineByUserId = new Map<string, boolean>();
   let typingTimer: number | undefined;
   const typingUsersByChat = new Map<string, Set<string>>();
@@ -211,7 +233,10 @@ export function chatPage(context: RouteContext): PageView {
         });
       const body = el('span', { className: 'chat-list__body' });
       const titleLine = el('span', { className: 'chat-list__title', text: title });
-      const preview = el('span', { className: 'chat-list__preview', text: chat.lastMessage?.content || (chat.type === 'group' ? `${chat.members.length} สมาชิก` : 'เริ่มบทสนทนา') });
+      const previewText = chat.lastMessage?.content
+        || (chat.lastMessage?.images?.length ? (chat.lastMessage.images.length > 1 ? `ส่งรูปภาพ ${chat.lastMessage.images.length} รูป` : 'ส่งรูปภาพ') : '')
+        || (chat.type === 'group' ? `${chat.members.length} สมาชิก` : 'เริ่มบทสนทนา');
+      const preview = el('span', { className: 'chat-list__preview', text: previewText });
       body.append(titleLine, preview);
       button.append(avatar, body);
       if (chat.lastMessage) button.append(el('span', { className: 'chat-list__time', text: formatRelativeTime(chat.lastMessage.createdAt) }));
@@ -263,6 +288,7 @@ export function chatPage(context: RouteContext): PageView {
       for (const friend of friends) {
         if (typeof friend.isOnline === 'boolean') onlineByUserId.set(friend.id, friend.isOnline);
       }
+      renderChats();
       renderHeader();
     } catch {
       // The conversation remains usable if presence cannot be loaded.
@@ -305,7 +331,32 @@ export function chatPage(context: RouteContext): PageView {
       if (!self && chat?.type === 'group' && !isGrouped) {
         item.append(el('span', { className: 'chat-message__sender', text: sender }));
       }
-      item.append(el('p', { className: 'chat-message__content chat-message__bubble', text: message.content }));
+      if (message.images?.length) {
+        const media = el('div', {
+          className: `chat-message__images chat-message__images--${Math.min(message.images.length, 4)}`,
+        });
+        for (const [index, path] of message.images.entries()) {
+          const fullUrl = chatImageUrl(path);
+          const link = el('a', {
+            className: 'chat-message__image-link',
+            attrs: {
+              href: fullUrl,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              'aria-label': `เปิดรูปภาพที่ ${index + 1}`,
+            },
+          });
+          link.append(el('img', {
+            className: 'chat-message__image',
+            attrs: { src: fullUrl, alt: 'รูปภาพในแชท', loading: 'lazy' },
+          }));
+          media.append(link);
+        }
+        item.append(media);
+      }
+      if (message.content) {
+        item.append(el('p', { className: 'chat-message__content chat-message__bubble', text: message.content }));
+      }
       item.append(el('time', { className: 'chat-message__time', text: messageTime(message.createdAt), attrs: { datetime: message.createdAt } }));
       messageArea.append(item);
     }
@@ -395,7 +446,7 @@ export function chatPage(context: RouteContext): PageView {
     event.preventDefault();
     if (!selectedId || sendButton.disabled) return;
     const content = messageInput.value.trim();
-    if (!content) return;
+    if (!content && pendingImages.length === 0) return;
     const chatId = selectedId;
     if (typingTimer) {
       window.clearTimeout(typingTimer);
@@ -403,16 +454,21 @@ export function chatPage(context: RouteContext): PageView {
     }
     realtime.sendTyping(chatId, false);
     const startedAt = Date.now();
-    pendingSubmission = { chatId, content, startedAt };
     sendButton.disabled = true;
+    imageButton.disabled = true;
     try {
+      const uploadedImages = pendingImages.length
+        ? await Promise.all(pendingImages.map(async ({ file }) => (await chatsApi.uploadImage(file)).url))
+        : [];
+      pendingSubmission = { chatId, content, images: uploadedImages, startedAt };
       const sent = realtime.isConnected()
-        ? await realtime.sendMessage(chatId, content)
-        : await chatsApi.send(chatId, content);
+        ? await realtime.sendMessage(chatId, content, uploadedImages)
+        : await chatsApi.send(chatId, content, uploadedImages);
       if (disposed) return;
       if (selectedId === chatId) mergeMessages([sent], true);
       if (messageInput.value.trim() === content) messageInput.value = '';
-      sendButton.hidden = !messageInput.value.trim();
+      clearPendingImages();
+      updateComposerState();
       pendingSubmission = null;
       const chat = chats.find((item) => item.id === chatId);
       if (chat) mergeChat({ ...chat, lastMessage: sent, updatedAt: sent.createdAt });
@@ -422,10 +478,16 @@ export function chatPage(context: RouteContext): PageView {
         try {
           const latest = await chatsApi.messages(chatId);
           if (selectedId === chatId) mergeMessages(latest);
-          const delivered = latest.find((message) => message.senderId === selfId && message.content === content && new Date(message.createdAt).getTime() >= startedAt - 2000);
+          const expectedImages = pendingSubmission?.images ?? [];
+          const delivered = latest.find((message) =>
+            message.senderId === selfId
+            && message.content === content
+            && sameImages(message.images ?? [], expectedImages)
+            && new Date(message.createdAt).getTime() >= startedAt - 2000);
           if (delivered) {
             if (messageInput.value.trim() === content) messageInput.value = '';
-            sendButton.hidden = !messageInput.value.trim();
+            clearPendingImages();
+            updateComposerState();
             pendingSubmission = null;
             return;
           }
@@ -437,9 +499,70 @@ export function chatPage(context: RouteContext): PageView {
       }
     } finally {
       sendButton.disabled = false;
-      messageInput.focus();
+      imageButton.disabled = false;
+      messageInput.focus({ preventScroll: true });
     }
   });
+  function updateComposerState(): void {
+    sendButton.hidden = !messageInput.value.trim() && pendingImages.length === 0;
+    imagePreview.hidden = pendingImages.length === 0;
+  }
+
+  function renderPendingImages(): void {
+    clear(imagePreview);
+    for (const [index, item] of pendingImages.entries()) {
+      const preview = el('div', { className: 'chat-composer__image-item' });
+      preview.append(el('img', {
+        attrs: { src: item.previewUrl, alt: `รูปที่เลือก ${index + 1}` },
+      }));
+      const remove = el('button', {
+        className: 'chat-composer__image-remove',
+        attrs: { type: 'button', 'aria-label': `ลบรูปที่ ${index + 1}` },
+      });
+      remove.append(reactIcon('close', { size: 12 }));
+      remove.addEventListener('click', () => {
+        const [removed] = pendingImages.splice(index, 1);
+        if (removed) URL.revokeObjectURL(removed.previewUrl);
+        renderPendingImages();
+        updateComposerState();
+      });
+      preview.append(remove);
+      imagePreview.append(preview);
+    }
+    updateComposerState();
+  }
+
+  function clearPendingImages(): void {
+    for (const item of pendingImages) URL.revokeObjectURL(item.previewUrl);
+    pendingImages = [];
+    imageInput.value = '';
+    clear(imagePreview);
+    updateComposerState();
+  }
+
+  imageButton.addEventListener('click', () => imageInput.click());
+  imageInput.addEventListener('change', () => {
+    const selected = [...(imageInput.files ?? [])];
+    imageInput.value = '';
+    const allowed = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']);
+    for (const file of selected) {
+      if (pendingImages.length >= 4) {
+        toast.info('ส่งรูปได้สูงสุด 4 รูปต่อข้อความ');
+        break;
+      }
+      if (!allowed.has(file.type)) {
+        toast.error('รองรับเฉพาะ JPEG, PNG, GIF, WebP และ AVIF');
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} มีขนาดเกิน 10 MB`);
+        continue;
+      }
+      pendingImages.push({ file, previewUrl: URL.createObjectURL(file) });
+    }
+    renderPendingImages();
+  });
+
   messageInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
@@ -447,7 +570,7 @@ export function chatPage(context: RouteContext): PageView {
     }
   });
   messageInput.addEventListener('input', () => {
-    sendButton.hidden = !messageInput.value.trim();
+    updateComposerState();
     if (selectedId) {
       realtime.sendTyping?.(selectedId, true);
       if (typingTimer) window.clearTimeout(typingTimer);
@@ -456,7 +579,7 @@ export function chatPage(context: RouteContext): PageView {
       }, 1500);
     }
   });
-  sendButton.hidden = true;
+  updateComposerState();
 
   const groupDialog = el('dialog', { className: 'chat-group-dialog' });
   const groupForm = el('form', { className: 'chat-group-form' });
@@ -598,9 +721,14 @@ export function chatPage(context: RouteContext): PageView {
         ]
       : []),
     realtime.onMessage((message) => {
-      if (pendingSubmission && message.chatId === pendingSubmission.chatId && message.senderId === selfId &&
-          message.content === pendingSubmission.content && new Date(message.createdAt).getTime() >= pendingSubmission.startedAt - 2000) {
+      if (pendingSubmission
+          && message.chatId === pendingSubmission.chatId
+          && message.senderId === selfId
+          && message.content === pendingSubmission.content
+          && sameImages(message.images ?? [], pendingSubmission.images)
+          && new Date(message.createdAt).getTime() >= pendingSubmission.startedAt - 2000) {
         if (messageInput.value.trim() === pendingSubmission.content) messageInput.value = '';
+        clearPendingImages();
         pendingSubmission = null;
       }
       if (message.chatId === selectedId) mergeMessages([message], true);
@@ -611,6 +739,7 @@ export function chatPage(context: RouteContext): PageView {
     realtime.onConversation((chat) => mergeChat(chat)),
     realtime.onPresenceUpdated(({ userId, isOnline }) => {
       onlineByUserId.set(userId, isOnline);
+      renderChats();
       renderHeader();
     }),
     realtime.onConnection((online) => {
@@ -660,6 +789,7 @@ export function chatPage(context: RouteContext): PageView {
         window.clearTimeout(timer);
       }
       typingExpireTimers.clear();
+      clearPendingImages();
       document.body.classList.remove('is-chat-thread-open');
       for (const unsubscribe of unsubscribers) unsubscribe();
       if (groupDialog.open) groupDialog.close();
