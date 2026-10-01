@@ -304,7 +304,7 @@ function attachGroupMentionAutocomplete(
             role: 'option',
             id: `group-mention-${index}`,
           },
-        }) as HTMLButtonElement;
+        });
         button.append(
           el('span', {
             className: 'group-mention-option__avatar',
@@ -495,7 +495,7 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
             placeholder: 'แชร์อะไรกับสมาชิกในกลุ่ม… พิมพ์ @ เพื่อแท็กสมาชิก',
             'aria-label': 'เขียนโพสต์ในกลุ่ม',
           },
-        }) as HTMLTextAreaElement;
+        });
         const composerFooter = el('div', { className: 'group-composer__footer' });
         composerFooter.append(
           el('span', { className: 'group-composer__hint', text: 'พิมพ์ @ แล้วตามด้วยชื่อเพื่อแท็กสมาชิกในกลุ่ม' }),
@@ -550,7 +550,7 @@ export async function groupPage(context: RouteContext): Promise<PageView> {
           placeholder: 'ค้นหาสมาชิกในกลุ่ม',
           'aria-label': 'ค้นหาสมาชิกในกลุ่ม',
         },
-      }) as HTMLInputElement;
+      });
       const memberList = el('div', { className: 'group-member-list' });
       memberSearch.append(memberInput);
       section.append(memberSearch, memberList);
