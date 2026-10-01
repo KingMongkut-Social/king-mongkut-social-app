@@ -151,7 +151,8 @@ export function chatPage(context: RouteContext): PageView {
   }
 
   function syncChatVisualViewport(): void {
-    if (viewportFrame) cancelAnimationFrame(viewportFrame);
+    if (disposed) return;
+    if (viewportFrame && window.cancelAnimationFrame) window.cancelAnimationFrame(viewportFrame);
     viewportFrame = requestAnimationFrame(() => {
       viewportFrame = 0;
       const mobileThreadOpen = Boolean(selectedId) && window.innerWidth <= 1023;
@@ -870,7 +871,7 @@ export function chatPage(context: RouteContext): PageView {
       root.style.removeProperty('--chat-visible-height');
       document.body.style.removeProperty('--chat-visible-height');
       root.classList.remove('chat-page--keyboard-open');
-      if (viewportFrame) cancelAnimationFrame(viewportFrame);
+      if (viewportFrame && window.cancelAnimationFrame) window.cancelAnimationFrame(viewportFrame);
       window.visualViewport?.removeEventListener('resize', handleViewportChange);
       window.visualViewport?.removeEventListener('scroll', handleViewportChange);
       window.removeEventListener('resize', handleViewportChange);
