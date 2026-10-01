@@ -107,9 +107,9 @@ function subscribe<T>(set: Set<Listener<T>>, listener: Listener<T>): () => void 
 
 export const realtime = {
   isConnected: (): boolean => connected && socket !== null,
-  async sendMessage(chatId: string, content: string): Promise<ChatMessage> {
+  async sendMessage(chatId: string, content: string, images: string[] = []): Promise<ChatMessage> {
     if (!socket || !connected) throw new Error('ไม่สามารถเชื่อมต่อแชทได้');
-    const acknowledgement = await socket.timeout(10000).emitWithAck('chat:send', { chatId, content }) as
+    const acknowledgement = await socket.timeout(10000).emitWithAck('chat:send', { chatId, content, images }) as
       | { success: true; data: ChatMessage }
       | { success: false; error: { code: string; message: string } };
     if (!acknowledgement.success) {

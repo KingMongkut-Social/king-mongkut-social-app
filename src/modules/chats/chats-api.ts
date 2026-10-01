@@ -1,3 +1,4 @@
+import { env } from '../../config/env';
 import { apiClient } from '../../core/api/api-client';
 import type { ApiSuccess } from '../../types/api';
 import type { FriendPerson } from '../friends/friends-api';
@@ -7,7 +8,19 @@ export interface ChatMessage {
   chatId: string;
   senderId: string;
   content: string;
+  images?: string[];
   createdAt: string;
+}
+
+export interface ChatImageAsset {
+  url: string;
+  mimeType: string;
+  size: number;
+}
+
+export function chatImageUrl(path: string): string {
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return new URL(path, env.apiBaseUrl).href;
 }
 
 export interface Chat {
@@ -49,10 +62,20 @@ export const chatsApi = {
     return result.data;
   },
 
-  async send(chatId: string, content: string): Promise<ChatMessage> {
+  async uploadImage(file: File): Promise<ChatImageAsset> {
+    const form = new FormData();
+    form.append('file', file);
+    const result = await apiClient.request<ApiSuccess<{ image: ChatImageAsset }>>('/chats/uploads', {
+      method: 'POST',
+      body: form,
+    });
+    return result.data.image;
+  },
+
+  async send(chatId: string, content: string, images: string[] = []): Promise<ChatMessage> {
     const result = await apiClient.request<ApiSuccess<ChatMessage>>(`/chats/${encodeURIComponent(chatId)}/messages`, {
       method: 'POST',
-      body: { content },
+      body: { content, images },
     });
     return result.data;
   },

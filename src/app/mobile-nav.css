@@ -18,6 +18,8 @@
   box-shadow: 0 -4px 16px rgba(45, 33, 23, 0.06);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  transition: transform 180ms ease;
+  will-change: transform;
 }
 
 @media (min-width: 1024px) {
@@ -101,4 +103,11 @@
 @media (max-width: 359px) {
   .mobile-primary-nav__label { font-size: 10px; }
   .mobile-primary-nav__link[data-nav-id="create"] { flex-basis: 48px; }
+}
+
+
+@media (max-width: 1023px) {
+  body.mobile-chrome-hidden .mobile-primary-nav {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 2px));
+  }
 }

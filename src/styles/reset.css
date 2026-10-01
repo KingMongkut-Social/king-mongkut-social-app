@@ -64,3 +64,22 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Mobile viewport hardening: prevent accidental horizontal zoom/scroll and iOS focus zoom. */
+html,
+body,
+#app {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

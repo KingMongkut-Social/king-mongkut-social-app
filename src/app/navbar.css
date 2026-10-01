@@ -724,3 +724,16 @@
     gap: 2px;
   }
 }
+
+
+/* Facebook-like mobile chrome: hide on downward scroll, reveal on upward scroll. */
+.site-header {
+  transition: transform 180ms ease, box-shadow var(--transition-fast);
+  will-change: transform;
+}
+
+@media (max-width: 1023px) {
+  body.mobile-chrome-hidden .site-header {
+    transform: translateY(calc(-100% - 2px));
+  }
+}
