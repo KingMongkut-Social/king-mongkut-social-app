@@ -8,7 +8,7 @@ export interface ChatMessage {
   chatId: string;
   senderId: string;
   content: string;
-  images: string[];
+  images?: string[];
   createdAt: string;
 }
 
