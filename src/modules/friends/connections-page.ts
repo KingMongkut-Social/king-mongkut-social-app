@@ -67,9 +67,8 @@ function studentCard(person: FriendPerson, summary: string, actions: HTMLElement
   );
   const footer = el('div', { className: 'student-card-footer' });
   footer.append(el('span', { className: 'student-mutual-count', text: summary }), actions);
-  info.append(footer);
   header.append(avatarLink, info);
-  card.append(header);
+  card.append(header, footer);
   return card;
 }
 
