@@ -109,8 +109,9 @@
   }
 
   body.is-chat-thread-open {
-    height: 100vh;
-    height: 100dvh;
+    height: var(--chat-visible-height, 100vh);
+    height: var(--chat-visible-height, 100dvh);
+    max-height: var(--chat-visible-height, 100dvh);
     overflow: hidden;
   }
 
@@ -120,10 +121,10 @@
   }
 
   body.is-chat-thread-open .app-layout {
-    height: 100vh;
-    height: 100dvh;
+    height: var(--chat-visible-height, 100vh);
+    height: var(--chat-visible-height, 100dvh);
     min-height: 0;
-    max-height: 100dvh;
+    max-height: var(--chat-visible-height, 100dvh);
     padding: 0;
     gap: 0;
     overflow: hidden;
