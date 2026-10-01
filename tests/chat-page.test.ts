@@ -101,6 +101,7 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(window, 'visualViewport');
 });
 
 describe('chat page', () => {
@@ -185,6 +186,45 @@ describe('chat page', () => {
     expect(page.element.querySelector('.chat-workspace')?.classList.contains('chat-workspace--thread-open')).toBe(false);
     expect(window.location.pathname).toBe('/chat');
     expect(window.location.search).toBe('');
+  });
+
+  it('resizes the open mobile thread to stay above the software keyboard', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
+
+    let visibleHeight = 760;
+    const viewport = new EventTarget();
+    Object.defineProperties(viewport, {
+      height: { configurable: true, get: () => visibleHeight },
+      offsetTop: { configurable: true, get: () => 0 },
+    });
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: viewport as VisualViewport,
+    });
+
+    page = chatPage(context());
+    document.body.append(page.element);
+    await vi.waitFor(() => expect(page!.element.querySelectorAll('.chat-list__item')).toHaveLength(1));
+    page.element.querySelector<HTMLButtonElement>('.chat-list__item')!.click();
+    await vi.waitFor(() => expect(mocks.chatMessages).toHaveBeenCalledWith('chat-1'));
+
+    expect(page.element.style.getPropertyValue('--chat-visible-height')).toBe('760px');
+    expect(document.body.style.getPropertyValue('--chat-visible-height')).toBe('760px');
+
+    const input = page.element.querySelector<HTMLTextAreaElement>('.chat-composer__input')!;
+    input.focus();
+    visibleHeight = 430;
+    viewport.dispatchEvent(new Event('resize'));
+
+    expect(page.element.style.getPropertyValue('--chat-visible-height')).toBe('430px');
+    expect(document.body.style.getPropertyValue('--chat-visible-height')).toBe('430px');
+    expect(page.element.classList.contains('chat-page--keyboard-open')).toBe(true);
+
+    input.blur();
+    visibleHeight = 760;
+    viewport.dispatchEvent(new Event('resize'));
+    expect(page.element.classList.contains('chat-page--keyboard-open')).toBe(false);
   });
 
   it('offers only accepted friends in the group member picker', async () => {
