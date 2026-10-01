@@ -157,6 +157,7 @@ export function chatPage(context: RouteContext): PageView {
       const mobileThreadOpen = Boolean(selectedId) && window.innerWidth <= 1023;
       if (!mobileThreadOpen) {
         root.style.removeProperty('--chat-visible-height');
+        document.body.style.removeProperty('--chat-visible-height');
         root.classList.remove('chat-page--keyboard-open');
         return;
       }
@@ -164,6 +165,7 @@ export function chatPage(context: RouteContext): PageView {
       const viewport = window.visualViewport;
       const visibleHeight = Math.max(320, Math.round(viewport?.height ?? window.innerHeight));
       root.style.setProperty('--chat-visible-height', `${visibleHeight}px`);
+      document.body.style.setProperty('--chat-visible-height', `${visibleHeight}px`);
 
       const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight);
       const keyboardHeight = Math.max(0, layoutHeight - visibleHeight - Math.max(0, viewport?.offsetTop ?? 0));
@@ -866,6 +868,7 @@ export function chatPage(context: RouteContext): PageView {
       clearPendingImages();
       document.body.classList.remove('is-chat-thread-open');
       root.style.removeProperty('--chat-visible-height');
+      document.body.style.removeProperty('--chat-visible-height');
       root.classList.remove('chat-page--keyboard-open');
       if (viewportFrame) cancelAnimationFrame(viewportFrame);
       window.visualViewport?.removeEventListener('resize', handleViewportChange);
