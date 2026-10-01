@@ -71,12 +71,15 @@ describe('post social controls', () => {
     expect(card.querySelector('.post-social-summary__likes')?.textContent).toContain('3');
 
     const footerButtons = [...card.querySelectorAll<HTMLButtonElement>('.post-reactions-footer > .reaction-btn')];
-    const saveButton = footerButtons.find((button) => button.textContent === 'บันทึก')!;
+    const moreButton = footerButtons.find((button) => button.getAttribute('aria-label') === 'ตัวเลือกเพิ่มเติม')!;
+    moreButton.click();
+    const saveButton = [...card.querySelectorAll<HTMLButtonElement>('.post-social-menu__item')]
+      .find((button) => button.textContent?.includes('บันทึกโพสต์'))!;
     saveButton.click();
     await vi.waitFor(() => expect(mocks.bookmark).toHaveBeenCalledWith(post._id));
     await vi.waitFor(() => expect(saveButton.getAttribute('aria-pressed')).toBe('true'));
 
-    const commentButton = footerButtons.find((button) => button.textContent === 'แสดงความคิดเห็น')!;
+    const commentButton = footerButtons.find((button) => button.textContent?.includes('ความคิดเห็น'))!;
     commentButton.click();
     await vi.waitFor(() => expect(mocks.listComments).toHaveBeenCalledWith(post._id, 1, 50));
     expect(card.querySelector('.comments-list')?.textContent).toContain('Great work');
@@ -94,12 +97,14 @@ describe('post social controls', () => {
     mountPostSocial(card, post, user._id, user.name);
 
     const footer = card.querySelector('.post-reactions-footer')!;
-    expect(footer.querySelectorAll('.reaction-btn')).toHaveLength(5);
-    expect([...footer.querySelectorAll<HTMLButtonElement>('.reaction-btn')]
-      .find((button) => button.textContent === 'รายงาน')?.classList.contains('reaction-btn--danger')).toBe(true);
+    expect(footer.querySelectorAll('.reaction-btn')).toHaveLength(4);
+    const reportButton = [...card.querySelectorAll<HTMLButtonElement>('.post-social-menu__item')]
+      .find((button) => button.textContent?.includes('รายงานโพสต์'));
+    expect(reportButton?.classList.contains('post-social-menu__item--danger')).toBe(true);
+    expect(footer.textContent).not.toContain('รายงานโพสต์');
 
     const commentButton = [...footer.querySelectorAll<HTMLButtonElement>('.reaction-btn')]
-      .find((button) => button.textContent === 'แสดงความคิดเห็น')!;
+      .find((button) => button.textContent?.includes('ความคิดเห็น'))!;
     commentButton.click();
     await vi.waitFor(() => expect(mocks.listComments).toHaveBeenCalled());
 
