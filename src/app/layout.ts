@@ -276,7 +276,13 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   const bellWrap = el('div', { className: 'notification-bell-wrap' });
   const bellBtn = el('button', {
     className: 'icon-btn',
-    attrs: { type: 'button', 'aria-label': 'การแจ้งเตือน', title: 'การแจ้งเตือน' },
+    attrs: {
+      type: 'button',
+      'aria-label': 'การแจ้งเตือน',
+      title: 'การแจ้งเตือน',
+      'aria-haspopup': 'true',
+      'aria-expanded': 'false',
+    },
   });
   bellBtn.append(reactIcon('bell', { size: 19 }));
   bellBtn.append(el('span', { className: 'header-action-label', text: 'การแจ้งเตือน' }));
@@ -348,6 +354,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       else if (n.type === 'friend_accept') actionDesc = ' ตอบรับคำขอเป็นเพื่อนของคุณ';
       else if (n.type === 'group_join') actionDesc = ' เข้าร่วมกลุ่มของคุณ';
       else if (n.type === 'group_invite') actionDesc = ' เชิญคุณเข้าร่วมกลุ่ม';
+      else if (n.type === 'group_mention') actionDesc = ' แท็กคุณในโพสต์ในกลุ่ม';
       else actionDesc = ' มีกิจกรรมใหม่';
       textLine.append(document.createTextNode(actionDesc));
 
@@ -375,15 +382,16 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       item.addEventListener('click', () => {
         notificationStore.markAsRead(n.id);
         notifDropdown.style.display = 'none';
+      bellBtn.setAttribute('aria-expanded', 'false');
         let target = '/';
         if (n.type === 'post_reaction' || n.type === 'post_comment' || n.type === 'comment_reply') {
-          target = n.postId ? `/posts/${encodeURIComponent(n.postId)}` : '/';
+          target = n.entityId ? `/posts/${encodeURIComponent(n.entityId)}` : '/';
         } else if (n.type === 'friend_request' || n.type === 'friend_accept') {
           target = '/connections';
         } else if (n.type === 'group_invite') {
           target = '/groups';
-        } else if (n.type === 'group_join') {
-          target = n.postId ? `/groups/${encodeURIComponent(n.postId)}` : '/groups';
+        } else if (n.type === 'group_join' || n.type === 'group_mention') {
+          target = n.entityId ? `/groups/${encodeURIComponent(n.entityId)}` : '/groups';
         }
         window.history.pushState(null, '', target);
         window.dispatchEvent(new PopStateEvent('popstate'));
@@ -405,11 +413,13 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     }
     const isHidden = notifDropdown.style.display === 'none';
     notifDropdown.style.display = isHidden ? 'block' : 'none';
+    bellBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
   });
 
   document.addEventListener('click', (e) => {
     if (!bellWrap.contains(e.target as Node)) {
       notifDropdown.style.display = 'none';
+      bellBtn.setAttribute('aria-expanded', 'false');
     }
   });
 
@@ -578,6 +588,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     mobileSearchBtn.hidden = !authenticated;
     if (!authenticated) {
       notifDropdown.style.display = 'none';
+      bellBtn.setAttribute('aria-expanded', 'false');
       closeAutocomplete();
     }
 
@@ -728,6 +739,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
         e.stopPropagation();
         const opening = menu.hidden;
         notifDropdown.style.display = 'none';
+      bellBtn.setAttribute('aria-expanded', 'false');
         menu.hidden = !opening;
         trigger.setAttribute('aria-expanded', opening ? 'true' : 'false');
       });
