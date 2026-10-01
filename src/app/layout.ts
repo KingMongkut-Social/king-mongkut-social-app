@@ -483,12 +483,12 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   const mobileNav = el('nav', { className: 'mobile-primary-nav', attrs: { 'aria-label': 'เมนูหลักบนมือถือ' } });
   root.replaceChildren(header, mobileNav, appLayout);
 
-  const mobileViewport = window.matchMedia('(max-width: 1023px)');
+  const isMobileViewport = (): boolean => window.innerWidth <= 1023;
   let lastScrollY = Math.max(0, window.scrollY);
   let scrollFrame = 0;
 
   const setMobileChromeHidden = (hidden: boolean): void => {
-    document.body.classList.toggle('mobile-chrome-hidden', mobileViewport.matches && hidden);
+    document.body.classList.toggle('mobile-chrome-hidden', isMobileViewport() && hidden);
   };
 
   const mobileOverlayOpen = (): boolean => (
@@ -500,7 +500,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   const updateMobileChromeFromScroll = (): void => {
     scrollFrame = 0;
     const current = Math.max(0, window.scrollY);
-    if (!mobileViewport.matches
+    if (!isMobileViewport()
       || document.body.classList.contains('is-auth-page')
       || document.body.classList.contains('is-chat-thread-open')) {
       setMobileChromeHidden(false);
@@ -524,11 +524,11 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   window.addEventListener('resize', () => {
     lastScrollY = Math.max(0, window.scrollY);
-    if (!mobileViewport.matches) setMobileChromeHidden(false);
+    if (!isMobileViewport()) setMobileChromeHidden(false);
   }, { passive: true });
 
   document.addEventListener('focusin', (event) => {
-    if (!mobileViewport.matches) return;
+    if (!isMobileViewport()) return;
     if (event.target instanceof HTMLInputElement
       || event.target instanceof HTMLTextAreaElement
       || event.target instanceof HTMLSelectElement) {
