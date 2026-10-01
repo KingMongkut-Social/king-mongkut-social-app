@@ -255,8 +255,8 @@ export function completeProfilePage(context: RouteContext): PageView {
     field('username', 'Username *', username, '3–30 ตัว ใช้ a–z, 0–9, _ หรือ .'),
     field('bio', 'Bio *', bio, 'แนะนำตัวอย่างน้อย 1 ตัวอักษร'),
     field('university', 'มหาวิทยาลัย', university, 'กำหนดอัตโนมัติจากอีเมลมหาวิทยาลัยและแก้ไขไม่ได้'),
-    field('faculty', 'คณะ *', facultyCombobox.container),
-    field('department', 'ภาควิชา / สาขาวิชา *', departmentCombobox.container),
+    field('faculty', 'คณะ *', facultyCombobox.container, 'พิมพ์ค้นหาหรือเลือกจากรายการทั้งหมด หากไม่มีสามารถพิมพ์ระบุเองได้'),
+    field('department', 'ภาควิชา / สาขาวิชา *', departmentCombobox.container, 'พิมพ์ค้นหาหรือเลือกจากรายการทั้งหมด หากไม่มีสามารถพิมพ์ระบุเองได้'),
     field('academicYear', 'ชั้นปี *', academicYear),
     formError,
   );
@@ -274,18 +274,6 @@ export function completeProfilePage(context: RouteContext): PageView {
 
     clearFieldErrors(form);
     formError.textContent = '';
-    setImageError('avatar', '');
-    setImageError('cover', '');
-
-    let imageInvalid = false;
-    if (!avatar.hasImage()) {
-      setImageError('avatar', 'กรุณาเลือกรูปโปรไฟล์');
-      imageInvalid = true;
-    }
-    if (!cover.hasImage()) {
-      setImageError('cover', 'กรุณาเลือกรูปหน้าปก');
-      imageInvalid = true;
-    }
 
     const result = profileSchema.safeParse({
       name: name.value,
@@ -297,6 +285,17 @@ export function completeProfilePage(context: RouteContext): PageView {
     });
 
     if (!result.success) showZodErrors(form, result.error);
+
+    let imageInvalid = false;
+    if (!avatar.hasImage()) {
+      setImageError('avatar', 'กรุณาเลือกรูปโปรไฟล์');
+      imageInvalid = true;
+    }
+    if (!cover.hasImage()) {
+      setImageError('cover', 'กรุณาเลือกรูปหน้าปก');
+      imageInvalid = true;
+    }
+
     if (!result.success || imageInvalid) {
       formError.textContent = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบทุกช่อง';
       form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
