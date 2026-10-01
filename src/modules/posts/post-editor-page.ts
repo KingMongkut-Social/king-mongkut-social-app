@@ -2,6 +2,7 @@ import type { PageView, RouteContext } from '../../core/router/router';
 import { el } from '../../core/ui/dom';
 import { errorMessage } from '../../core/ui/error-message';
 import { toast } from '../../core/ui/toast';
+import { reactIcon } from '../../core/ui/react-icon';
 import type { PostAttachment } from '../../types/api';
 import { postSchema } from '../../validation/schemas';
 import { clearFieldErrors, field, showZodErrors } from '../shared/form';
@@ -17,11 +18,21 @@ export async function postEditorPage(context: RouteContext): Promise<PageView> {
   const existing = id ? (await postsApi.getById(id)).data.post : null;
 
   const section = el('section', { className: 'page-shell page-shell--narrow' });
+  const backLink = el('a', {
+    className: 'editor-back-link',
+    attrs: {
+      href: editing ? '/dashboard' : '/',
+      'aria-label': 'ย้อนกลับ',
+      title: 'ย้อนกลับ',
+    },
+  });
+  backLink.append(reactIcon('arrow-left'));
   const heading = el('div', { className: 'editor-heading' },
-    el('div', {},
+    backLink,
+    el('div', { className: 'editor-heading__copy' },
       el('p', { className: 'eyebrow', text: editing ? 'แก้ไขโพสต์' : 'สร้างโพสต์ใหม่' }),
-      el('h1', { text: editing ? 'อัปเดตโพสต์ของคุณ' : 'แบ่งปันโปรเจกต์และไอเดียของคุณ' }),
-      el('p', { className: 'muted', text: 'บันทึกเป็นแบบร่างหรือเผยแพร่สู่ชาว 3 พระจอมฯ ทันที' }),
+      el('h1', { text: editing ? 'แก้ไขโพสต์' : 'สร้างโพสต์' }),
+      el('p', { className: 'muted', text: 'เขียน แชร์รูปภาพ และเลือกเผยแพร่หรือบันทึกเป็นแบบร่าง' }),
     ),
   );
 
