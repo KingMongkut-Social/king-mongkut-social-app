@@ -14,7 +14,7 @@ export interface RealtimeNotification {
   id: string;
   recipientId: string;
   actor: { id: string; name: string; avatarUrl: string | null; university: string } | null;
-  type: 'friend_request' | 'friend_accept' | 'post_reaction' | 'post_comment' | 'comment_reply' | 'group_invite' | 'group_join';
+  type: 'friend_request' | 'friend_accept' | 'post_reaction' | 'post_comment' | 'comment_reply' | 'group_invite' | 'group_join' | 'group_mention';
   entityId: string | null;
   content: string | null;
   read: boolean;
