@@ -153,10 +153,10 @@ describe('chat page', () => {
   });
 
   it('uploads an image and sends an image-only realtime message', async () => {
-    vi.stubGlobal('URL', {
-      ...URL,
-      createObjectURL: vi.fn(() => 'blob:preview'),
-      revokeObjectURL: vi.fn(),
+    const NativeURL = URL;
+    vi.stubGlobal('URL', class extends NativeURL {
+      static createObjectURL = vi.fn(() => 'blob:preview');
+      static revokeObjectURL = vi.fn();
     });
     const image: ChatImage = {
       url: '/api/v1/chats/uploads/11111111-1111-1111-1111-111111111111.png',
