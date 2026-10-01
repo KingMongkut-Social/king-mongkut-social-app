@@ -18,6 +18,8 @@
   box-shadow: 0 -4px 16px rgba(45, 33, 23, 0.06);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  transition: transform 180ms ease, box-shadow var(--transition-fast);
+  will-change: transform;
 }
 
 @media (min-width: 1024px) {
@@ -101,4 +103,18 @@
 @media (max-width: 359px) {
   .mobile-primary-nav__label { font-size: 10px; }
   .mobile-primary-nav__link[data-nav-id="create"] { flex-basis: 48px; }
+}
+
+
+@media (max-width: 1023px) {
+  body.mobile-chrome-hidden:not(.is-chat-thread-open) .mobile-primary-nav {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px) + 2px));
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-primary-nav {
+    transition: none;
+  }
 }
