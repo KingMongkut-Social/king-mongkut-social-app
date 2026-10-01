@@ -200,7 +200,7 @@ describe('chat page', () => {
     });
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
-      value: viewport as VisualViewport,
+      value: viewport,
     });
 
     page = chatPage(context());
