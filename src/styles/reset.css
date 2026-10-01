@@ -50,6 +50,13 @@ body {
   [role="button"] {
     touch-action: manipulation;
   }
+
+  input,
+  select,
+  textarea,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
 }
 
 img, picture, video, canvas, svg {
