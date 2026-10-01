@@ -1791,13 +1791,17 @@
   }
 
   .editor-heading {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
     align-items: center;
-    min-height: 52px;
-    margin: calc(var(--space-4) * -1) calc(var(--layout-gutter-mobile) * -1) 0;
-    padding: 8px var(--layout-gutter-mobile);
+    min-height: 56px;
+    margin: 0;
+    padding: 6px var(--layout-gutter-mobile);
     border-bottom: 1px solid var(--border-subtle);
-    background: var(--surface-card);
+    background: rgba(255,255,255,.97);
+    backdrop-filter: blur(10px);
   }
 
   .editor-heading .eyebrow,
@@ -1814,7 +1818,7 @@
   .editor-form {
     margin-inline: calc(var(--layout-gutter-mobile) * -1);
     padding: 14px var(--layout-gutter-mobile)
-      calc(var(--layout-mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 20px);
+      calc(env(safe-area-inset-bottom, 0px) + 22px);
     gap: 14px;
     border: 0;
     border-radius: 0;
