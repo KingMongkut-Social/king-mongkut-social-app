@@ -139,3 +139,27 @@
     overflow: hidden;
   }
 }
+
+
+/* Mobile post editor shell */
+@media (max-width: 639px) {
+  body.is-post-editor-page {
+    background: var(--surface-card);
+  }
+
+  body.is-post-editor-page .site-header,
+  body.is-post-editor-page .mobile-primary-nav {
+    display: none !important;
+  }
+
+  body.is-post-editor-page .app-layout {
+    min-height: 100dvh;
+    padding: 0;
+    gap: 0;
+  }
+
+  body.is-post-editor-page .app-content {
+    max-width: none;
+    margin: 0;
+  }
+}
