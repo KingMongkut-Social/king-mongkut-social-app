@@ -104,6 +104,7 @@ export function chatPage(context: RouteContext): PageView {
       realtime.sendTyping(selectedId, false);
     }
     selectedId = null;
+    clearSelectedImage();
     window.history.replaceState(null, '', '/chat');
     workspace.classList.remove('chat-workspace--thread-open');
     document.body.classList.remove('is-chat-thread-open');
