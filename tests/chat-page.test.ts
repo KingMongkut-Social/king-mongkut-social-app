@@ -127,11 +127,12 @@ describe('chat page', () => {
   });
 
   it('previews, uploads, sends, and renders chat images', async () => {
-    vi.stubGlobal('URL', {
-      ...URL,
-      createObjectURL: vi.fn(() => 'blob:preview'),
-      revokeObjectURL: vi.fn(),
-    });
+    const NativeURL = URL;
+    class TestURL extends NativeURL {
+      static createObjectURL = vi.fn(() => 'blob:preview');
+      static revokeObjectURL = vi.fn();
+    }
+    vi.stubGlobal('URL', TestURL);
     page = chatPage(context());
     document.body.append(page.element);
     await vi.waitFor(() => expect(mocks.chatMessages).toHaveBeenCalledWith('chat-1'));
