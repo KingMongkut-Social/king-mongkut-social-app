@@ -60,9 +60,9 @@ export function chatPage(context: RouteContext): PageView {
   const panelHeader = el('div', { className: 'chat-panel__header' });
   const backButton = el('button', {
     className: 'chat-back-button',
-    attrs: { type: 'button', 'aria-label': 'กลับไปหน้ารายการแชท' },
-    text: '← กลับ',
+    attrs: { type: 'button', 'aria-label': 'กลับไปหน้ารายการแชท', title: 'กลับไปหน้ารายการแชท' },
   });
+  backButton.append(reactIcon('arrow-left', { size: 20 }));
   backButton.addEventListener('click', () => {
     if (selectedId && typingTimer) {
       window.clearTimeout(typingTimer);
@@ -770,7 +770,26 @@ export function chatPage(context: RouteContext): PageView {
       return;
     }
     const requested = context.query.get('chatId');
-    const first = (requested && chats.find((chat) => chat.id === requested)) || sortedChats()[0];
+    const requestedChat = requested ? chats.find((chat) => chat.id === requested) : undefined;
+    const mobile = window.innerWidth <= 1023;
+
+    if (requestedChat) {
+      await selectChat(requestedChat.id);
+      return;
+    }
+
+    // Mobile follows a Messenger/Facebook master-detail flow:
+    // /chat shows the conversation list first, then a selected thread becomes full screen.
+    if (mobile) {
+      selectedId = null;
+      document.body.classList.remove('is-chat-thread-open');
+      workspace.classList.remove('chat-workspace--thread-open');
+      renderChats();
+      renderHeader();
+      return;
+    }
+
+    const first = sortedChats()[0];
     if (first) await selectChat(first.id);
     else renderHeader();
   }
