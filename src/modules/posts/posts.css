@@ -1259,3 +1259,112 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Mobile readability and viewport collision fixes */
+@media (max-width: 639px) {
+  .create-post-input-box,
+  .comment-input-field,
+  .comment-input-form input,
+  .comment-reply-form input,
+  .edit-post-modal__textarea {
+    font-size: 16px;
+  }
+
+  .feed-post-card,
+  .create-post-card {
+    gap: var(--space-3);
+  }
+
+  .post-body-text {
+    font-size: 16px;
+    line-height: 1.58;
+    overflow-wrap: anywhere;
+  }
+
+  .post-author-name {
+    font-size: 16px;
+  }
+
+  .post-menu-btn {
+    width: var(--touch-target-mobile);
+    height: var(--touch-target-mobile);
+  }
+
+  .post-actions-dropdown {
+    right: 0;
+    width: min(220px, calc(100vw - 24px));
+  }
+
+  .post-dropdown-item {
+    min-height: var(--touch-target-mobile);
+    font-size: 15px;
+  }
+
+  .reaction-btn {
+    min-height: var(--touch-target-mobile);
+    padding-inline: 6px;
+    font-size: 13px;
+  }
+
+  .comment-bubble {
+    font-size: 14px;
+  }
+
+  .btn-reply-comment {
+    min-height: 36px;
+    padding-inline: 8px;
+  }
+
+  .reaction-picker {
+    position: fixed;
+    z-index: 130;
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--layout-mobile-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    justify-content: space-around;
+    max-width: none;
+    border-radius: var(--radius-xl);
+  }
+
+  .reaction-choice,
+  .reaction-picker-emoji {
+    width: var(--touch-target-mobile);
+    height: var(--touch-target-mobile);
+  }
+
+  .feeling-picker-popover {
+    position: fixed;
+    z-index: 130;
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--layout-mobile-nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    width: auto;
+    max-height: min(420px, 58dvh);
+    overflow-y: auto;
+  }
+
+  .edit-post-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(
+      100dvh - max(24px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px))
+    );
+  }
+
+  .edit-post-modal__close-btn {
+    width: var(--touch-target-mobile);
+    height: var(--touch-target-mobile);
+  }
+}
+
+@media (max-width: 359px) {
+  .reaction-btn {
+    gap: 4px;
+    padding-inline: 4px;
+    font-size: 12px;
+  }
+
+  .comment-item--reply {
+    margin-left: 16px;
+  }
+}
