@@ -289,7 +289,16 @@ export function mountLayout(root: HTMLElement): HTMLElement {
 
   const notifBadge = el('span', { className: 'notification-badge', attrs: { style: 'display: none;' } });
 
-  const notifDropdown = el('div', { className: 'notifications-dropdown', attrs: { style: 'display: none;' } });
+  const notifDropdown = el('div', {
+    className: 'notifications-dropdown',
+    attrs: {
+      id: 'notifications-dropdown',
+      role: 'region',
+      'aria-label': 'รายการการแจ้งเตือน',
+      style: 'display: none;',
+    },
+  });
+  bellBtn.setAttribute('aria-controls', 'notifications-dropdown');
   const notifHeader = el('div', { className: 'notifications-dropdown__header' });
   const notifTitle = el('span', { className: 'notifications-dropdown__title', text: 'การแจ้งเตือน' });
   const markAllReadBtn = el('button', {
@@ -382,7 +391,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
       item.addEventListener('click', () => {
         notificationStore.markAsRead(n.id);
         notifDropdown.style.display = 'none';
-      bellBtn.setAttribute('aria-expanded', 'false');
+        bellBtn.setAttribute('aria-expanded', 'false');
         let target = '/';
         if (n.type === 'post_reaction' || n.type === 'post_comment' || n.type === 'comment_reply') {
           target = n.entityId ? `/posts/${encodeURIComponent(n.entityId)}` : '/';
@@ -439,6 +448,7 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     if (e.key !== 'Escape') return;
     closeAutocomplete();
     notifDropdown.style.display = 'none';
+    bellBtn.setAttribute('aria-expanded', 'false');
     const menu = userActionSlot.querySelector<HTMLElement>('.account-menu');
     const trigger = userActionSlot.querySelector<HTMLButtonElement>('.account-menu-trigger');
     if (!menu || !trigger || menu.hidden) return;
