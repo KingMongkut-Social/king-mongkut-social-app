@@ -71,7 +71,7 @@ describe('post social controls', () => {
     expect(card.querySelector('.post-social-summary__likes')?.textContent).toContain('3');
 
     const footerButtons = [...card.querySelectorAll<HTMLButtonElement>('.post-reactions-footer > .reaction-btn')];
-    const moreButton = footerButtons.find((button) => button.getAttribute('aria-label') === 'ตัวเลือกเพิ่มเติม')!;
+    const moreButton = card.querySelector<HTMLButtonElement>('.reaction-btn--more')!;
     moreButton.click();
     const saveButton = [...card.querySelectorAll<HTMLButtonElement>('.post-social-menu__item')]
       .find((button) => button.textContent?.includes('บันทึกโพสต์'))!;
@@ -101,7 +101,8 @@ describe('post social controls', () => {
     const reportButton = [...card.querySelectorAll<HTMLButtonElement>('.post-social-menu__item')]
       .find((button) => button.textContent?.includes('รายงานโพสต์'));
     expect(reportButton?.classList.contains('post-social-menu__item--danger')).toBe(true);
-    expect(footer.textContent).not.toContain('รายงานโพสต์');
+    expect(footer.querySelectorAll('.reaction-btn--danger')).toHaveLength(0);
+    expect(footer.querySelectorAll('.post-social-menu__item--danger')).toHaveLength(1);
 
     const commentButton = [...footer.querySelectorAll<HTMLButtonElement>('.reaction-btn')]
       .find((button) => button.textContent?.includes('ความคิดเห็น'))!;
