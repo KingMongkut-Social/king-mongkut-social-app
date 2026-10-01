@@ -140,8 +140,51 @@ export function chatPage(context: RouteContext): PageView {
   let pendingImages: Array<{ file: File; previewUrl: string }> = [];
   const onlineByUserId = new Map<string, boolean>();
   let typingTimer: number | undefined;
+  let viewportFrame = 0;
   const typingUsersByChat = new Map<string, Set<string>>();
   const typingExpireTimers = new Map<string, number>();
+
+  function scrollThreadToBottom(): void {
+    requestAnimationFrame(() => {
+      messageArea.scrollTop = messageArea.scrollHeight;
+    });
+  }
+
+  function syncChatVisualViewport(): void {
+    if (disposed) return;
+    if (viewportFrame && window.cancelAnimationFrame) window.cancelAnimationFrame(viewportFrame);
+    viewportFrame = requestAnimationFrame(() => {
+      viewportFrame = 0;
+      const mobileThreadOpen = Boolean(selectedId) && window.innerWidth <= 1023;
+      if (!mobileThreadOpen) {
+        root.style.removeProperty('--chat-visible-height');
+        document.body.style.removeProperty('--chat-visible-height');
+        root.classList.remove('chat-page--keyboard-open');
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      const visibleHeight = Math.max(320, Math.round(viewport?.height ?? window.innerHeight));
+      root.style.setProperty('--chat-visible-height', `${visibleHeight}px`);
+      document.body.style.setProperty('--chat-visible-height', `${visibleHeight}px`);
+
+      const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight);
+      const keyboardHeight = Math.max(0, layoutHeight - visibleHeight - Math.max(0, viewport?.offsetTop ?? 0));
+      const keyboardOpen = keyboardHeight > 120;
+      root.classList.toggle('chat-page--keyboard-open', keyboardOpen);
+
+      if (keyboardOpen && document.activeElement === messageInput) {
+        scrollThreadToBottom();
+      }
+    });
+  }
+
+  const handleViewportChange = (): void => {
+    syncChatVisualViewport();
+  };
+  window.visualViewport?.addEventListener('resize', handleViewportChange);
+  window.visualViewport?.addEventListener('scroll', handleViewportChange);
+  window.addEventListener('resize', handleViewportChange);
 
   function renderTypingIndicator(): void {
     if (!selectedId) {
@@ -249,6 +292,7 @@ export function chatPage(context: RouteContext): PageView {
     const chat = chats.find((item) => item.id === selectedId);
     workspace.classList.toggle('chat-workspace--thread-open', Boolean(selectedId));
     document.body.classList.toggle('is-chat-thread-open', Boolean(selectedId));
+    syncChatVisualViewport();
     panelTitle.textContent = chat ? chatTitle(chat, selfId) : 'เลือกบทสนทนา';
     clear(panelAvatar);
     panelAvatar.hidden = !chat;
@@ -569,6 +613,20 @@ export function chatPage(context: RouteContext): PageView {
       composer.requestSubmit();
     }
   });
+  messageInput.addEventListener('focus', () => {
+    syncChatVisualViewport();
+    window.setTimeout(() => {
+      syncChatVisualViewport();
+      scrollThreadToBottom();
+    }, 80);
+    window.setTimeout(() => {
+      syncChatVisualViewport();
+      scrollThreadToBottom();
+    }, 280);
+  });
+  messageInput.addEventListener('blur', () => {
+    window.setTimeout(syncChatVisualViewport, 80);
+  });
   messageInput.addEventListener('input', () => {
     updateComposerState();
     if (selectedId) {
@@ -810,6 +868,13 @@ export function chatPage(context: RouteContext): PageView {
       typingExpireTimers.clear();
       clearPendingImages();
       document.body.classList.remove('is-chat-thread-open');
+      root.style.removeProperty('--chat-visible-height');
+      document.body.style.removeProperty('--chat-visible-height');
+      root.classList.remove('chat-page--keyboard-open');
+      if (viewportFrame && window.cancelAnimationFrame) window.cancelAnimationFrame(viewportFrame);
+      window.visualViewport?.removeEventListener('resize', handleViewportChange);
+      window.visualViewport?.removeEventListener('scroll', handleViewportChange);
+      window.removeEventListener('resize', handleViewportChange);
       for (const unsubscribe of unsubscribers) unsubscribe();
       if (groupDialog.open) groupDialog.close();
     },

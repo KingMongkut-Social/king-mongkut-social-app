@@ -445,8 +445,9 @@
   }
 
   body.is-chat-thread-open .chat-page {
-    height: 100vh;
-    height: 100dvh;
+    height: var(--chat-visible-height, 100vh);
+    height: var(--chat-visible-height, 100dvh);
+    max-height: var(--chat-visible-height, 100dvh);
     min-height: 0;
   }
 
@@ -870,5 +871,22 @@
   .chat-composer__input {
     min-width: 0;
     width: 100%;
+  }
+}
+
+
+@media (max-width: 1023px) {
+  body.is-chat-thread-open .chat-composer {
+    position: relative;
+    bottom: auto;
+  }
+
+  .chat-page--keyboard-open .chat-composer {
+    padding-bottom: var(--space-2);
+    box-shadow: 0 -2px 14px rgba(45, 33, 23, 0.08);
+  }
+
+  .chat-page--keyboard-open .chat-messages {
+    scroll-padding-bottom: 120px;
   }
 }
