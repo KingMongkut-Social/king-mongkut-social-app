@@ -14,21 +14,36 @@ import { postCard } from '../src/modules/posts/post-components';
 import type { User } from '../src/types/api';
 
 const user: User = {
-  _id: 'member-id', name: 'Student', email: 'student@mail.kmutt.ac.th', role: 'user',
-  university: 'KMUTT', needsProfileCompletion: true, createdAt: '', updatedAt: '',
+  _id: 'member-id',
+  name: 'Student',
+  username: 'student.kmutt',
+  bio: 'KMUTT student',
+  academicYear: 2,
+  avatarUrl: '/api/v1/users/uploads/11111111-1111-4111-8111-111111111111.png',
+  coverUrl: '/api/v1/users/uploads/22222222-2222-4222-8222-222222222222.png',
+  email: 'student@mail.kmutt.ac.th',
+  role: 'user',
+  university: 'KMUTT',
+  needsProfileCompletion: true,
+  createdAt: '',
+  updatedAt: '',
 };
 function context(path: string): RouteContext {
   const url = new URL(path, 'http://localhost:3000');
   return { url, params: {}, query: url.searchParams };
 }
-function mountProfile() {
-  authStore.setAuthenticated({ ...user }, 'access-token');
+function mountProfile(overrides: Partial<User> = {}) {
+  authStore.setAuthenticated({ ...user, ...overrides }, 'access-token');
   const page = completeProfilePage(context('/complete-profile?returnTo=%2Fconnections'));
   document.body.replaceChildren(page.element);
   return {
-    form: page.element.querySelector('form')!,
+    form: page.element.querySelector<HTMLFormElement>('form')!,
+    name: page.element.querySelector<HTMLInputElement>('#name')!,
+    username: page.element.querySelector<HTMLInputElement>('#username')!,
+    bio: page.element.querySelector<HTMLTextAreaElement>('#bio')!,
     faculty: page.element.querySelector<HTMLInputElement>('#faculty')!,
     department: page.element.querySelector<HTMLInputElement>('#department')!,
+    academicYear: page.element.querySelector<HTMLSelectElement>('#academicYear')!,
     submit: page.element.querySelector<HTMLButtonElement>('button[type=submit]')!,
   };
 }
@@ -103,35 +118,71 @@ describe('persistent profile onboarding', () => {
     expect(card.querySelector('.post-dept-line')?.textContent).not.toContain('My Faculty');
   });
 
-  it('requires both fields without sending an invalid request', () => {
+  it('requires every first-login field without sending an invalid request', () => {
     const update = vi.spyOn(authApi, 'updateProfile');
-    const { form, faculty, department } = mountProfile();
+    const { form, username, bio, faculty, department, academicYear } = mountProfile({
+      avatarUrl: null,
+      coverUrl: null,
+    });
+    username.value = '';
+    bio.value = '';
     faculty.value = ' ';
     department.value = '';
+    academicYear.value = '';
     form.dispatchEvent(new Event('submit', { cancelable: true }));
+
     expect(update).not.toHaveBeenCalled();
+    expect(form.querySelector('#avatar-error')?.textContent).toContain('รูปโปรไฟล์');
+    expect(form.querySelector('#cover-error')?.textContent).toContain('รูปหน้าปก');
+    expect(form.querySelector('#username-error')?.textContent).toBeTruthy();
+    expect(form.querySelector('#bio-error')?.textContent).toBe('กรุณากรอก Bio');
     expect(form.querySelector('#faculty-error')?.textContent).toBe('กรุณากรอกคณะ');
     expect(form.querySelector('#department-error')?.textContent).toBe('กรุณากรอกภาควิชา');
+    expect(form.querySelector('#academicYear-error')?.textContent).toBe('กรุณาเลือกชั้นปี');
   });
 
-  it('saves to the API, updates identity state and restores the profile after reload', async () => {
-    const completed = { ...user, faculty: 'Engineering', department: 'Computer', needsProfileCompletion: false };
+  it('saves the full required profile, updates identity state and restores it after reload', async () => {
+    const completed = {
+      ...user,
+      name: 'Student Example',
+      username: 'student.example',
+      bio: 'Computer engineering student',
+      faculty: 'Engineering',
+      department: 'Computer',
+      academicYear: 3,
+      needsProfileCompletion: false,
+    };
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json({ success: true, data: { user: completed } }))
       .mockResolvedValueOnce(Response.json({ success: true, data: { user: completed, accessToken: 'restored-token' } }));
     vi.stubGlobal('fetch', fetchMock);
-    const { form, faculty, department, submit } = mountProfile();
+    const { form, name, username, bio, faculty, department, academicYear, submit } = mountProfile();
     expect(form.parentElement?.textContent).toContain('student@mail.kmutt.ac.th');
     expect(form.querySelector('input[name=email]')).toBeNull();
+
+    name.value = ' Student Example ';
+    username.value = 'Student.Example';
+    bio.value = ' Computer engineering student ';
     faculty.value = ' Engineering ';
     department.value = ' Computer ';
+    academicYear.value = '3';
+
     form.dispatchEvent(new Event('submit', { cancelable: true }));
     expect(submit.disabled).toBe(true);
     await vi.waitFor(() => expect(window.location.pathname).toBe('/connections'));
-    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ faculty: 'Engineering', department: 'Computer' }));
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({
+      name: 'Student Example',
+      username: 'student.example',
+      bio: 'Computer engineering student',
+      faculty: 'Engineering',
+      department: 'Computer',
+      academicYear: 3,
+    }));
     expect(authStore.snapshot.user?.needsProfileCompletion).toBe(false);
+
     authStore.setAnonymous();
     await apiClient.restoreSession();
     expect(authStore.snapshot.user?.faculty).toBe('Engineering');
+    expect(authStore.snapshot.user?.username).toBe('student.example');
     expect(authStore.snapshot.accessToken).toBe('restored-token');
     expect(localStorage.getItem('mock_profile_member-id')).toBeNull();
   });
@@ -139,7 +190,8 @@ describe('persistent profile onboarding', () => {
   it('retains entered values and allows retry on save failure', async () => {
     vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockRejectedValue(new Error('offline')));
     const { form, faculty, department, submit } = mountProfile();
-    faculty.value = 'Engineering'; department.value = 'Computer';
+    faculty.value = 'Engineering';
+    department.value = 'Computer';
     form.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(submit.disabled).toBe(false));
     expect(faculty.value).toBe('Engineering');
