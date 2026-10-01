@@ -483,6 +483,59 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   const mobileNav = el('nav', { className: 'mobile-primary-nav', attrs: { 'aria-label': 'เมนูหลักบนมือถือ' } });
   root.replaceChildren(header, mobileNav, appLayout);
 
+  const mobileViewport = window.matchMedia('(max-width: 1023px)');
+  let lastScrollY = Math.max(0, window.scrollY);
+  let scrollFrame = 0;
+
+  const setMobileChromeHidden = (hidden: boolean): void => {
+    document.body.classList.toggle('mobile-chrome-hidden', mobileViewport.matches && hidden);
+  };
+
+  const mobileOverlayOpen = (): boolean => (
+    notifDropdown.style.display !== 'none'
+    || autocompleteDropdown.style.display !== 'none'
+    || Boolean(root.querySelector('.account-menu:not([hidden])'))
+  );
+
+  const updateMobileChromeFromScroll = (): void => {
+    scrollFrame = 0;
+    const current = Math.max(0, window.scrollY);
+    if (!mobileViewport.matches
+      || document.body.classList.contains('is-auth-page')
+      || document.body.classList.contains('is-chat-thread-open')) {
+      setMobileChromeHidden(false);
+      lastScrollY = current;
+      return;
+    }
+
+    const delta = current - lastScrollY;
+    if (current <= 18) {
+      setMobileChromeHidden(false);
+    } else if (Math.abs(delta) >= 7 && !mobileOverlayOpen()) {
+      setMobileChromeHidden(delta > 0);
+    }
+    lastScrollY = current;
+  };
+
+  window.addEventListener('scroll', () => {
+    if (scrollFrame) return;
+    scrollFrame = window.requestAnimationFrame(updateMobileChromeFromScroll);
+  }, { passive: true });
+
+  window.addEventListener('resize', () => {
+    lastScrollY = Math.max(0, window.scrollY);
+    if (!mobileViewport.matches) setMobileChromeHidden(false);
+  }, { passive: true });
+
+  document.addEventListener('focusin', (event) => {
+    if (!mobileViewport.matches) return;
+    if (event.target instanceof HTMLInputElement
+      || event.target instanceof HTMLTextAreaElement
+      || event.target instanceof HTMLSelectElement) {
+      setMobileChromeHidden(false);
+    }
+  });
+
   const updatePageLayoutState = (): void => {
     const path = window.location.pathname;
     const isAuth = ['/login', '/register', '/complete-profile', '/auth/callback'].includes(path);
@@ -496,6 +549,8 @@ export function mountLayout(root: HTMLElement): HTMLElement {
   };
 
   const renderNav = (): void => {
+    setMobileChromeHidden(false);
+    lastScrollY = Math.max(0, window.scrollY);
     clear(navList);
     clear(mobileNav);
     clear(userActionSlot);
