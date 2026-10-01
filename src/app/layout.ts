@@ -537,12 +537,15 @@ export function mountLayout(root: HTMLElement): HTMLElement {
     const path = window.location.pathname;
     const isAuth = ['/login', '/register', '/complete-profile', '/auth/callback'].includes(path);
     const isEditProfile = path === '/profile/edit';
+    const isPostEditor = path === '/dashboard/posts/new'
+      || /^\/dashboard\/posts\/[^/]+\/edit$/.test(path);
     document.body.classList.toggle('is-auth-page', isAuth);
     document.body.classList.toggle('is-feed-page', path === '/');
     document.body.classList.toggle('is-profile-page', !isEditProfile && (path === '/profile' || path.startsWith('/profile/')));
     document.body.classList.toggle('is-edit-profile-page', isEditProfile);
     document.body.classList.toggle('is-connections-page', path === '/connections');
     document.body.classList.toggle('is-chat-page', path === '/chat');
+    document.body.classList.toggle('is-post-editor-page', isPostEditor);
   };
 
   const renderNav = (): void => {
