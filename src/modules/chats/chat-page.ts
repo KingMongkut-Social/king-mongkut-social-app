@@ -365,23 +365,25 @@ export function chatPage(context: RouteContext): PageView {
       if (!self && chat?.type === 'group' && !isGrouped) {
         item.append(el('span', { className: 'chat-message__sender', text: sender }));
       }
-      if (message.image) {
+      const messageImage = message.image;
+      if (messageImage) {
         const imageButtonEl = el('button', {
           className: 'chat-message__image-button',
-          attrs: { type: 'button', 'aria-label': `เปิดรูปภาพ ${message.image.name}` },
+          attrs: { type: 'button', 'aria-label': `เปิดรูปภาพ ${messageImage.name}` },
         });
+        const imageUrl = chatAssetUrl(messageImage.url);
         const imageEl = el('img', {
           className: 'chat-message__image',
           attrs: {
-            src: chatAssetUrl(message.image.url),
-            alt: message.image.name || 'รูปภาพในแชท',
+            src: imageUrl,
+            alt: messageImage.name || 'รูปภาพในแชท',
             loading: 'lazy',
             decoding: 'async',
           },
         });
         imageButtonEl.append(imageEl);
         imageButtonEl.addEventListener('click', () => {
-          openChatImageViewer(chatAssetUrl(message.image!.url), message.image!.name);
+          openChatImageViewer(imageUrl, messageImage.name);
         });
         item.append(imageButtonEl);
       }
@@ -405,6 +407,7 @@ export function chatPage(context: RouteContext): PageView {
 
   async function selectChat(chatId: string): Promise<void> {
     if (disposed) return;
+    if (selectedId !== chatId) clearSelectedImage();
     if (selectedId && typingTimer) {
       window.clearTimeout(typingTimer);
       realtime.sendTyping?.(selectedId, false);
@@ -542,12 +545,15 @@ export function chatPage(context: RouteContext): PageView {
     realtime.sendTyping(chatId, false);
     sendButton.disabled = true;
     imageButton.disabled = true;
+    let uploadedImage: ChatImage | undefined;
+    let startedAt = 0;
+    let messageSendStarted = false;
     try {
-      let uploadedImage: ChatImage | undefined;
       if (imageFile) {
         uploadedImage = await chatsApi.uploadImage(chatId, imageFile);
       }
-      const startedAt = Date.now();
+      startedAt = Date.now();
+      messageSendStarted = true;
       pendingSubmission = {
         chatId,
         content,
@@ -569,7 +575,7 @@ export function chatPage(context: RouteContext): PageView {
       if (chat) mergeChat({ ...chat, lastMessage: sent, updatedAt: sent.createdAt });
     } catch (cause) {
       if (disposed) return;
-      if (cause instanceof Error && /timed out|timeout/i.test(cause.message)) {
+      if (messageSendStarted && cause instanceof Error && /timed out|timeout/i.test(cause.message)) {
         try {
           const latest = await chatsApi.messages(chatId);
           if (selectedId === chatId) mergeMessages(latest);
