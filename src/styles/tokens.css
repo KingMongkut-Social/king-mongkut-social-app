@@ -160,3 +160,20 @@
   }
 }
 
+
+
+/* Mobile token contract */
+@media (max-width: 639px) {
+  :root {
+    --layout-header-height: 56px;
+    --layout-gutter-mobile: 14px;
+    --layout-mobile-nav-height: 60px;
+    --font-2xl: 24px;
+  }
+}
+
+@media (max-width: 359px) {
+  :root {
+    --layout-gutter-mobile: 12px;
+  }
+}
