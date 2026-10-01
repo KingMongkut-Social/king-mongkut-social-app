@@ -2,18 +2,38 @@ import { describe, expect, it } from 'vitest';
 import { postSchema, profileSchema } from '../src/validation/schemas';
 
 describe('profileSchema', () => {
-  it('trims faculty and department', () => {
-    expect(profileSchema.parse({ faculty: ' วิศวกรรมศาสตร์ ', department: ' คอมพิวเตอร์ ' }))
-      .toEqual({ faculty: 'วิศวกรรมศาสตร์', department: 'คอมพิวเตอร์' });
+  const valid = {
+    name: ' Student Name ',
+    username: 'Student.Name',
+    bio: ' Computer engineering student ',
+    faculty: ' วิศวกรรมศาสตร์ ',
+    department: ' คอมพิวเตอร์ ',
+    academicYear: 2,
+  };
+
+  it('normalizes every required first-login profile field', () => {
+    expect(profileSchema.parse(valid)).toEqual({
+      name: 'Student Name',
+      username: 'student.name',
+      bio: 'Computer engineering student',
+      faculty: 'วิศวกรรมศาสตร์',
+      department: 'คอมพิวเตอร์',
+      academicYear: 2,
+    });
   });
 
-  it('rejects blank, missing and oversized fields and identity edits', () => {
+  it('rejects missing, blank, invalid and oversized required fields', () => {
     for (const input of [
-      { faculty: ' ', department: 'Computer' },
-      { faculty: 'Engineering' },
-      { faculty: 'A'.repeat(151), department: 'Computer' },
-      { faculty: 'Engineering', department: 'A'.repeat(151) },
-      { faculty: 'Engineering', department: 'Computer', university: 'KMITL' },
+      { ...valid, name: ' ' },
+      { ...valid, username: 'bad space' },
+      { ...valid, bio: ' ' },
+      { ...valid, faculty: ' ' },
+      { ...valid, department: ' ' },
+      { ...valid, academicYear: 0 },
+      { ...valid, academicYear: 9 },
+      { ...valid, faculty: 'A'.repeat(151) },
+      { ...valid, university: 'KMITL' },
+      { faculty: 'Engineering', department: 'Computer' },
     ]) expect(profileSchema.safeParse(input).success).toBe(false);
   });
 });
