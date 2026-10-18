@@ -8,6 +8,7 @@ interface RequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
   headers?: HeadersInit;
   auth?: boolean;
   retryOnUnauthorized?: boolean;
+  responseType?: 'blob';
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -57,6 +58,7 @@ class ApiClient {
       headers: customHeaders,
       auth = true,
       retryOnUnauthorized = true,
+      responseType,
       ...requestInit
     } = options;
 
@@ -93,7 +95,7 @@ class ApiClient {
       }
     }
 
-    const payload = await parseResponse(response);
+    const payload = response.ok && responseType === 'blob' ? await response.blob() : await parseResponse(response);
     if (!response.ok) throw ApiError.fromResponse(response.status, payload);
     return payload as T;
   }

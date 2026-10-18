@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   chatMessages: vi.fn<(chatId: string, before?: string) => Promise<ChatMessage[]>>(),
   sendMessage: vi.fn<(chatId: string, content: string, images?: string[]) => Promise<ChatMessage>>(),
   uploadImage: vi.fn<(file: File) => Promise<{ url: string; mimeType: string; size: number }>>(),
+  imageBlob: vi.fn<(path: string) => Promise<Blob>>(),
   listFriends: vi.fn<() => Promise<AcceptedFriend[]>>(),
 }));
 
@@ -49,6 +50,7 @@ vi.mock('../src/modules/chats/chats-api', () => ({
     messages: mocks.chatMessages,
     send: vi.fn(),
     uploadImage: mocks.uploadImage,
+    imageBlob: mocks.imageBlob,
   },
 }));
 vi.mock('../src/modules/friends/friends-api', () => ({ listFriends: mocks.listFriends }));
@@ -75,6 +77,7 @@ beforeEach(() => {
   authStore.setAuthenticated(self, 'access-token');
   mocks.chatList.mockResolvedValue([chat]);
   mocks.chatMessages.mockResolvedValue([]);
+  mocks.imageBlob.mockResolvedValue(new Blob(['image'], { type: 'image/png' }));
   mocks.listFriends.mockResolvedValue([]);
   mocks.uploadImage.mockResolvedValue({
     url: '/api/v1/chats/uploads/11111111-1111-4111-8111-111111111111.png',
@@ -145,7 +148,7 @@ describe('chat page', () => {
     const fileInput = page.element.querySelector<HTMLInputElement>('.chat-composer__file-input')!;
     Object.defineProperty(fileInput, 'files', { configurable: true, value: [file] });
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(page.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(1);
+    await vi.waitFor(() => expect(page!.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(1));
 
     const imageUrl = '/api/v1/chats/uploads/11111111-1111-4111-8111-111111111111.png';
     const sent: ChatMessage = {
@@ -163,8 +166,50 @@ describe('chat page', () => {
     await vi.waitFor(() => expect(mocks.uploadImage).toHaveBeenCalledWith(file));
     await vi.waitFor(() => expect(mocks.sendMessage).toHaveBeenCalledWith('chat-1', '', [imageUrl]));
     await vi.waitFor(() => expect(page!.element.querySelectorAll('.chat-message__image')).toHaveLength(1));
-    expect(page.element.querySelector<HTMLImageElement>('.chat-message__image')?.src).toContain(imageUrl);
+    await vi.waitFor(() => expect(mocks.imageBlob).toHaveBeenCalledWith(imageUrl));
+    await vi.waitFor(() => expect(page!.element.querySelector<HTMLImageElement>('.chat-message__image')?.src).toBe('blob:preview'));
     expect(page.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(0);
+  });
+
+  it('keeps text and image drafts in their original conversation', async () => {
+    vi.stubGlobal('URL', class extends URL {
+      static override createObjectURL = vi.fn(() => 'blob:draft');
+      static override revokeObjectURL = vi.fn();
+    });
+    mocks.chatList.mockResolvedValue([chat, { ...chat, id: 'chat-2', name: 'Other', type: 'group' }]);
+    page = chatPage(context());
+    document.body.append(page.element);
+    await vi.waitFor(() => expect(mocks.chatMessages).toHaveBeenCalledWith('chat-1'));
+    const input = page.element.querySelector<HTMLTextAreaElement>('.chat-composer__input')!;
+    input.value = 'Only for Bob';
+    const picker = page.element.querySelector<HTMLInputElement>('.chat-composer__file-input')!;
+    Object.defineProperty(picker, 'files', { configurable: true, value: [new File(['png'], 'photo.png', { type: 'image/png' })] });
+    picker.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(page!.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(1));
+    const rows = page.element.querySelectorAll<HTMLButtonElement>('.chat-list__item');
+    rows[1]!.click();
+    await vi.waitFor(() => expect(mocks.chatMessages).toHaveBeenCalledWith('chat-2'));
+    expect(input.value).toBe('');
+    expect(page.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(0);
+    page.element.querySelector<HTMLButtonElement>('.chat-list__item')!.click();
+    expect(input.value).toBe('Only for Bob');
+    expect(page.element.querySelectorAll('.chat-composer__image-item')).toHaveLength(1);
+  });
+
+  it('does not clear another room draft when a timed-out send arrives later', async () => {
+    mocks.chatList.mockResolvedValue([chat, { ...chat, id: 'chat-2', type: 'group', name: 'Other' }]);
+    page = chatPage(context());
+    document.body.append(page.element);
+    await vi.waitFor(() => expect(mocks.chatMessages).toHaveBeenCalledWith('chat-1'));
+    const input = page.element.querySelector<HTMLTextAreaElement>('.chat-composer__input')!;
+    input.value = 'Delayed';
+    mocks.sendMessage.mockRejectedValue(new Error('timeout'));
+    page.element.querySelector<HTMLFormElement>('.chat-composer')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(page!.element.querySelector<HTMLButtonElement>('.chat-composer__send')!.disabled).toBe(false));
+    page.element.querySelectorAll<HTMLButtonElement>('.chat-list__item')[1]!.click();
+    input.value = 'Keep this draft';
+    realtimeState.message?.({ id: 'delayed', chatId: 'chat-1', senderId: 'alice', content: 'Delayed', images: [], createdAt: new Date().toISOString() });
+    expect(input.value).toBe('Keep this draft');
   });
 
   it('uses a full-screen mobile thread and restores the conversation list on back', async () => {

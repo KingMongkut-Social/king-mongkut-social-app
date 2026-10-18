@@ -9,7 +9,8 @@ import { createEmptyState } from '../../core/ui/feedback';
 import { toast } from '../../core/ui/toast';
 import { formatRelativeTime } from '../../core/utils/format';
 import { listFriends, type AcceptedFriend } from '../friends/friends-api';
-import { chatImageUrl, chatsApi, type Chat, type ChatMessage } from './chats-api';
+import { chatsApi, type Chat, type ChatMessage } from './chats-api';
+import { prepareChatImage } from './prepare-chat-image';
 
 
 function chatTitle(chat: Chat, selfId: string): string {
@@ -64,6 +65,8 @@ export function chatPage(context: RouteContext): PageView {
   });
   backButton.append(reactIcon('arrow-left', { size: 20 }));
   backButton.addEventListener('click', () => {
+    if (sendButton.disabled) return;
+    saveDraft();
     if (selectedId && typingTimer) {
       window.clearTimeout(typingTimer);
       realtime.sendTyping(selectedId, false);
@@ -103,7 +106,7 @@ export function chatPage(context: RouteContext): PageView {
     className: 'chat-composer__file-input',
     attrs: {
       type: 'file',
-      accept: 'image/jpeg,image/png,image/gif,image/webp,image/avif',
+      accept: 'image/jpeg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif,.heic,.heif',
       multiple: 'true',
       'aria-label': 'เลือกรูปภาพเพื่อส่ง',
     },
@@ -138,6 +141,25 @@ export function chatPage(context: RouteContext): PageView {
   let wasConnected = false;
   let pendingSubmission: { chatId: string; content: string; images: string[]; startedAt: number } | null = null;
   let pendingImages: Array<{ file: File; previewUrl: string }> = [];
+  const drafts = new Map<string, { content: string; images: typeof pendingImages }>();
+  const imageUrls = new Map<string, Promise<string>>();
+
+  function saveDraft(): void {
+    if (selectedId) drafts.set(selectedId, { content: messageInput.value, images: pendingImages });
+  }
+
+  function loadImage(path: string): Promise<string> {
+    let pending = imageUrls.get(path);
+    if (!pending) {
+      pending = chatsApi.imageBlob(path).then((blob) => {
+        const url = URL.createObjectURL(blob);
+        if (disposed) URL.revokeObjectURL(url);
+        return url;
+      }).catch((error: unknown) => { imageUrls.delete(path); throw error; });
+      imageUrls.set(path, pending);
+    }
+    return pending;
+  }
   const onlineByUserId = new Map<string, boolean>();
   let typingTimer: number | undefined;
   let viewportFrame = 0;
@@ -380,20 +402,25 @@ export function chatPage(context: RouteContext): PageView {
           className: `chat-message__images chat-message__images--${Math.min(message.images.length, 4)}`,
         });
         for (const [index, path] of message.images.entries()) {
-          const fullUrl = chatImageUrl(path);
           const link = el('a', {
             className: 'chat-message__image-link',
             attrs: {
-              href: fullUrl,
               target: '_blank',
               rel: 'noopener noreferrer',
               'aria-label': `เปิดรูปภาพที่ ${index + 1}`,
             },
           });
-          link.append(el('img', {
+          const image = el('img', {
             className: 'chat-message__image',
-            attrs: { src: fullUrl, alt: 'รูปภาพในแชท', loading: 'lazy' },
-          }));
+            attrs: { alt: 'กำลังโหลดรูปภาพ', loading: 'lazy' },
+          });
+          link.append(image);
+          void loadImage(path).then((url) => {
+            if (disposed) return;
+            link.href = url;
+            image.alt = 'รูปภาพในแชท';
+            image.src = url;
+          }).catch(() => { image.alt = 'โหลดรูปภาพไม่สำเร็จ ลองเปิดบทสนทนาอีกครั้ง'; });
           media.append(link);
         }
         item.append(media);
@@ -417,7 +444,12 @@ export function chatPage(context: RouteContext): PageView {
   }
 
   async function selectChat(chatId: string): Promise<void> {
-    if (disposed) return;
+    if (disposed || sendButton.disabled) return;
+    saveDraft();
+    const draft = drafts.get(chatId);
+    messageInput.value = draft?.content ?? '';
+    pendingImages = draft?.images ?? [];
+    renderPendingImages();
     if (selectedId && typingTimer) {
       window.clearTimeout(typingTimer);
       realtime.sendTyping?.(selectedId, false);
@@ -565,6 +597,7 @@ export function chatPage(context: RouteContext): PageView {
       });
       remove.append(reactIcon('close', { size: 12 }));
       remove.addEventListener('click', () => {
+        if (sendButton.disabled) return;
         const [removed] = pendingImages.splice(index, 1);
         if (removed) URL.revokeObjectURL(removed.previewUrl);
         renderPendingImages();
@@ -577,6 +610,7 @@ export function chatPage(context: RouteContext): PageView {
   }
 
   function clearPendingImages(): void {
+    if (selectedId) drafts.delete(selectedId);
     for (const item of pendingImages) URL.revokeObjectURL(item.previewUrl);
     pendingImages = [];
     imageInput.value = '';
@@ -585,23 +619,23 @@ export function chatPage(context: RouteContext): PageView {
   }
 
   imageButton.addEventListener('click', () => imageInput.click());
-  imageInput.addEventListener('change', () => {
+  imageInput.addEventListener('change', async () => {
+    const chatId = selectedId;
     const selected = [...(imageInput.files ?? [])];
     imageInput.value = '';
-    const allowed = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif']);
-    for (const file of selected) {
+    for (const original of selected) {
       if (pendingImages.length >= 4) {
         toast.info('ส่งรูปได้สูงสุด 4 รูปต่อข้อความ');
         break;
       }
-      if (!allowed.has(file.type)) {
-        toast.error('รองรับเฉพาะ JPEG, PNG, GIF, WebP และ AVIF');
+      let file: File;
+      try {
+        file = await prepareChatImage(original);
+      } catch (error) {
+        if (!disposed) toast.error(errorMessage(error));
         continue;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} มีขนาดเกิน 10 MB`);
-        continue;
-      }
+      if (disposed || selectedId !== chatId) return;
       pendingImages.push({ file, previewUrl: URL.createObjectURL(file) });
     }
     renderPendingImages();
@@ -785,8 +819,16 @@ export function chatPage(context: RouteContext): PageView {
           && message.content === pendingSubmission.content
           && sameImages(message.images ?? [], pendingSubmission.images)
           && new Date(message.createdAt).getTime() >= pendingSubmission.startedAt - 2000) {
-        if (messageInput.value.trim() === pendingSubmission.content) messageInput.value = '';
-        clearPendingImages();
+        if (selectedId === pendingSubmission.chatId) {
+          if (messageInput.value.trim() === pendingSubmission.content) messageInput.value = '';
+          clearPendingImages();
+        } else {
+          const draft = drafts.get(pendingSubmission.chatId);
+          if (draft?.content.trim() === pendingSubmission.content) {
+            for (const image of draft.images) URL.revokeObjectURL(image.previewUrl);
+            drafts.delete(pendingSubmission.chatId);
+          }
+        }
         pendingSubmission = null;
       }
       if (message.chatId === selectedId) mergeMessages([message], true);
@@ -867,6 +909,14 @@ export function chatPage(context: RouteContext): PageView {
       }
       typingExpireTimers.clear();
       clearPendingImages();
+      for (const draft of drafts.values()) {
+        for (const item of draft.images) URL.revokeObjectURL(item.previewUrl);
+      }
+      drafts.clear();
+      for (const pending of imageUrls.values()) {
+        void pending.then((url) => URL.revokeObjectURL(url)).catch(() => undefined);
+      }
+      imageUrls.clear();
       document.body.classList.remove('is-chat-thread-open');
       root.style.removeProperty('--chat-visible-height');
       document.body.style.removeProperty('--chat-visible-height');

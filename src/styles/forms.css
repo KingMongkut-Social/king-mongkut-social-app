@@ -74,7 +74,7 @@ label {
 }
 
 /* Header search bar pill */
-.search-pill-input {
+input.search-pill-input {
   width: 100%;
   height: 38px;
   min-height: 38px;

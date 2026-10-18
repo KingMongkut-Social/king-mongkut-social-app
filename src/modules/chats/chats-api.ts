@@ -34,6 +34,11 @@ export interface Chat {
 }
 
 export const chatsApi = {
+  imageBlob(path: string): Promise<Blob> {
+    const prefix = '/api/v1';
+    if (!path.startsWith(`${prefix}/chats/uploads/`)) throw new Error('Invalid chat image URL');
+    return apiClient.request<Blob>(path.slice(prefix.length), { responseType: 'blob' });
+  },
   async list(): Promise<Chat[]> {
     const result = await apiClient.request<ApiSuccess<Chat[]>>('/chats');
     return result.data;
