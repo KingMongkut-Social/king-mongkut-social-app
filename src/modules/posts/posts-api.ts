@@ -1,4 +1,4 @@
-import type { ApiSuccess, PaginatedPostComments, PaginatedPosts, PostAttachment, PostComment, PostPayload, PostReaction, PostStatus } from '../../types/api';
+import type { ApiSuccess, PaginatedPostComments, PaginatedPostReactions, PaginatedPosts, PostAttachment, PostComment, PostPayload, PostReaction, PostStatus } from '../../types/api';
 import { apiClient } from '../../core/api/api-client';
 import { env } from '../../config/env';
 
@@ -80,6 +80,12 @@ export const postsApi = {
 
   unreact(id: string): Promise<ApiSuccess<PostPayload>> {
     return apiClient.request(`/posts/${encodeURIComponent(id)}/reaction`, { method: 'DELETE' });
+  },
+
+  listReactions(id: string, reaction?: PostReaction, page = 1, limit = 50): Promise<ApiSuccess<PaginatedPostReactions>> {
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (reaction) query.set('reaction', reaction);
+    return apiClient.request(`/posts/${encodeURIComponent(id)}/reactions?${query.toString()}`);
   },
 
   bookmark(id: string): Promise<ApiSuccess<PostPayload>> {

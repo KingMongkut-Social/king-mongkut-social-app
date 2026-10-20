@@ -230,8 +230,11 @@
 /* Community Layout inside University */
 .community-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 @media (min-width: 900px) {
@@ -244,6 +247,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .community-feed h2,
@@ -417,10 +423,28 @@
     font-size: 22px;
   }
 
+  .community-layout {
+    gap: var(--space-4);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .community-feed {
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
   .community-sidebar {
     padding: 12px;
     border-radius: 14px;
     box-shadow: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   .community-person {

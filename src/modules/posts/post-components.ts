@@ -260,27 +260,27 @@ export function postCard(
   const isEdited = Boolean(post.updatedAt && post.createdAt &&
     new Date(post.updatedAt).getTime() - new Date(post.createdAt).getTime() > 2000);
 
-  // Timestamp Line (เวลาที่โพสต์)
-  const timestamp = el('div', { className: 'post-timestamp' });
-  const timeSpan = el('span', {
-    attrs: { title: formatDate(post.createdAt) },
-    text: formatRelativeTime(post.createdAt),
-  });
-  timestamp.append(timeSpan);
+  // Timestamp Line (เวลาที่โพสต์ - แยกเป็นบรรทัดเฉพาะ ไม่ให้โดนภาควิชาบดบังบนมือถือ)
+  const timeLine = el('div', { className: 'post-time-line' });
+  const relTime = formatRelativeTime(post.createdAt);
+  const fullDate = formatDate(post.createdAt);
+  const timeDisplay = relTime !== fullDate ? `${relTime} • ${fullDate}` : fullDate;
 
-  const renderEditedTag = () => {
-    return el('span', {
-      className: 'post-edited-tag',
-      text: '• มีการแก้ไข',
-    });
-  };
+  const timeSpan = el('span', {
+    className: 'post-timestamp-text',
+    attrs: { title: fullDate },
+    text: timeDisplay,
+  });
+  timeLine.append(timeSpan);
 
   if (isEdited) {
-    timestamp.append(renderEditedTag());
+    timeLine.append(el('span', {
+      className: 'post-edited-tag',
+      text: '• มีการแก้ไข',
+    }));
   }
 
-  deptLine.append(el('span', { className: 'post-dot-sep', text: '•' }), timestamp);
-  details.append(nameLine, deptLine);
+  details.append(nameLine, deptLine, timeLine);
   authorInfo.append(avatar, details);
 
   // Right Side of Post Header: Owner 3-dots Dropdown vs Non-Owner Friend Button
@@ -560,9 +560,12 @@ export function pagination(
 }
 
 export function searchForm(value: string, action: string): HTMLFormElement {
-  const form = el('form', { className: 'search', attrs: { method: 'get', action, role: 'search' } });
+  const form = el('form', { className: 'search dashboard-search-form', attrs: { method: 'get', action, role: 'search' } });
+  const inputWrap = el('div', { className: 'dashboard-search-input-wrap' });
+  const icon = el('span', { className: 'dashboard-search-icon' });
+  icon.append(reactIcon('search', { size: 16 }));
   const input = el('input', {
-    className: 'input search__input',
+    className: 'input search__input dashboard-search__input',
     attrs: {
       type: 'search',
       name: 'search',
@@ -572,7 +575,9 @@ export function searchForm(value: string, action: string): HTMLFormElement {
       'aria-label': 'ค้นหาโพสต์',
     },
   });
-  form.append(input, el('button', { className: 'button button--secondary', text: 'ค้นหา', attrs: { type: 'submit' } }));
+  inputWrap.append(icon, input);
+  const submitBtn = el('button', { className: 'button button--secondary dashboard-search__btn', text: 'ค้นหา', attrs: { type: 'submit' } });
+  form.append(inputWrap, submitBtn);
   return form;
 }
 

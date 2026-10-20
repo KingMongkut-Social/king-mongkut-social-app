@@ -13,14 +13,14 @@ export async function myPostsPage(context: RouteContext): Promise<PageView> {
   const search = (context.query.get('search') ?? '').trim().slice(0, 100);
   const result = await postsApi.listMine({ page, limit: 12, ...(search ? { search } : {}) });
 
-  const section = el('section', { className: 'page-shell' });
+  const section = el('section', { className: 'page-shell dashboard-page' });
   const heading = el('div', { className: 'dashboard-heading' },
-    el('div', {},
+    el('div', { className: 'dashboard-heading__copy' },
       el('p', { className: 'eyebrow', text: 'แดชบอร์ด' }),
       el('h1', { text: 'โพสต์ของฉัน' }),
       el('p', { className: 'muted', text: 'จัดการแบบร่างและโพสต์ที่เผยแพร่ทั้งหมดของคุณ' }),
     ),
-    el('a', { className: 'button button--primary', text: '+ สร้างโพสต์ใหม่', attrs: { href: '/dashboard/posts/new' } }),
+    el('a', { className: 'button button--primary dashboard-heading__btn', text: '+ สร้างโพสต์ใหม่', attrs: { href: '/dashboard/posts/new' } }),
   );
 
   const searchBar = searchForm(search, '/dashboard');

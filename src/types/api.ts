@@ -83,6 +83,25 @@ export interface PaginatedPostComments {
   pages: number;
 }
 
+export interface PostReactionUser {
+  _id: string;
+  post: string;
+  reaction: PostReaction;
+  user: PostAuthor;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaginatedPostReactions {
+  items: PostReactionUser[];
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+  reactionCounts: Record<PostReaction, number>;
+  totalReactions: number;
+}
+
 export interface PaginatedPosts {
   items: Post[];
   page: number;

@@ -10,9 +10,12 @@ import { formatRelativeTime } from '../../core/utils/format';
 import type { Post, PostComment, PostReaction } from '../../types/api';
 import { postsApi } from './posts-api';
 import { openReportDialog } from '../reports/report-dialog';
+import { openReactionsModal } from './reactions-modal';
 
 function action(label: string, className = ''): HTMLButtonElement {
-  return el('button', { className: `reaction-btn ${className}`.trim(), attrs: { type: 'button' }, text: label });
+  const btn = el('button', { className: `reaction-btn ${className}`.trim(), attrs: { type: 'button' } });
+  btn.append(el('span', { className: 'reaction-btn__label', text: label }));
+  return btn;
 }
 
 const REACTIONS: ReadonlyArray<{ value: PostReaction; icon: AppIconName; label: string }> = [
@@ -132,7 +135,53 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
   const renderSummary = (): void => {
     summary.replaceChildren();
     const likesSummary = el('span', { className: 'post-social-summary__likes' });
-    likesSummary.append(reactIcon('heart'), document.createTextNode(` ${likesCount}`));
+
+    // Determine active reactions (sorted by count descending)
+    const reactionOrder: PostReaction[] = ['LIKE', 'LOVE', 'HAHA', 'WOW', 'SAD', 'ANGRY'];
+    const activeReactions = reactionOrder
+      .filter((r) => (reactionCounts[r] ?? 0) > 0)
+      .sort((a, b) => (reactionCounts[b] ?? 0) - (reactionCounts[a] ?? 0));
+
+    if (activeReactions.length === 0 && likesCount > 0) {
+      activeReactions.push(currentReaction || 'LIKE');
+    }
+
+    if (activeReactions.length > 0) {
+      const iconsContainer = el('span', { className: 'post-social-summary__icons' });
+      for (const r of activeReactions.slice(0, 3)) {
+        const meta = reactionMeta(r);
+        if (!meta) continue;
+        const iconSpan = el('span', {
+          className: `reaction-summary-icon reaction-summary-icon--${r.toLowerCase()}`,
+          attrs: { title: meta.label },
+        });
+        iconSpan.append(reactIcon(meta.icon, { size: 14 }));
+        iconsContainer.append(iconSpan);
+      }
+      likesSummary.append(iconsContainer, document.createTextNode(` ${likesCount}`));
+    } else {
+      likesSummary.append(reactIcon('thumbs-up', { size: 14 }), document.createTextNode(` ${likesCount}`));
+    }
+
+    if (likesCount > 0) {
+      likesSummary.classList.add('post-social-summary__likes--interactive');
+      likesSummary.setAttribute('role', 'button');
+      likesSummary.setAttribute('tabindex', '0');
+      likesSummary.setAttribute('title', 'ดูคนที่แสดงความรู้สึก');
+      likesSummary.setAttribute('aria-label', `ดูคนที่แสดงความรู้สึก ${likesCount} คน`);
+      likesSummary.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openReactionsModal(post._id);
+      });
+      likesSummary.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          openReactionsModal(post._id);
+        }
+      });
+    }
+
     summary.append(
       likesSummary,
       el('span', { className: 'post-social-summary__comments', text: `ความคิดเห็น ${commentsCount}` }),
@@ -140,14 +189,14 @@ export function mountPostSocial(card: HTMLElement, post: Post, authorId: string,
     const meta = reactionMeta(currentReaction);
     likeBtn.replaceChildren();
     if (meta) {
-      likeBtn.append(reactIcon(meta.icon), document.createTextNode(` ${meta.label}`));
+      likeBtn.append(reactIcon(meta.icon), el('span', { className: 'reaction-btn__label', text: ` ${meta.label}` }));
     } else {
-      likeBtn.append(reactIcon('thumbs-up'), document.createTextNode(' ถูกใจ'));
+      likeBtn.append(reactIcon('thumbs-up'), el('span', { className: 'reaction-btn__label', text: ' ถูกใจ' }));
     }
     likeBtn.classList.toggle('reaction-btn--liked', liked);
     likeBtn.setAttribute('aria-pressed', String(liked));
-    commentBtn.replaceChildren(reactIcon('comments'), document.createTextNode(' ความคิดเห็น'));
-    shareBtn.replaceChildren(reactIcon('arrow-right'), document.createTextNode(' แชร์'));
+    commentBtn.replaceChildren(reactIcon('comments'), el('span', { className: 'reaction-btn__label', text: ' ความคิดเห็น' }));
+    shareBtn.replaceChildren(reactIcon('arrow-right'), el('span', { className: 'reaction-btn__label', text: ' แชร์' }));
     saveBtn.replaceChildren(
       reactIcon('bookmark'),
       document.createTextNode(saved ? ' บันทึกแล้ว' : ' บันทึกโพสต์'),

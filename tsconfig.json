@@ -20,5 +20,5 @@
     "resolveJsonModule": true,
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src", "tests", "vite.config.ts", "eslint.config.js"]
+  "include": ["src", "tests", "vite.config.ts", "vitest.config.ts", "eslint.config.js"]
 }
